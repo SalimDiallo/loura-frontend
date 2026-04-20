@@ -101,28 +101,42 @@ export function usePaginatedQuery<T, TFilters extends FilterParams = FilterParam
   const {
     queryKey,
     fetchFn,
-    filters = {} as Omit<TFilters, 'page' | 'page_size'>,
+    filters,
     pageSize: defaultPageSize = 20,
     initialPage = 1,
     enabled = true,
   } = options;
+
+  // Stabilize the filters reference to avoid infinite re-renders
+  const stableFilters = useMemo(
+    () => (filters ?? {}) as Omit<TFilters, 'page' | 'page_size'>,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(filters)]
+  );
 
   const [pagination, setPagination] = useState<PaginationState>({
     page: initialPage,
     pageSize: defaultPageSize,
   });
 
+  // Reset to page 1 when filters change
+  const filtersKey = JSON.stringify(stableFilters);
+  useMemo(() => {
+    setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
+
   // Builds the composite query key including filters + pagination
   const compositeKey = useMemo(
-    () => [...queryKey, { ...filters, page: pagination.page, page_size: pagination.pageSize }],
-    [queryKey, filters, pagination.page, pagination.pageSize]
+    () => [...queryKey, { ...stableFilters, page: pagination.page, page_size: pagination.pageSize }],
+    [queryKey, stableFilters, pagination.page, pagination.pageSize]
   );
 
   const query = useQuery<PaginatedResponse<T>, Error>({
     queryKey: compositeKey,
     queryFn: () =>
       fetchFn({
-        ...filters,
+        ...stableFilters,
         page: pagination.page,
         page_size: pagination.pageSize,
       } as TFilters),
@@ -139,8 +153,8 @@ export function usePaginatedQuery<T, TFilters extends FilterParams = FilterParam
       totalPages,
       currentPage: pagination.page,
       pageSize: pagination.pageSize,
-      hasNextPage: query.data?.next !== null,
-      hasPreviousPage: query.data?.previous !== null,
+      hasNextPage: !!query.data?.next,
+      hasPreviousPage: !!query.data?.previous,
     }),
     [totalItems, totalPages, pagination, query.data?.next, query.data?.previous]
   );

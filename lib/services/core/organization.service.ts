@@ -6,7 +6,7 @@
 import { ActivatableService, type ActivatableEndpoints } from '@/lib/api/base-service';
 import { apiClient } from '@/lib/api/client';
 import { API_ENDPOINTS } from '@/lib/api/config';
-import type { Category, CreateOrganizationData, Organization, UpdateOrganizationData } from '@/lib/types/core';
+import type { Category, CreateOrganizationData, Organization, OrganizationSettings, UpdateOrganizationData, UpdateOrganizationSettingsData } from '@/lib/types/core';
 
 class OrganizationService extends ActivatableService<
   Organization,
@@ -75,3 +75,30 @@ class CategoryService {
 }
 
 export const categoryService = new CategoryService();
+
+// ============================================================================
+// Organization Settings Service
+// ============================================================================
+
+class OrganizationSettingsService {
+  /**
+   * Récupère les settings d'une organisation.
+   */
+  async get(orgId: string): Promise<OrganizationSettings> {
+    return apiClient.get<OrganizationSettings>(
+      API_ENDPOINTS.CORE.ORGANIZATIONS.SETTINGS(orgId),
+    );
+  }
+
+  /**
+   * Met à jour les settings d'une organisation.
+   */
+  async update(orgId: string, data: UpdateOrganizationSettingsData): Promise<OrganizationSettings> {
+    return apiClient.patch<OrganizationSettings>(
+      API_ENDPOINTS.CORE.ORGANIZATIONS.SETTINGS(orgId),
+      data,
+    );
+  }
+}
+
+export const settingsService = new OrganizationSettingsService();

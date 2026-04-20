@@ -2,34 +2,36 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  useOrganizations,
-  useToggleOrganization,
+    useOrganizations,
+    useToggleOrganization,
 } from "@/lib/hooks/core";
 import type { Organization } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Power,
-  Search,
+    Building2,
+    ChevronLeft,
+    ChevronRight,
+    Loader2,
+    MoreHorizontal,
+    Pencil,
+    Plus,
+    Power,
+    Search,
+    Settings,
+    X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // ============================================================================
 // MAIN PAGE
@@ -37,7 +39,20 @@ import { useCallback, useState } from "react";
 
 export default function OrganizationsPage() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Stable filters object
+  const filters = useMemo(
+    () => (debouncedSearch ? { search: debouncedSearch } : undefined),
+    [debouncedSearch]
+  );
 
   // API hooks
   const {
@@ -47,7 +62,7 @@ export default function OrganizationsPage() {
     setPage,
     isLoading,
     isFetching,
-  } = useOrganizations(search ? { search } : undefined);
+  } = useOrganizations(filters);
 
   const toggleMutation = useToggleOrganization();
 
@@ -126,13 +141,23 @@ export default function OrganizationsPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Rechercher une organisation…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 h-10"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="pl-10 pr-10 h-10"
         />
-        {isFetching && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-        )}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {searchInput && !isFetching && (
+            <button
+              onClick={() => setSearchInput("")}
+              className="h-5 w-5 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+            >
+              <X className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+          {isFetching && (
+            <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+          )}
+        </div>
       </div>
 
       {/* List */}
@@ -219,6 +244,13 @@ export default function OrganizationsPage() {
                         <Pencil className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                         Modifier
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-xs"
+                        onClick={() => router.push(`/core/dashboard/organizations/${org.id}/settings`)}
+                      >
+                        <Settings className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                        Paramètres
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className={cn(
@@ -244,14 +276,14 @@ export default function OrganizationsPage() {
               <Building2 className="h-5 w-5 text-muted-foreground/60" />
             </div>
             <h3 className="text-sm font-medium text-foreground">
-              {search ? "Aucun résultat" : "Aucune organisation"}
+              {debouncedSearch ? "Aucun résultat" : "Aucune organisation"}
             </h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-[220px] leading-relaxed">
-              {search
+              {debouncedSearch
                 ? "Essayez avec d'autres termes."
                 : "Créez votre premier espace de travail."}
             </p>
-            {!search && (
+            {!debouncedSearch && (
               <Button
                 onClick={() => router.push("/core/dashboard/organizations/create")}
                 size="sm"

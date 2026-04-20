@@ -1,1 +1,1 @@
-export { organizationService, categoryService } from './organization.service';
+export { organizationService, categoryService, settingsService } from './organization.service';

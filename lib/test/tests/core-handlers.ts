@@ -1,5 +1,5 @@
 /**
- * MSW Handlers pour le module Core (organisations + catégories).
+ * MSW Handlers pour le module Core (organisations + catégories + settings).
  */
 
 import { API_CONFIG } from '@/lib/api';
@@ -58,6 +58,36 @@ const mockOrganizations = [
     updated_at: '2026-03-01T10:00:00Z',
   },
 ];
+
+const mockSettingsStore: Record<string, Record<string, unknown>> = {};
+
+function getDefaultSettings(orgId: string) {
+  return {
+    id: `settings-${orgId}`,
+    organization: orgId,
+    primary_color: '#6366F1',
+    secondary_color: '#E5E7EB',
+    font_family: 'Inter',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    tax_id: '',
+    tax_rate: '18.00',
+    invoice_footer: '',
+    invoice_prefix: 'FAC',
+    receipt_prefix: 'REC',
+    created_at: '2026-01-15T10:00:00Z',
+    updated_at: '2026-01-15T10:00:00Z',
+  };
+}
+
+function getSettings(orgId: string) {
+  if (!mockSettingsStore[orgId]) {
+    mockSettingsStore[orgId] = getDefaultSettings(orgId);
+  }
+  return mockSettingsStore[orgId];
+}
 
 // ============================================================================
 // HANDLERS
@@ -206,4 +236,35 @@ export const coreHandlers = [
       data: { ...org, logo: null },
     });
   }),
+
+  // ========================================================================
+  // ORGANIZATION SETTINGS
+  // ========================================================================
+
+  // GET /core/organizations/:id/settings/
+  http.get(`${API_URL}/core/organizations/:id/settings/`, ({ params }) => {
+    const orgId = params.id as string;
+    const org = mockOrganizations.find((o) => o.id === orgId);
+    if (!org) {
+      return HttpResponse.json({ message: 'Non trouvé.' }, { status: 404 });
+    }
+    return HttpResponse.json(getSettings(orgId));
+  }),
+
+  // PATCH /core/organizations/:id/settings/
+  http.patch(`${API_URL}/core/organizations/:id/settings/`, async ({ params, request }) => {
+    const orgId = params.id as string;
+    const org = mockOrganizations.find((o) => o.id === orgId);
+    if (!org) {
+      return HttpResponse.json({ message: 'Non trouvé.' }, { status: 404 });
+    }
+
+    const body = (await request.json()) as Record<string, unknown>;
+    const current = getSettings(orgId);
+    const updated = { ...current, ...body, updated_at: new Date().toISOString() };
+    mockSettingsStore[orgId] = updated;
+
+    return HttpResponse.json(updated);
+  }),
 ];
+

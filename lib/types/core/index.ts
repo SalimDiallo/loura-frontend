@@ -64,3 +64,30 @@ export interface UpdateOrganizationData {
   country?: string;
   currency?: string;
 }
+
+// ============================================================================
+// ORGANIZATION SETTINGS
+// ============================================================================
+
+export interface OrganizationSettings {
+  id: string;
+  organization: string;
+  primary_color: string;
+  secondary_color: string;
+  font_family: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  tax_id: string;
+  tax_rate: string;
+  invoice_footer: string;
+  invoice_prefix: string;
+  receipt_prefix: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type UpdateOrganizationSettingsData = Partial<
+  Omit<OrganizationSettings, 'id' | 'organization' | 'created_at' | 'updated_at'>
+>;

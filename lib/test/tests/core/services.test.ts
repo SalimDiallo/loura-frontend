@@ -1,9 +1,9 @@
 /**
- * Tests pour le service Organisation.
+ * Tests pour les services Core (Organisation, Category, Settings).
  */
 
 import { tokenManager } from '@/lib/api';
-import { categoryService, organizationService } from '@/lib/services/core';
+import { categoryService, organizationService, settingsService } from '@/lib/services/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('categoryService', () => {
@@ -56,5 +56,66 @@ describe('organizationService', () => {
     const result = await organizationService.toggleActive('org-1', true);
 
     expect(result).toBeDefined();
+  });
+});
+
+describe('settingsService', () => {
+  beforeEach(() => {
+    tokenManager.setTokens('mock_access_token', 'mock_refresh_token');
+  });
+
+  it('get retourne les settings par défaut', async () => {
+    const settings = await settingsService.get('org-1');
+
+    expect(settings.primary_color).toBe('#6366F1');
+    expect(settings.secondary_color).toBe('#E5E7EB');
+    expect(settings.font_family).toBe('Inter');
+    expect(settings.tax_rate).toBe('18.00');
+    expect(settings.invoice_prefix).toBe('FAC');
+    expect(settings.receipt_prefix).toBe('REC');
+  });
+
+  it('get retourne les champs de contact vides par défaut', async () => {
+    const settings = await settingsService.get('org-2');
+
+    expect(settings.address).toBe('');
+    expect(settings.phone).toBe('');
+    expect(settings.email).toBe('');
+    expect(settings.website).toBe('');
+    expect(settings.tax_id).toBe('');
+  });
+
+  it('update modifie le branding', async () => {
+    const updated = await settingsService.update('org-1', {
+      primary_color: '#FF0000',
+      font_family: 'Poppins',
+    });
+
+    expect(updated.primary_color).toBe('#FF0000');
+    expect(updated.font_family).toBe('Poppins');
+  });
+
+  it('update modifie les coordonnées', async () => {
+    const updated = await settingsService.update('org-1', {
+      address: '456 Avenue',
+      phone: '+33100000000',
+      email: 'info@org.fr',
+    });
+
+    expect(updated.address).toBe('456 Avenue');
+    expect(updated.phone).toBe('+33100000000');
+    expect(updated.email).toBe('info@org.fr');
+  });
+
+  it('update modifie les infos fiscales', async () => {
+    const updated = await settingsService.update('org-1', {
+      tax_id: 'SIRET-123',
+      tax_rate: '20.00',
+      invoice_prefix: 'FACT',
+    });
+
+    expect(updated.tax_id).toBe('SIRET-123');
+    expect(updated.tax_rate).toBe('20.00');
+    expect(updated.invoice_prefix).toBe('FACT');
   });
 });

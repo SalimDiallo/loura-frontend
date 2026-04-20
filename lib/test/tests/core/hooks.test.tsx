@@ -1,5 +1,5 @@
 /**
- * Tests pour les hooks Core (useOrganizations, useCategories, mutations).
+ * Tests pour les hooks Core (useOrganizations, useCategories, settings, mutations).
  */
 
 import { tokenManager } from '@/lib/api';
@@ -7,8 +7,10 @@ import {
   useCategories,
   useCreateOrganization,
   useOrganization,
+  useOrganizationSettings,
   useToggleOrganization,
-  useUpdateOrganization
+  useUpdateOrganization,
+  useUpdateOrganizationSettings,
 } from '@/lib/hooks/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
@@ -181,5 +183,155 @@ describe('useToggleOrganization', () => {
     result.current.mutate({ id: 'org-3', isActive: false });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+});
+
+// ============================================================================
+// ORGANIZATION SETTINGS
+// ============================================================================
+
+describe('useOrganizationSettings', () => {
+  beforeEach(() => {
+    tokenManager.setTokens('mock_access_token', 'mock_refresh_token');
+  });
+
+  it('récupère les settings par défaut', async () => {
+    const { result } = renderHook(() => useOrganizationSettings('org-1'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const settings = result.current.data!;
+    expect(settings.primary_color).toBe('#6366F1');
+    expect(settings.secondary_color).toBe('#E5E7EB');
+    expect(settings.font_family).toBe('Inter');
+    expect(settings.tax_rate).toBe('18.00');
+    expect(settings.invoice_prefix).toBe('FAC');
+    expect(settings.receipt_prefix).toBe('REC');
+  });
+
+  it('contient tous les champs attendus', async () => {
+    const { result } = renderHook(() => useOrganizationSettings('org-1'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const settings = result.current.data!;
+    expect(settings).toHaveProperty('id');
+    expect(settings).toHaveProperty('organization');
+    expect(settings).toHaveProperty('primary_color');
+    expect(settings).toHaveProperty('secondary_color');
+    expect(settings).toHaveProperty('font_family');
+    expect(settings).toHaveProperty('address');
+    expect(settings).toHaveProperty('phone');
+    expect(settings).toHaveProperty('email');
+    expect(settings).toHaveProperty('website');
+    expect(settings).toHaveProperty('tax_id');
+    expect(settings).toHaveProperty('tax_rate');
+    expect(settings).toHaveProperty('invoice_footer');
+    expect(settings).toHaveProperty('invoice_prefix');
+    expect(settings).toHaveProperty('receipt_prefix');
+  });
+
+  it('retourne 404 pour une org inexistante', async () => {
+    const { result } = renderHook(() => useOrganizationSettings('org-unknown'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it('ne fait pas de requête si orgId est vide', async () => {
+    const { result } = renderHook(() => useOrganizationSettings(''), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+});
+
+describe('useUpdateOrganizationSettings', () => {
+  beforeEach(() => {
+    tokenManager.setTokens('mock_access_token', 'mock_refresh_token');
+  });
+
+  it('met à jour les couleurs', async () => {
+    const { result } = renderHook(() => useUpdateOrganizationSettings(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({
+      orgId: 'org-1',
+      data: { primary_color: '#FF5500', secondary_color: '#000000' },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data!.primary_color).toBe('#FF5500');
+    expect(result.current.data!.secondary_color).toBe('#000000');
+  });
+
+  it('met à jour la police', async () => {
+    const { result } = renderHook(() => useUpdateOrganizationSettings(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({
+      orgId: 'org-2',
+      data: { font_family: 'Roboto' },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data!.font_family).toBe('Roboto');
+  });
+
+  it('met à jour les coordonnées', async () => {
+    const { result } = renderHook(() => useUpdateOrganizationSettings(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({
+      orgId: 'org-1',
+      data: {
+        address: '123 Rue Test',
+        phone: '+224621000000',
+        email: 'test@acme.com',
+        website: 'https://acme.com',
+      },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data!.address).toBe('123 Rue Test');
+    expect(result.current.data!.phone).toBe('+224621000000');
+    expect(result.current.data!.email).toBe('test@acme.com');
+  });
+
+  it('met à jour les infos fiscales et préfixes', async () => {
+    const { result } = renderHook(() => useUpdateOrganizationSettings(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({
+      orgId: 'org-1',
+      data: {
+        tax_id: 'NIF-999',
+        tax_rate: '10.00',
+        invoice_prefix: 'INV',
+        receipt_prefix: 'RCT',
+        invoice_footer: 'Merci !',
+      },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data!.tax_id).toBe('NIF-999');
+    expect(result.current.data!.tax_rate).toBe('10.00');
+    expect(result.current.data!.invoice_prefix).toBe('INV');
+    expect(result.current.data!.receipt_prefix).toBe('RCT');
+    expect(result.current.data!.invoice_footer).toBe('Merci !');
   });
 });
