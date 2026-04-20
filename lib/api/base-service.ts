@@ -78,11 +78,20 @@ export abstract class BaseService<
   }
 
   /**
-   * Récupère tous les résultats (sans pagination) - helper pratique
+   * Récupère tous les résultats (sans pagination) via ?page_size=all
    */
   async getAll(filters?: TFilters): Promise<T[]> {
-    const response = await this.list(filters);
-    return response.results || [];
+    const allFilters = { ...filters, page_size: 'all' } as unknown as TFilters;
+    const queryParams = this.buildQueryParams(allFilters);
+    const endpoint = queryParams
+      ? `${this.endpoints.LIST}?${queryParams}`
+      : this.endpoints.LIST;
+    const response = await apiClient.get<T[] | PaginatedResponse<T>>(endpoint);
+    // Le backend renvoie un array brut quand page_size=all
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return (response as PaginatedResponse<T>).results || [];
   }
 
   /**

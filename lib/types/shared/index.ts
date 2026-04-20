@@ -32,12 +32,15 @@ export interface ApiErrorResponse {
 }
 
 /**
- * Format standard des réponses paginées
+ * Format standard des réponses paginées (correspond à core.pagination.StandardPagination)
  */
 export interface PaginatedResponse<T> {
   count: number;
   next: string | null;
   previous: string | null;
+  page_size?: number;
+  total_pages?: number;
+  current_page?: number;
   results: T[];
 }
 
