@@ -118,13 +118,13 @@ class AuthService extends BaseService<BaseUser, RegisterData, Partial<BaseUser>>
    * Mettre à jour le profil
    */
   async updateProfile(data: Partial<BaseUser>): Promise<BaseUser> {
-    const response = await apiClient.patch<{ user: BaseUser; message: string }>(
+    const response = await apiClient.patch<{ data: BaseUser; message: string }>(
       API_ENDPOINTS.AUTH.UPDATE_PROFILE,
       data
     );
 
-    tokenManager.saveUser(response.user);
-    return response.user;
+    tokenManager.saveUser(response.data);
+    return response.data;
   }
 
   /**
@@ -134,6 +134,15 @@ class AuthService extends BaseService<BaseUser, RegisterData, Partial<BaseUser>>
     return apiClient.post<{ message: string }>(
       API_ENDPOINTS.AUTH.CHANGE_PASSWORD,
       data
+    );
+  }
+
+  /**
+   * Supprimer l'avatar
+   */
+  async deleteAvatar(): Promise<{ message: string; data: BaseUser }> {
+    return apiClient.delete<{ message: string; data: BaseUser }>(
+      API_ENDPOINTS.AUTH.DELETE_AVATAR
     );
   }
 

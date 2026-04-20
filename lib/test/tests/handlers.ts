@@ -140,4 +140,84 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     });
   }),
+
+  // Update Profile (PATCH /auth/profile/update/)
+  http.patch(`${API_URL}/auth/profile/update/`, async ({ request }) => {
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json() as Record<string, unknown>;
+
+    // Retourner le profil mis à jour
+    return HttpResponse.json({
+      message: 'Profil mis à jour avec succès.',
+      data: {
+        id: '1',
+        email: 'test@example.com',
+        first_name: body.first_name || 'Test',
+        last_name: body.last_name || 'User',
+        phone: body.phone || null,
+        avatar_url: body.avatar_url || null,
+        language: body.language || 'fr',
+        timezone: body.timezone || 'Africa/Conakry',
+        date_of_birth: body.date_of_birth || null,
+        address: body.address || null,
+        city: body.city || null,
+        country: body.country || null,
+        emergency_contact: body.emergency_contact || null,
+        email_verified: false,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    });
+  }),
+
+  // Change Password (POST /auth/profile/change-password/)
+  http.post(`${API_URL}/auth/profile/change-password/`, async ({ request }) => {
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json() as {
+      old_password: string;
+      new_password: string;
+      new_password_confirm: string;
+    };
+
+    // Vérifier que l'ancien mot de passe est correct (mock)
+    if (body.old_password !== 'OldPassword123!') {
+      return HttpResponse.json(
+        {
+          message: 'Erreur lors du changement de mot de passe.',
+          errors: {
+            old_password: ["L'ancien mot de passe est incorrect."],
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // Vérifier que les nouveaux mots de passe correspondent
+    if (body.new_password !== body.new_password_confirm) {
+      return HttpResponse.json(
+        {
+          message: 'Erreur lors du changement de mot de passe.',
+          errors: {
+            new_password_confirm: ['Les mots de passe ne correspondent pas.'],
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    return HttpResponse.json({
+      message: 'Mot de passe modifié avec succès.',
+    });
+  }),
 ];

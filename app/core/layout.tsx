@@ -1,5 +1,6 @@
 "use client";
 
+import AppHeader from '@/components/AppHeader';
 import { useCurrentUser } from '@/lib/hooks/auth/useCurrentUser';
 import { useLogout } from '@/lib/hooks/auth/useLogout';
 import React from 'react';
@@ -29,25 +30,7 @@ export default function RootLayout({
 
   return (
     <>
-      {/* Afficher le nom et prénom si l'utilisateur est chargé + bouton de déconnexion */}
-      {isLoading ? (
-        <div>Chargement...</div>
-      ) : error ? (
-        <div style={{ color: 'red', padding: '1rem', marginBottom: '1rem' }}>
-          Erreur de chargement de l'utilisateur: {error.message}
-          <br />
-          <small>Vérifiez la console pour plus de détails</small>
-        </div>
-      ) : user ? (
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
-          <span>
-            {user.first_name} {user.last_name}
-          </span>
-          <button onClick={handleLogout} disabled={logoutMutation.status === "pending"}>
-            {logoutMutation.status === "pending" ? "Déconnexion..." : "Se déconnecter"}
-          </button>
-        </div>
-      ) : null}
+    <AppHeader />
       {children}
     </>
   );

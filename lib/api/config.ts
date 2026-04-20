@@ -36,6 +36,8 @@ export const API_ENDPOINTS = {
     ME: '/auth/me/',                               // Utilisateur courant
     UPDATE_PROFILE: '/auth/profile/update/',       // Mise à jour du profil
     CHANGE_PASSWORD: '/auth/profile/change-password/',  // Changement de mot de passe
+    UPLOAD_AVATAR: '/auth/profile/upload-avatar/', // Upload d'avatar
+    DELETE_AVATAR: '/auth/profile/upload-avatar/', // Suppression d'avatar (même endpoint, méthode DELETE)
     // Multi-organization
     MY_ORGANIZATIONS: '/auth/my-organizations/',   // Liste des organisations de l'employé
     SELECT_ORGANIZATION: '/auth/select-organization/',  // Sélection d'organisation

@@ -3,6 +3,7 @@
  */
 
 export * from './alert';
+export * from './alert-dialog';
 export * from './badge';
 export * from './button';
 export * from './card';
@@ -10,6 +11,8 @@ export * from './chart';
 export * from './dialog';
 export * from './dropdown-menu';
 export * from './empty-state';
+export * from './error-dialog';
+export * from './file-upload';
 export * from './filter-bar';
 export * from './form';
 export * from './form-fields';

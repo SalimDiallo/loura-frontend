@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { authService } from '@/lib/services/auth/auth.service';
 import type { BaseUser } from '@/lib/types';
+import { useQuery } from '@tanstack/react-query';
 
 /**
  * Hook pour récupérer l'utilisateur courant

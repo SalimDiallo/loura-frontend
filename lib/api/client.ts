@@ -79,13 +79,18 @@ class ApiClient {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<T> {
-    const { requiresAuth = true, headers = {}, ...restOptions } = options;
+    const { requiresAuth = true, headers = {}, body, ...restOptions } = options;
+
+    // Détecter si le body est un FormData
+    const isFormData = body instanceof FormData;
 
     // Construction des headers
-    const requestHeaders: Record<string, string> = {
-      ...API_CONFIG.headers,
-      ...(headers as Record<string, string>),
-    };
+    const requestHeaders: Record<string, string> = isFormData
+      ? { ...(headers as Record<string, string>) } // Ne pas inclure Content-Type pour FormData
+      : {
+          ...API_CONFIG.headers,
+          ...(headers as Record<string, string>),
+        };
 
     // Ajout du token d'authentification si nécessaire
     if (requiresAuth) {
@@ -98,6 +103,7 @@ class ApiClient {
     // Configuration de la requête
     const config: RequestInit = {
       ...restOptions,
+      body,
       headers: requestHeaders,
     };
 
@@ -244,7 +250,7 @@ class ApiClient {
   ): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
       ...options,
     });
   }
@@ -259,7 +265,7 @@ class ApiClient {
   ): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
       ...options,
     });
   }
@@ -274,7 +280,7 @@ class ApiClient {
   ): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
       ...options,
     });
   }
