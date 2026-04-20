@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { AvatarProfileDropDown } from "./services/auth/AvatarProfileDropDown";
 import { Button, ThemeToggle } from "./ui";
 import { Command } from "./ui/command";
+import Logo from "./ui/Logo";
 // import { SidebarTrigger } from "./ui/sidebar"; // Removed to prevent SidebarContext error
 
 export default function AppHeader() {
@@ -21,15 +22,7 @@ export default function AppHeader() {
         <div className="flex items-center gap-3">
           {/* <SidebarTrigger className="size-9" /> */}
           {/* Temporarily replaced SidebarTrigger with a placeholder icon/button to avoid context error */}
-          <div className="size-9 flex items-center justify-center rounded-xl bg-muted/30 border border-border/50 text-muted-foreground select-none">
-            <span className="sr-only">Menu</span>
-            <svg width="18" height="18" fill="none" viewBox="0 0 20 20">
-              <rect y="3" width="18" height="2" rx="1" fill="currentColor"/>
-              <rect y="8" width="18" height="2" rx="1" fill="currentColor"/>
-              <rect y="13" width="18" height="2" rx="1" fill="currentColor"/>
-            </svg>
-          </div>
-
+          <Logo className="w-40" />
           {/* Separator */}
           <div className="hidden sm:block h-6 w-px bg-border/60" />
 

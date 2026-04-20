@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
-import { Plus, Settings, Users, MoreHorizontal, Pencil, Power, UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,156 +11,317 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  useOrganizations,
+  useToggleOrganization,
+} from "@/lib/hooks/core";
+import type { Organization } from "@/lib/types/core";
+import { cn } from "@/lib/utils";
+import {
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Power,
+  Search,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
+
+// ============================================================================
+// MAIN PAGE
+// ============================================================================
 
 export default function OrganizationsPage() {
   const router = useRouter();
+  const [search, setSearch] = useState("");
 
-  // Données factices pour illustrer l'interface (à remplacer par des hooks API réels)
-  const organizations = [
-    {
-      id: 1,
-      name: "Acme Corp",
-      initials: "AC",
-      role: "Propriétaire",
-      members: 12,
-      plan: "Pro",
-      status: "active",
+  // API hooks
+  const {
+    data: organizations,
+    meta,
+    page,
+    setPage,
+    isLoading,
+    isFetching,
+  } = useOrganizations(search ? { search } : undefined);
+
+  const toggleMutation = useToggleOrganization();
+
+  const handleToggle = useCallback(
+    (org: Organization) => {
+      toggleMutation.mutate({ id: org.id, isActive: org.is_active });
     },
-    {
-      id: 2,
-      name: "Tech Innovators",
-      initials: "TI",
-      role: "Membre",
-      members: 5,
-      plan: "Starter",
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Design Studio",
-      initials: "DS",
-      role: "Invité",
-      members: 3,
-      plan: "Enterprise",
-      status: "inactive",
-    }
-  ];
+    [toggleMutation]
+  );
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
+  // ========================================================================
+  // LOADING STATE
+  // ========================================================================
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-8 max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-end pb-4 border-b border-border/40">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <Skeleton className="h-9 w-28" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <Card className="border p-0 overflow-hidden">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3.5 p-4 border-b border-border/30 last:border-0">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-8 w-8 rounded" />
+            </div>
+          ))}
+        </Card>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // RENDER
+  // ========================================================================
 
   return (
-    <div className="px-4 py-8 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="px-4 py-8 max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between pb-4 border-b border-border/40 gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Organisations
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Gérez vos espaces de travail, accédez aux paramètres de votre équipe et surveillez vos abonnements.
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/40 gap-4">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Organisations</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {meta.totalItems} espace{meta.totalItems !== 1 ? "s" : ""} de travail
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => router.push("/core/dashboard/organizations/create")}
-          className="shadow-sm transition-all text-sm font-medium"
+          size="sm"
+          className="h-9 text-xs font-medium shadow-sm"
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Nouvelle organisation
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Nouvelle
         </Button>
       </div>
 
-      {/* Main List */}
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Rechercher une organisation…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10 h-10"
+        />
+        {isFetching && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+        )}
+      </div>
+
+      {/* List */}
       <Card className="border shadow-sm overflow-hidden bg-card">
-        <div className="divide-y divide-border/50">
-          {organizations.map((org) => (
-            <div key={org.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 hover:bg-primary/5 transition-colors group">
-              
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 shrink-0 rounded-full bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary/20">
-                  <span className="text-primary font-semibold text-sm tracking-wide">{org.initials}</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
-                    {org.name}
-                    {org.status === 'active' ? (
-                      <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] uppercase font-bold tracking-wider">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        Actif
-                      </span>
+        {organizations.length > 0 ? (
+          <div className="divide-y divide-border/40">
+            {organizations.map((org) => (
+              <div
+                key={org.id}
+                className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group cursor-pointer"
+                onClick={() => router.push(`/core/dashboard/organizations/${org.id}/edit`)}
+              >
+                {/* Left: Avatar + Info */}
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/8 flex items-center justify-center overflow-hidden">
+                    {org.logo ? (
+                      <img src={org.logo} alt={org.name} className="h-full w-full object-cover" />
                     ) : (
-                      <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] uppercase font-bold tracking-wider">
-                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
-                        Inactif
+                      <span className="text-primary font-bold text-xs tracking-wide">
+                        {getInitials(org.name)}
                       </span>
                     )}
-                    <span className="text-[10px] uppercase font-bold tracking-wider bg-secondary/50 text-secondary-foreground px-2 py-0.5 rounded-sm">
-                      {org.plan}
-                    </span>
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground/80">{org.role}</span>
-                    <span className="h-1 w-1 rounded-full bg-border" />
-                    <div className="flex items-center">
-                      <Users className="h-3.5 w-3.5 mr-1.5 opacity-70" />
-                      {org.members} membre{org.members > 1 ? 's' : ''}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-sm text-foreground truncate group-hover:text-primary transition-colors">{org.name}</h3>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 px-1.5 py-px rounded text-[9px] uppercase font-bold tracking-wider shrink-0",
+                          org.is_active
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-1 w-1 rounded-full",
+                            org.is_active ? "bg-emerald-500" : "bg-muted-foreground/50"
+                          )}
+                        />
+                        {org.is_active ? "Actif" : "Inactif"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {org.category && (
+                        <span className="text-[10px] text-muted-foreground font-medium">{org.category.name}</span>
+                      )}
+                      {org.category && org.country && <span className="text-muted-foreground/40">·</span>}
+                      {org.country && <span className="text-[10px] text-muted-foreground">{org.country}</span>}
+                      {(org.category || org.country) && <span className="text-muted-foreground/40">·</span>}
+                      <span className="text-[10px] text-muted-foreground">{org.currency}</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Right: Actions */}
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs px-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => router.push(`/core/dashboard/organizations/${org.id}/edit`)}
+                  >
+                    <Pencil className="h-3 w-3 mr-1.5" />
+                    Modifier
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        className="cursor-pointer text-xs"
+                        onClick={() => router.push(`/core/dashboard/organizations/${org.id}/edit`)}
+                      >
+                        <Pencil className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                        Modifier
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className={cn(
+                          "cursor-pointer text-xs",
+                          org.is_active
+                            ? "text-destructive focus:text-destructive focus:bg-destructive/10"
+                            : "text-emerald-600 focus:text-emerald-600 focus:bg-emerald-500/10"
+                        )}
+                        onClick={() => handleToggle(org)}
+                      >
+                        <Power className="mr-2 h-3.5 w-3.5" />
+                        {org.is_active ? "Désactiver" : "Activer"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto mt-4 sm:mt-0 justify-end">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-9 px-4 bg-transparent group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all duration-300 hidden sm:flex"
-                >
-                  <UserPlus className="h-4 w-4 mr-2 opacity-70 group-hover:opacity-100" />
-                  Équipe
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Menu</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[220px]">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <Pencil className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Modifier les infos & logo
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer sm:hidden">
-                       <UserPlus className="mr-2 h-4 w-4 text-muted-foreground" />
-                       Gérer l'équipe
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Paramètres avancés
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
-                      <Power className="mr-2 h-4 w-4" />
-                      Désactiver l'organisation
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <div className="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
+              <Building2 className="h-5 w-5 text-muted-foreground/60" />
             </div>
-          ))}
-          
-          {organizations.length === 0 && (
-            <div className="p-12 flex flex-col items-center justify-center text-center space-y-3">
-              <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
-                <Users className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium text-foreground">Aucune organisation trouvée</p>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Vous ne faites actuellement partie d'aucune organisation. Créez-en une pour commencer à collaborer.
-              </p>
-            </div>
-          )}
-        </div>
+            <h3 className="text-sm font-medium text-foreground">
+              {search ? "Aucun résultat" : "Aucune organisation"}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-[220px] leading-relaxed">
+              {search
+                ? "Essayez avec d'autres termes."
+                : "Créez votre premier espace de travail."}
+            </p>
+            {!search && (
+              <Button
+                onClick={() => router.push("/core/dashboard/organizations/create")}
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs mt-4"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Créer
+              </Button>
+            )}
+          </div>
+        )}
       </Card>
+
+      {/* Pagination */}
+      {meta.totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-muted-foreground">
+            Page {meta.currentPage} sur {meta.totalPages}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={!meta.hasPreviousPage}
+              onClick={() => setPage(page - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {Array.from({ length: Math.min(meta.totalPages, 5) }, (_, i) => {
+              let pageNum: number;
+              if (meta.totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (meta.currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (meta.currentPage >= meta.totalPages - 2) {
+                pageNum = meta.totalPages - 4 + i;
+              } else {
+                pageNum = meta.currentPage - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pageNum === meta.currentPage ? "default" : "ghost"}
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 text-xs",
+                    pageNum === meta.currentPage && "pointer-events-none"
+                  )}
+                  onClick={() => setPage(pageNum)}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={!meta.hasNextPage}
+              onClick={() => setPage(page + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
