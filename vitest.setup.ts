@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll, afterAll } from 'vitest';
-import { server } from './lib/test/server';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from './lib/test/tests/server';
 
 // Démarrer le serveur MSW avant tous les tests
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
