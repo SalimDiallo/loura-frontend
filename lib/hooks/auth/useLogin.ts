@@ -1,11 +1,9 @@
 'use client';
 
+import { authService } from '@/lib/services/auth/auth.service';
+import type { LoginCredentials } from '@/lib/types';
+import { AuthResponse } from '@/lib/types/auth/auth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  authService,
-  type AuthResponse,
-  type LoginCredentials,
-} from '@/lib/services/auth/auth.service';
 
 /**
  * Hook pour la connexion utilisateur

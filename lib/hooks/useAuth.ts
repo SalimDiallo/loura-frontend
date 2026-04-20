@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useLogin, useLogout, useRegister, useIsAuthenticated } from './auth';
 import { useUser } from './useUser';
-import type { LoginCredentials, RegisterData } from '@/lib/services/auth/auth.service';
+import type { LoginCredentials, RegisterData } from '@/lib/types';
 
 /**
  * Hook principal pour la gestion de l'authentification
@@ -33,39 +33,23 @@ export function useAuth() {
 
   // État utilisateur
   const { isAuthenticated, isLoading: isAuthLoading } = useIsAuthenticated();
-  const { user, isAdmin, isEmployee } = useUser();
+  const { user } = useUser();
 
   /**
    * Connexion avec redirection automatique
    */
-  const login = async (credentials: LoginCredentials, redirectTo?: string) => {
+  const login = async (credentials: LoginCredentials, redirectTo: string = '/dashboard') => {
     const result = await loginMutation.mutateAsync(credentials);
-
-    // Redirection basée sur le type d'utilisateur
-    if (redirectTo) {
-      router.push(redirectTo);
-    } else if (result.user_type === 'admin') {
-      router.push('/dashboard');
-    } else {
-      router.push('/employee/dashboard');
-    }
-
+    router.push(redirectTo);
     return result;
   };
 
   /**
    * Inscription avec redirection automatique
    */
-  const register = async (data: RegisterData, redirectTo?: string) => {
+  const register = async (data: RegisterData, redirectTo: string = '/dashboard') => {
     const result = await registerMutation.mutateAsync(data);
-
-    // Redirection
-    if (redirectTo) {
-      router.push(redirectTo);
-    } else {
-      router.push('/dashboard');
-    }
-
+    router.push(redirectTo);
     return result;
   };
 
@@ -87,8 +71,6 @@ export function useAuth() {
     user,
     isAuthenticated,
     isLoading: isAuthLoading || loginMutation.isPending || registerMutation.isPending,
-    isAdmin,
-    isEmployee,
 
     // États des mutations
     loginError: loginMutation.error,
@@ -113,18 +95,4 @@ export function useRequireAuth(redirectTo: string = '/auth') {
   }
 
   return { isLoading, isAuthenticated };
-}
-
-/**
- * Hook pour protéger une route admin
- */
-export function useRequireAdmin(redirectTo: string = '/') {
-  const router = useRouter();
-  const { user, isLoading } = useUser();
-
-  if (!isLoading && user?.user_type !== 'admin') {
-    router.push(redirectTo);
-  }
-
-  return { isLoading, isAdmin: user?.user_type === 'admin' };
 }

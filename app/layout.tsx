@@ -1,7 +1,7 @@
 import { Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google";
 
-import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/providers";
+import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 

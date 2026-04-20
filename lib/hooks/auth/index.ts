@@ -5,12 +5,11 @@
  * pour une meilleure gestion du cache et des optimisations
  */
 
-export { useLogin } from './useLogin';
-export { useRegister } from './useRegister';
-export { useLogout } from './useLogout';
 export {
-  useCurrentUser,
-  useIsAuthenticated,
-  useIsAdmin
+    useCurrentUser,
+    useIsAuthenticated
 } from './useCurrentUser';
+export { useLogin } from './useLogin';
+export { useLogout } from './useLogout';
 export { useRefreshToken } from './useRefreshToken';
+export { useRegister } from './useRegister';

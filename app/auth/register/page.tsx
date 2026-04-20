@@ -11,7 +11,7 @@ import {
 import Logo from '@/components/ui/Logo';
 import { ApiError } from '@/lib/api/client';
 import { siteConfig } from '@/lib/config';
-import { useAuth, useUser, useZodForm } from '@/lib/hooks';
+import { useRegister, useUser, useZodForm } from '@/lib/hooks';
 import {
     ArrowLeft,
     ArrowRight,
@@ -23,35 +23,36 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import { z } from 'zod';
 
 // Schéma de validation Zod
-const registerSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email requis')
-    .email('Adresse email invalide'),
-  first_name: z
-    .string()
-    .min(2, 'Le prénom doit contenir au moins 2 caractères')
-    .max(50, 'Le prénom ne peut pas dépasser 50 caractères'),
-  last_name: z
-    .string()
-    .min(2, 'Le nom doit contenir au moins 2 caractères')
-    .max(50, 'Le nom ne peut pas dépasser 50 caractères'),
-  password: z
-    .string()
-    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
-    .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
-    .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre'),
-  password_confirm: z
-    .string()
-    .min(1, 'Veuillez confirmer votre mot de passe'),
-}).refine((data) => data.password === data.password_confirm, {
-  message: 'Les mots de passe ne correspondent pas',
-  path: ['password_confirm'],
-});
+const registerSchema = z
+  .object({
+    email: z
+      .string()
+      .min(1, 'Email requis')
+      .email('Adresse email invalide'),
+    first_name: z
+      .string()
+      .min(2, 'Le prénom doit contenir au moins 2 caractères')
+      .max(50, 'Le prénom ne peut pas dépasser 50 caractères'),
+    last_name: z
+      .string()
+      .min(2, 'Le nom doit contenir au moins 2 caractères')
+      .max(50, 'Le nom ne peut pas dépasser 50 caractères'),
+    password: z
+      .string()
+      .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+      .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
+      .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre'),
+    password_confirm: z
+      .string()
+      .min(1, 'Veuillez confirmer votre mot de passe'),
+  })
+  .refine((data) => data.password === data.password_confirm, {
+    message: 'Les mots de passe ne correspondent pas',
+    path: ['password_confirm'],
+  });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -66,7 +67,11 @@ const features = [
 export default function RegisterPage() {
   const router = useRouter();
   const { user } = useUser();
-  const { register, isRegisterPending, registerError } = useAuth();
+  const {
+    mutateAsync: register,
+    isPending: isRegisterPending,
+    error: registerError,
+  } = useRegister();
 
   const form = useZodForm({
     schema: registerSchema,
@@ -80,19 +85,22 @@ export default function RegisterPage() {
   });
 
   if (user?.id) {
-    if (user.user_type === "admin") {
-      router.push(`/core/dashboard`)
-      return;
-    } else if (user.user_type == "employee") {
-      router.push(`/apps/${user.organization?.subdomain}/dashboard`)
-    }
+    router.push('/dashboard');
+    return null;
   }
 
   const onSubmit = form.handleSubmit(async (data: RegisterFormData) => {
     try {
-      await register(data, siteConfig.core.dashboard.home);
+      await register({
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        password: data.password,
+        password_confirm: data.password_confirm,
+      });
+      router.push(siteConfig.core.dashboard.home);
     } catch (err) {
-      // Les erreurs sont gérées par le hook useAuth
+      // Les erreurs sont gérées par le hook useRegister
       console.error('Registration error:', err);
     }
   });
@@ -165,7 +173,7 @@ export default function RegisterPage() {
           <Form {...form}>
             <form onSubmit={onSubmit} className="space-y-5">
               {registerError && (
-                <Alert variant="error">
+                <Alert variant="destructive">
                   {registerError instanceof ApiError
                     ? registerError.message
                     : "Une erreur est survenue lors de l'inscription"}
@@ -220,11 +228,11 @@ export default function RegisterPage() {
                 />
                 <label htmlFor="terms" className="text-sm text-neutral-600 dark:text-neutral-300">
                   J'accepte les{' '}
-                  <Link href="#" className="text-black dark:text-white hover:underline transition-colors">
+                  <Link href="/docs/legals/terms" className="text-black dark:text-white hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
                     Conditions d'utilisation
                   </Link>{' '}
                   et la{' '}
-                  <Link href="#" className="text-black dark:text-white hover:underline transition-colors">
+                  <Link href="/docs/legals/privacy" className="text-black dark:text-white hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
                     Politique de confidentialité
                   </Link>
                 </label>

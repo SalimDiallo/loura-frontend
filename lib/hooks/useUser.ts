@@ -1,7 +1,7 @@
 'use client';
 
 import { useCurrentUser } from './auth';
-import type { UnifiedUser } from '@/lib/services/auth/auth.service';
+import type { BaseUser } from '@/lib/types';
 
 /**
  * Hook utilitaire pour accéder à l'utilisateur courant
@@ -25,28 +25,5 @@ export function useUser() {
     isLoading,
     error: isError ? (error as Error) : null,
     isAuthenticated: !!user,
-    isAdmin: user?.user_type === 'admin',
-    isEmployee: user?.user_type === 'employee',
-  };
-}
-
-/**
- * Hook pour obtenir les informations d'organisation de l'utilisateur
- */
-export function useUserOrganization() {
-  const { user } = useUser();
-
-  const currentOrgSlug = typeof window !== 'undefined'
-    ? localStorage.getItem('current_organization_slug')
-    : null;
-
-  const currentOrg = user?.organizations?.find(
-    (org) => org.subdomain === currentOrgSlug
-  );
-
-  return {
-    organization: currentOrg ?? null,
-    organizations: user?.organizations ?? [],
-    isLoading: !user,
   };
 }

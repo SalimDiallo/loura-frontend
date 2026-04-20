@@ -10,7 +10,7 @@ import {
 import Logo from '@/components/ui/Logo';
 import { ApiError } from '@/lib/api/client';
 import { siteConfig } from '@/lib/config';
-import { useAuth, useUser, useZodForm } from '@/lib/hooks';
+import { useLogin, useUser, useZodForm } from '@/lib/hooks';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -32,9 +32,10 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
-  const { login, isLoginPending, loginError } = useAuth();
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+
+  const loginMutation = useLogin();
 
   useEffect(() => {
     const message = searchParams.get('message');
@@ -57,7 +58,6 @@ function LoginForm() {
   });
 
   const getRedirectUrl = useCallback((): string => {
-    // Si une URL de redirection personnalisée est fournie, l'utiliser
     if (redirectUrl) {
       return redirectUrl;
     }
@@ -67,9 +67,7 @@ function LoginForm() {
 
   // Redirection automatique si l'utilisateur est déjà connecté
   useEffect(() => {
-    // Vérifier que l'utilisateur existe ET qu'il y a des tokens valides
-    if (user?.id && user.user_type) {
-      // Vérifier si on a des tokens dans localStorage
+    if (user?.id) {
       const hasTokens =
         typeof window !== 'undefined' &&
         localStorage.getItem('loura_access_token') &&
@@ -85,9 +83,10 @@ function LoginForm() {
   const onSubmit = form.handleSubmit(async (data: LoginFormData) => {
     try {
       const destination = getRedirectUrl();
-      await login(data, destination);
+      await loginMutation.mutateAsync(data);
+      router.push(destination);
     } catch (err) {
-      // Les erreurs sont gérées par le hook useAuth
+      // Les erreurs sont gérées par le hook useLogin
       console.error('Login error:', err);
     }
   });
@@ -121,13 +120,13 @@ function LoginForm() {
             <form onSubmit={onSubmit} className="space-y-5">
               {infoMessage && <Alert variant="destructive">{infoMessage}</Alert>}
 
-              {loginError && (
+              {loginMutation.isError && (
                 <Alert variant="destructive">
-                  {loginError instanceof ApiError && loginError.status === 401
+                  {loginMutation.error instanceof ApiError && loginMutation.error.status === 401
                     ? 'Identifiants incorrects'
-                    : loginError instanceof ApiError && loginError.status === 403
-                      ? 'Compte désactivé. Contactez votre administrateur.'
-                      : 'Une erreur est survenue lors de la connexion'}
+                    : loginMutation.error instanceof ApiError && loginMutation.error.status === 403
+                    ? 'Compte désactivé. Contactez votre administrateur.'
+                    : 'Une erreur est survenue lors de la connexion'}
                 </Alert>
               )}
 
@@ -165,9 +164,9 @@ function LoginForm() {
               <Button
                 type="submit"
                 className="w-full h-11 text-base font-medium group"
-                disabled={isLoginPending}
+                disabled={loginMutation.isPending}
               >
-                {isLoginPending ? (
+                {loginMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-background/30 border-t-background animate-spin" />
                     Connexion...
@@ -203,9 +202,30 @@ function LoginForm() {
           </Link>
 
           {/* Footer */}
-          <p className="mt-10 text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} LouraTech. Tous droits réservés.
-          </p>
+          <div className="mt-10 space-y-3">
+            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+              <Link
+                href="/docs/legals/terms"
+                className="hover:text-foreground transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                CGU
+              </Link>
+              <span>•</span>
+              <Link
+                href="/docs/legals/privacy"
+                className="hover:text-foreground transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Confidentialité
+              </Link>
+            </div>
+            <p className="text-center text-xs text-muted-foreground">
+              © {new Date().getFullYear()} LouraTech. Tous droits réservés.
+            </p>
+          </div>
         </div>
       </div>
     </div>

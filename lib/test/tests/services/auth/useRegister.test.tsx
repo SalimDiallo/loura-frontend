@@ -32,6 +32,7 @@ describe('useRegister', () => {
     result.current.mutate({
       email: 'newuser@example.com',
       password: 'SecurePass123',
+      password_confirm: 'SecurePass123',
       first_name: 'New',
       last_name: 'User',
     });
@@ -43,15 +44,16 @@ describe('useRegister', () => {
         email: 'newuser@example.com',
         first_name: 'New',
         last_name: 'User',
-        user_type: 'admin',
       },
       access: 'mock_access_token',
       refresh: 'mock_refresh_token',
     });
 
     // Vérifier que les tokens sont stockés
-    expect(localStorage.getItem('loura_access_token')).toBe('mock_access_token');
-    expect(localStorage.getItem('loura_refresh_token')).toBe('mock_refresh_token');
+    await waitFor(() => {
+      expect(localStorage.getItem('loura_access_token')).toBe('mock_access_token');
+      expect(localStorage.getItem('loura_refresh_token')).toBe('mock_refresh_token');
+    });
   });
 
   it('should fail when email already exists', async () => {
@@ -62,6 +64,7 @@ describe('useRegister', () => {
     result.current.mutate({
       email: 'existing@example.com',
       password: 'SecurePass123',
+      password_confirm: 'SecurePass123',
       first_name: 'Existing',
       last_name: 'User',
     });
@@ -80,6 +83,7 @@ describe('useRegister', () => {
     result.current.mutate({
       email: 'auto@example.com',
       password: 'SecurePass123',
+      password_confirm: 'SecurePass123',
       first_name: 'Auto',
       last_name: 'Login',
     });
@@ -87,8 +91,10 @@ describe('useRegister', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     // Vérifier que l'utilisateur est authentifié
-    expect(localStorage.getItem('loura_access_token')).toBeTruthy();
-    expect(localStorage.getItem('loura_user')).toBeTruthy();
+    await waitFor(() => {
+      expect(localStorage.getItem('loura_access_token')).toBeTruthy();
+      expect(localStorage.getItem('loura_user')).toBeTruthy();
+    });
   });
 
   it('should clean localStorage on registration error', async () => {
@@ -103,6 +109,7 @@ describe('useRegister', () => {
     result.current.mutate({
       email: 'existing@example.com',
       password: 'SecurePass123',
+      password_confirm: 'SecurePass123',
       first_name: 'Fail',
       last_name: 'User',
     });

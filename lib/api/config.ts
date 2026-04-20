@@ -15,9 +15,9 @@ export const API_CONFIG = {
  * Clés de stockage local
  */
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'access_token',
-  REFRESH_TOKEN: 'refresh_token',
-  USER: 'user',
+  ACCESS_TOKEN: 'loura_access_token',
+  REFRESH_TOKEN: 'loura_refresh_token',
+  USER: 'loura_user',
 } as const;
 
 /**

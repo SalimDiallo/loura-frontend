@@ -11,8 +11,8 @@ export function useLogout() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (): Promise<void> => {
-      await authService.logout();
+    mutationFn: async (): Promise<{ message: string }> => {
+      return authService.logout();
     },
 
     onSuccess: () => {

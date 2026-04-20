@@ -5,11 +5,11 @@
 
 // Auth hooks
 export {
-  useCurrentUser, useIsAdmin, useIsAuthenticated, useLogin, useLogout, useRefreshToken, useRegister
+  useCurrentUser, useIsAuthenticated, useLogin, useLogout, useRefreshToken, useRegister
 } from './auth';
 
-export { useAuth, useRequireAdmin, useRequireAuth } from './useAuth';
-export { useUser, useUserOrganization } from './useUser';
+export { useAuth, useRequireAuth } from './useAuth';
+export { useUser } from './useUser';
 
 // Form hooks
 export { useZodForm } from './useZodForm';

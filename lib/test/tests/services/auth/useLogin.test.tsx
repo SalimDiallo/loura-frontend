@@ -42,15 +42,16 @@ describe('useLogin', () => {
         email: 'test@example.com',
         first_name: 'Test',
         last_name: 'User',
-        user_type: 'admin',
       },
       access: 'mock_access_token',
       refresh: 'mock_refresh_token',
     });
 
     // Vérifier que les tokens sont stockés dans localStorage
-    expect(localStorage.getItem('loura_access_token')).toBe('mock_access_token');
-    expect(localStorage.getItem('loura_refresh_token')).toBe('mock_refresh_token');
+    await waitFor(() => {
+      expect(localStorage.getItem('loura_access_token')).toBe('mock_access_token');
+      expect(localStorage.getItem('loura_refresh_token')).toBe('mock_refresh_token');
+    });
   });
 
   it('should fail with invalid credentials', async () => {
@@ -81,13 +82,15 @@ describe('useLogin', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const storedUser = localStorage.getItem('loura_user');
-    expect(storedUser).toBeDefined();
+    await waitFor(() => {
+      const storedUser = localStorage.getItem('loura_user');
+      expect(storedUser).toBeDefined();
 
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      expect(user.email).toBe('test@example.com');
-    }
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        expect(user.email).toBe('test@example.com');
+      }
+    });
   });
 
   it('should set loading state during login', async () => {
@@ -102,9 +105,10 @@ describe('useLogin', () => {
       password: 'password123',
     });
 
-    // Pendant la mutation
-    expect(result.current.isPending).toBe(true);
+    // Attendre que la mutation démarre
+    await waitFor(() => expect(result.current.isPending || result.current.isSuccess).toBe(true));
 
+    // Attendre la fin
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     // Après succès

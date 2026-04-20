@@ -1,23 +1,22 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  authService,
-  type UnifiedUser,
-} from '@/lib/services/auth/auth.service';
+import { authService } from '@/lib/services/auth/auth.service';
+import type { BaseUser } from '@/lib/types';
 
 /**
  * Hook pour récupérer l'utilisateur courant
- * Avec cache et auto-refetch
+ * Utilise le cache TanStack Query avec auto-refetch
  */
 export function useCurrentUser() {
+  const hasToken =
+    typeof window !== 'undefined' ? !!localStorage.getItem('loura_access_token') : false;
+
   return useQuery({
     queryKey: ['currentUser'],
-    queryFn: async (): Promise<UnifiedUser> => {
-      // Vérifier si on a un token
-      const token = typeof window !== 'undefined'
-        ? localStorage.getItem('loura_access_token')
-        : null;
+    queryFn: async (): Promise<BaseUser> => {
+      const token =
+        typeof window !== 'undefined' ? localStorage.getItem('loura_access_token') : null;
 
       if (!token) {
         throw new Error('No access token found');
@@ -27,9 +26,7 @@ export function useCurrentUser() {
     },
 
     // Ne fetch que si on a un token
-    enabled: typeof window !== 'undefined'
-      ? !!localStorage.getItem('loura_access_token')
-      : false,
+    enabled: hasToken,
 
     // Rafraîchir les données toutes les 2 minutes
     staleTime: 2 * 60 * 1000,
@@ -54,18 +51,6 @@ export function useIsAuthenticated() {
   return {
     isAuthenticated: !!user,
     isLoading,
-    user,
-  };
-}
-
-/**
- * Hook utilitaire pour vérifier si l'utilisateur est admin
- */
-export function useIsAdmin() {
-  const { data: user } = useCurrentUser();
-
-  return {
-    isAdmin: user?.user_type === 'admin',
     user,
   };
 }
