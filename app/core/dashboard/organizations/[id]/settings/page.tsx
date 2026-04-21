@@ -61,7 +61,7 @@ function ColorInput({
   return (
     <div className="flex items-center gap-3">
       <div
-        className="h-9 w-9 rounded-lg border border-border shadow-sm cursor-pointer relative overflow-hidden shrink-0"
+        className="h-9 w-9 rounded-lg shadow-sm cursor-pointer relative overflow-hidden shrink-0"
         style={{ backgroundColor: value }}
       >
         <input
@@ -223,7 +223,7 @@ export default function OrganizationSettingsPage() {
       </div>
 
       {/* Section: Branding */}
-      <Card className="border shadow-sm p-5 space-y-5">
+      <Card className="p-5 bg-muted/30 space-y-5">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Palette className="h-4 w-4 text-muted-foreground" />
           Branding
@@ -290,7 +290,7 @@ export default function OrganizationSettingsPage() {
       </Card>
 
       {/* Section: Coordonnées */}
-      <Card className="border shadow-sm p-5 space-y-4">
+      <Card className="p-5 bg-muted/30 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <MapPin className="h-4 w-4 text-muted-foreground" />
           Coordonnées
@@ -351,7 +351,7 @@ export default function OrganizationSettingsPage() {
       </Card>
 
       {/* Section: Fiscal */}
-      <Card className="border shadow-sm p-5 space-y-4">
+      <Card className="p-5 bg-muted/30 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Receipt className="h-4 w-4 text-muted-foreground" />
           Informations fiscales
@@ -384,7 +384,7 @@ export default function OrganizationSettingsPage() {
       </Card>
 
       {/* Section: Documents */}
-      <Card className="border shadow-sm p-5 space-y-4">
+      <Card className="p-5 bg-muted/30 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <FileText className="h-4 w-4 text-muted-foreground" />
           Documents (PDF)

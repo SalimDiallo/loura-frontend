@@ -265,10 +265,10 @@
   --card-foreground: #182132;
   --popover: #ffffff;
   --popover-foreground: #222d3b;
-  --primary: #e2b100;
+  --primary: #ffd15d;
   --primary-foreground: #f6f6f4;
   --success: #14cc57;
-  --secondary: #0068ca;
+  --secondary: #f8f8f8;
   --secondary-foreground: #f6f6f4;
   --muted: #ece8e2;
   --muted-foreground: #766c60;
@@ -286,14 +286,14 @@
   --chart-4: #d3bc8e;
   --chart-5: #b5bec9;
   --radius: 0.625rem;
-  --sidebar: #ece8e2;
+  --sidebar: #f6f6f4;
   --sidebar-foreground: #232c3a;
-  --sidebar-primary: #aa7c4f;
+  --sidebar-primary: #232c3a;
   --sidebar-primary-foreground: #f6f6f4;
-  --sidebar-accent: #e89c69;
-  --sidebar-accent-foreground: #945841;
-  --sidebar-border: #e2dcc5;
-  --sidebar-ring: #cba670;
+  --sidebar-accent: #ece8e2;
+  --sidebar-accent-foreground: #232c3a;
+  --sidebar-border: #e8e4dd;
+  --sidebar-ring: #d0ccc5;
 }
 
 /* Dark mode: sobriété neutre et chaleur */
@@ -305,10 +305,10 @@
   --popover: #24232e;
   --popover-foreground: #edece6;
   --success: #14cc57;
-  --primary: #e2b100bb;
+  --primary: hwb(48 0% 62% / 0.733);
   /* Même couleur que clair, chaleur sobre */
   --primary-foreground: #191922;
-  --secondary: #000f99;
+  --secondary: #f3b414;
   /* Sombre, neutre, moins bleu */
   --secondary-foreground: #edece6;
   --muted: #262727;
@@ -325,14 +325,14 @@
   --chart-3: #e89c69;
   --chart-4: #aa7c4f;
   --chart-5: #505969;
-  --sidebar: #23232d;
+  --sidebar: #191922;
   --sidebar-foreground: #edece6;
-  --sidebar-primary: #aa7c4f;
-  --sidebar-primary-foreground: #edece6;
-  --sidebar-accent: #e89c69;
-  --sidebar-accent-foreground: #945841;
-  --sidebar-border: #382e24;
-  --sidebar-ring: #cba670;
+  --sidebar-primary: #edece6;
+  --sidebar-primary-foreground: #191922;
+  --sidebar-accent: #2a2a35;
+  --sidebar-accent-foreground: #edece6;
+  --sidebar-border: #2e2e3a;
+  --sidebar-ring: #3a3a48;
 }
 
 @layer base {

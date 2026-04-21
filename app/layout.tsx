@@ -1,6 +1,7 @@
 "use client";
 import { QueryProvider } from "@/components/providers";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { JetBrains_Mono, Playfair_Display, Space_Grotesk } from "next/font/google";
 import { useRouter } from "next/navigation";
@@ -58,7 +59,6 @@ export default function RootLayout({
     return () => document.removeEventListener("keydown", handleGlobalKeyDown);
   }, [handleGlobalKeyDown]);
 
-
   return (
     <html
       lang="en"
@@ -71,7 +71,10 @@ export default function RootLayout({
     >
       <body>
         <QueryProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            {children}
+            <Toaster richColors position='top-center' />
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>

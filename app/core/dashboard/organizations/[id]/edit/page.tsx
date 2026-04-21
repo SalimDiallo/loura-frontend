@@ -140,11 +140,11 @@ export default function EditOrganizationPage() {
   if (isLoading) {
     return (
       <div className="px-4 py-8 max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-border/40">
-          <Skeleton className="h-8 w-8 rounded" />
+        <div className="flex items-center gap-3 pb-4">
+          <Skeleton className="h-8 w-8 rounded-lg" />
           <Skeleton className="h-6 w-52" />
         </div>
-        <Card className="p-6 border space-y-6">
+        <Card className="p-6 bg-muted/30 space-y-6">
           <div className="flex items-center gap-4">
             <Skeleton className="h-20 w-20 rounded-xl" />
             <div className="space-y-2">
@@ -180,7 +180,7 @@ export default function EditOrganizationPage() {
   return (
     <div className="px-4 py-8 max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-4 border-b border-border/40">
+      <div className="flex items-center gap-3 pb-4">
         <Button
           variant="ghost"
           size="icon"
@@ -196,7 +196,7 @@ export default function EditOrganizationPage() {
       </div>
 
       {/* Form */}
-      <Card className="border shadow-sm p-6 space-y-6">
+      <Card className="p-6 bg-muted/30 space-y-6">
         {/* Logo */}
         <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-3">
@@ -261,7 +261,7 @@ export default function EditOrganizationPage() {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-border/40" />
+        <div className="h-px bg-border/20" />
 
         {/* Name */}
         <div className="space-y-1.5">
@@ -298,7 +298,7 @@ export default function EditOrganizationPage() {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-border/40" />
+        <div className="h-px bg-border/20" />
 
         {/* Country (QuickSelect) */}
         <div className="space-y-1.5">

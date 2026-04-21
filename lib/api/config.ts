@@ -60,5 +60,36 @@ export const API_ENDPOINTS = {
     },
   },
 
+  // ── HR (Human Resources) ────────────────────────────────────────────────────
+  HR: {
+    // Permissions
+    PERMISSIONS: {
+      LIST: '/hr/permissions/',
+    },
+    // Rôles
+    ROLES: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/roles/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/roles/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/roles/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/roles/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/roles/${id}/`,
+    },
+    // Membres
+    MEMBERS: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/members/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/members/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/members/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/members/${id}/`,
+      MY_MEMBERSHIPS: '/hr/my-memberships/',
+    },
+    // Invitations
+    INVITATIONS: {
+      SEND: (orgId: string) => `/hr/organizations/${orgId}/invitations/`,
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/invitations/`,
+      PENDING: '/hr/invitations/pending/',
+      ACCEPT: (id: string) => `/hr/invitations/${id}/accept/`,
+      DECLINE: (id: string) => `/hr/invitations/${id}/decline/`,
+    },
+  },
 
 } as const;

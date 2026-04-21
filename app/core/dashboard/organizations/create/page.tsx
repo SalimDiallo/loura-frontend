@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { QuickSelect, type QuickSelectItem } from "@/components/ui/quick-select";
-import { useCategories, useCreateOrganization, useUploadOrganizationLogo } from "@/lib/hooks/core";
 import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
+import { useCategories, useCreateOrganization, useUploadOrganizationLogo } from "@/lib/hooks/core";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -156,8 +156,8 @@ export default function CreateOrganizationPage() {
                   step > s.id
                     ? "bg-primary text-primary-foreground"
                     : step === s.id
-                    ? "bg-primary/15 text-primary border-2 border-primary"
-                    : "bg-muted text-muted-foreground"
+                      ? "bg-primary/15 text-primary border-2 border-primary"
+                      : "bg-muted text-muted-foreground"
                 )}
               >
                 {step > s.id ? (
@@ -179,7 +179,7 @@ export default function CreateOrganizationPage() {
         </div>
 
         {/* Card */}
-        <Card className="p-6 border shadow-sm">
+        <Card className="p-6 bg-muted/30">
           {/* Step 1: Name */}
           {step === 1 && (
             <div className="space-y-5">

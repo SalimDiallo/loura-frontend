@@ -15,3 +15,6 @@ export type {
 // Type guards pour l'authentification
 export { isBaseUser, isLoginResponse } from './auth/auth';
 
+// Types HR (employés, rôles, permissions, invitations)
+export * from './hr';
+

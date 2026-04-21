@@ -3,32 +3,32 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-    useOrganizations,
-    useToggleOrganization,
+  useOrganizations,
+  useToggleOrganization,
 } from "@/lib/hooks/core";
 import type { Organization } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
-    Building2,
-    ChevronLeft,
-    ChevronRight,
-    Loader2,
-    MoreHorizontal,
-    Pencil,
-    Plus,
-    Power,
-    Search,
-    Settings,
-    X
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Power,
+  Search,
+  Settings,
+  X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -88,23 +88,23 @@ export default function OrganizationsPage() {
   if (isLoading) {
     return (
       <div className="px-4 py-8 max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-end pb-4 border-b border-border/40">
+        <div className="flex justify-between items-end pb-4">
           <div className="space-y-2">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-4 w-24" />
           </div>
-          <Skeleton className="h-9 w-28" />
+          <Skeleton className="h-9 w-28 rounded-lg" />
         </div>
-        <Skeleton className="h-10 w-full" />
-        <Card className="border p-0 overflow-hidden">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Card className="p-0 overflow-hidden bg-muted/30">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3.5 p-4 border-b border-border/30 last:border-0">
+            <div key={i} className="flex items-center gap-3.5 p-4">
               <Skeleton className="h-10 w-10 rounded-lg" />
               <div className="space-y-1.5 flex-1">
                 <Skeleton className="h-4 w-32" />
                 <Skeleton className="h-3 w-20" />
               </div>
-              <Skeleton className="h-8 w-8 rounded" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
             </div>
           ))}
         </Card>
@@ -119,7 +119,7 @@ export default function OrganizationsPage() {
   return (
     <div className="px-4 py-8 max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/40 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Organisations</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -161,9 +161,9 @@ export default function OrganizationsPage() {
       </div>
 
       {/* List */}
-      <Card className="border shadow-sm overflow-hidden bg-card">
+      <Card className="overflow-hidden bg-muted/30 p-0">
         {organizations.length > 0 ? (
-          <div className="divide-y divide-border/40">
+          <div>
             {organizations.map((org) => (
               <div
                 key={org.id}

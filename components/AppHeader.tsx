@@ -3,44 +3,43 @@ import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { AvatarProfileDropDown } from "./services/auth/AvatarProfileDropDown";
 import { Button, ThemeToggle } from "./ui";
-import { Command } from "./ui/command";
 import Logo from "./ui/Logo";
 // import { SidebarTrigger } from "./ui/sidebar"; // Removed to prevent SidebarContext error
 
 export default function AppHeader() {
-    return (
-      <header
-        className={cn(
-          "sticky top-0 z-40",
-          "flex h-16 shrink-0 items-center gap-4",
-          "px-4 sm:px-6",
-          "bg-background/80 backdrop-blur-xl",
-          "border-b border-border/40"
-        )}
-      >
-        {/* Left section */}
-        <div className="flex items-center gap-3">
-          {/* <SidebarTrigger className="size-9" /> */}
-          {/* Temporarily replaced SidebarTrigger with a placeholder icon/button to avoid context error */}
-          <Logo className="w-40" />
-          {/* Separator */}
-          <div className="hidden sm:block h-6 w-px bg-border/60" />
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-40",
+        "flex h-16 shrink-0 items-center gap-4",
+        "px-4 sm:px-6",
+        "bg-background/80 backdrop-blur-xl",
+        "border-b border-border/40"
+      )}
+    >
+      {/* Left section */}
+      <div className="flex items-center gap-3">
+        {/* <SidebarTrigger className="size-9" /> */}
+        {/* Temporarily replaced SidebarTrigger with a placeholder icon/button to avoid context error */}
+        <Logo className="w-40" />
+        {/* Separator */}
+        <div className="hidden sm:block h-6 w-px bg-border/60" />
 
-          {/* Separator */}
-          <div className="hidden lg:block h-6 w-px bg-border/60" />
+        {/* Separator */}
+        <div className="hidden lg:block h-6 w-px bg-border/60" />
 
-          {/* Page title - breadcrumb style */}
-          <div className="hidden lg:flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">/</span>
-            <span className="font-medium text-foreground">
-              {/* {getPageTitle()} */}
-            </span>
-          </div>
+        {/* Page title - breadcrumb style */}
+        <div className="hidden lg:flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">/</span>
+          <span className="font-medium text-foreground">
+            {/* {getPageTitle()} */}
+          </span>
         </div>
+      </div>
 
-        {/* Center section - Search (desktop) */}
-        <div className="flex-1 flex justify-center">
-          <button
+      {/* Center section - Search (desktop) */}
+      <div className="flex-1 flex justify-center">
+        {/* <button
             className={cn(
               "hidden md:flex items-center gap-3",
               "w-full max-w-md",
@@ -59,28 +58,28 @@ export default function AppHeader() {
               <Command className="size-3" />
               <span>K</span>
             </kbd>
-          </button>
-        </div>
+          </button> */}
+      </div>
 
-        {/* Right section */}
-        <div className="flex items-center gap-2">
-          {/* Search button (mobile) */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden size-9 rounded-xl"
-          >
-            <Search className="size-4" />
-          </Button>
+      {/* Right section */}
+      <div className="flex items-center gap-2">
+        {/* Search button (mobile) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden size-9 rounded-xl"
+        >
+          <Search className="size-4" />
+        </Button>
 
-          {/* Theme toggle */}
-          <ThemeToggle />
+        {/* Theme toggle */}
+        <ThemeToggle />
 
-          {/* Separator */}
-          <div className="h-6 w-px bg-border/60 mx-1" />
+        {/* Separator */}
+        <div className="h-6 w-px bg-border/60 mx-1" />
 
-          {/* AI Assistant button */}
-          {/* <Button
+        {/* AI Assistant button */}
+        {/* <Button
             variant={chatOpen ? "default" : "outline"}
             size="sm"
             onClick={() => setChatOpen((prev) => !prev)}
@@ -111,8 +110,8 @@ export default function AppHeader() {
             )}
           </Button> */}
 
-          <AvatarProfileDropDown/>
-        </div>
-      </header>
-    );
+        <AvatarProfileDropDown />
+      </div>
+    </header>
+  );
 }
