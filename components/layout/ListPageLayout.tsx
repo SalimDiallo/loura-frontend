@@ -1,6 +1,4 @@
-"use client";
-
-import { Button } from "@/components/ui/button";
+import { PageHeader, PageHeaderAction } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,27 +9,13 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import React, { useState } from "react";
 import { FaFilter, FaSearch, FaTimes } from "react-icons/fa";
 
 /* --------------------------
    PATTERN COMMUN POUR PAGES DE LISTES 
 -------------------------- */
-
-// En-tête réutilisable d'action (bouton + icône + label)
-export function ListHeaderAction({ label, icon, onClick, variant = "default" }: {
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-  variant?: "default" | "outline" | "ghost" | "secondary";
-}) {
-  return (
-    <Button className="gap-2" variant={variant} onClick={onClick}>
-      {icon}
-      {label}
-    </Button>
-  );
-}
 
 // Statistique réutilisable pour les pages de listes
 export function ListStat({ label, value, icon }: {
@@ -76,7 +60,6 @@ export function ListSearchFilters({
     setPopoverVisible(filtersOpen);
   }, [filtersOpen]);
 
-  // Inspired by shadcn/ui popover primitive, but implemented minimal custom
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
       <div className="relative flex-1">
@@ -118,11 +101,10 @@ export function ListSearchFilters({
         </Button>
         {popoverVisible && (
           <div
-            className="absolute z-50 mt-1 right-0 w-72 bg-popover border  p-4"
+            className="absolute z-50 mt-1 right-0 w-72 bg-popover border p-4 shadow-md rounded-md"
             style={{ minWidth: "16rem" }}
             tabIndex={-1}
             onBlur={(e) => {
-              // If the newly focused element is outside this popover, close it
               if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                 setPopoverVisible(false);
                 onFiltersOpenChange(false);
@@ -137,7 +119,7 @@ export function ListSearchFilters({
   );
 }
 
-// Table générique basée sur le composant Table de @components/ui/table.tsx
+// Table générique
 export function ListTable({
   columns,
   data,
@@ -173,7 +155,7 @@ export function ListTable({
   );
 }
 
-// Colonne de table générique (à utiliser avec ListTable)
+// Colonne de table générique
 export function ListTableColumn({
   header,
   children,
@@ -215,35 +197,35 @@ export function ListPagination({
         Page {meta.currentPage} sur {meta.totalPages} ({meta.totalItems} au total)
       </div>
       <nav className="flex items-center gap-1">
-        <Button size="icon" variant="ghost" disabled={!meta.hasPreviousPage} onClick={onPrev}>
+        <Button size="icon" variant="ghost" disabled={!meta.hasPreviousPage} onClick={onPrev} className="h-8 w-8">
           {"<"}
         </Button>
         {meta.currentPage > 2 && (
-          <Button size="icon" variant="ghost" onClick={() => onPageChange(1)}>
+          <Button size="icon" variant="ghost" onClick={() => onPageChange(1)} className="h-8 w-8">
             1
           </Button>
         )}
-        {meta.currentPage > 3 && <span className="px-1">…</span>}
+        {meta.currentPage > 3 && <span className="px-1 text-muted-foreground">…</span>}
         {meta.currentPage > 1 && (
-          <Button size="icon" variant="ghost" onClick={() => onPageChange(meta.currentPage - 1)}>
+          <Button size="icon" variant="ghost" onClick={() => onPageChange(meta.currentPage - 1)} className="h-8 w-8">
             {meta.currentPage - 1}
           </Button>
         )}
-        <Button size="icon" variant="default" disabled>
+        <Button size="icon" variant="secondary" disabled className="h-8 w-8">
           {meta.currentPage}
         </Button>
         {meta.currentPage < meta.totalPages && (
-          <Button size="icon" variant="ghost" onClick={() => onPageChange(meta.currentPage + 1)}>
+          <Button size="icon" variant="ghost" onClick={() => onPageChange(meta.currentPage + 1)} className="h-8 w-8">
             {meta.currentPage + 1}
           </Button>
         )}
-        {meta.currentPage < meta.totalPages - 2 && <span className="px-1">…</span>}
+        {meta.currentPage < meta.totalPages - 2 && <span className="px-1 text-muted-foreground">…</span>}
         {meta.currentPage < meta.totalPages - 1 && (
-          <Button size="icon" variant="ghost" onClick={() => onPageChange(meta.totalPages)}>
+          <Button size="icon" variant="ghost" onClick={() => onPageChange(meta.totalPages)} className="h-8 w-8">
             {meta.totalPages}
           </Button>
         )}
-        <Button size="icon" variant="ghost" disabled={!meta.hasNextPage} onClick={onNext}>
+        <Button size="icon" variant="ghost" disabled={!meta.hasNextPage} onClick={onNext} className="h-8 w-8">
           {">"}
         </Button>
       </nav>
@@ -251,7 +233,7 @@ export function ListPagination({
   );
 }
 
-// Layout principal de page de liste (pattern commun)
+// Layout principal de page de liste
 export function ListPageLayout({
   title,
   icon,
@@ -261,45 +243,48 @@ export function ListPageLayout({
   searchFilters,
   content,
 }: {
-  title: React.ReactNode;
-  icon?: React.ReactNode;
-  description?: React.ReactNode;
-  headerActions?: React.ReactNode[];
+  title: string;
+  icon?: any;
+  description?: string;
+  headerActions?: PageHeaderAction[];
   stats?: React.ReactNode[];
   searchFilters?: React.ReactNode;
   content: React.ReactNode;
 }) {
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            {icon} {title}
-          </h1>
-          {description && (
-            <p className="text-muted-foreground mt-1">{description}</p>
-          )}
-        </div>
-        <div className="flex gap-2">{headerActions.map((action, i) => action)}</div>
-      </div>
-      {/* Stats */}
+      <PageHeader
+        title={title}
+        subtitle={description}
+        icon={icon}
+        actions={headerActions}
+      />
+
       {stats && stats.length > 0 && (
         <div className="grid gap-4 md:grid-cols-3">
-          {stats.map((stat, i) => stat)}
+          {stats.map((stat, i) => (
+            <React.Fragment key={i}>{stat}</React.Fragment>
+          ))}
         </div>
       )}
-      {/* Search & Filters */}
-      {searchFilters && (
+
+      {searchFilters ? (
         <Card>
           <CardHeader>
             <CardTitle>Liste</CardTitle>
             <CardDescription>Recherchez et gérez vos éléments</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">{searchFilters}{content}</CardContent>
+          <CardContent className="space-y-4">
+            {searchFilters}
+            {content}
+          </CardContent>
         </Card>
+      ) : (
+        content
       )}
-      {!searchFilters && content}
     </div>
   );
 }
+
+// Re-export ListHeaderAction equivalent from PageHeader if needed, 
+// but we prefer using PageHeaderAction interface now.

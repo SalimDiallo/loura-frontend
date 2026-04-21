@@ -1,7 +1,7 @@
 "use client";
 
 import { BadgeStatus } from "@/components/BadgeStatus";
-import { ListHeaderAction, ListPageLayout, ListPagination, ListSearchFilters, ListStat, ListTable, ListTableColumn } from "@/components/layout/ListPageLayout";
+import { ListPageLayout, ListPagination, ListSearchFilters, ListStat, ListTable, ListTableColumn } from "@/components/layout/ListPageLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +50,7 @@ export default function EmployeesPage() {
     }
   );
 
-  // Filtrage local (uniquement sur la page courante)
+  // ... (filtrage local logic unchanged)
   const roleOptions: { name: string; id: string }[] = Array.from(
     new Map(
       (members || []).filter(Boolean).map(m => m.role && { id: m.role?.id, name: m.role?.name })
@@ -104,22 +104,20 @@ export default function EmployeesPage() {
   return (
     <ListPageLayout
       title="Employés"
-      icon={<FaUsers className="h-8 w-8" />}
+      icon={FaUsers}
       description="Gérez les membres de votre organisation"
       headerActions={[
-        <ListHeaderAction
-          key="view-invitations"
-          label="Voir les invitations"
-          icon={<FaEye className="h-4 w-4" />}
-          onClick={() => router.push(`/organisation/${orgId}/hr/employees/invitations`)}
-          variant="outline"
-        />,
-        <ListHeaderAction
-          key="add-employee"
-          label="Ajouter un employé"
-          icon={<FaUserPlus className="h-4 w-4" />}
-          onClick={() => router.push(`/organisation/${orgId}/hr/employees/invite`)}
-        />
+        {
+          label: "Voir les invitations",
+          icon: FaEye,
+          onClick: () => router.push(`/organisation/${orgId}/hr/employees/invitations`),
+          variant: "outline"
+        },
+        {
+          label: "Ajouter un employé",
+          icon: FaUserPlus,
+          onClick: () => router.push(`/organisation/${orgId}/hr/employees/invite`),
+        }
       ]}
       stats={[
         <ListStat

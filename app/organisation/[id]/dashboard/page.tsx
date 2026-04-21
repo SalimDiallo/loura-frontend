@@ -5,6 +5,7 @@ import { useOrganization } from "@/lib/hooks/core";
 import { Calendar, Clock, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 
 // Fonctions améliorées pour afficher l'heure précise + salutation dynamique
 function getCreativeDateTimeInfo() {
@@ -23,11 +24,9 @@ function getCreativeDateTimeInfo() {
     .toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   // Affichage de l'heure à la fois en numérique et en version parlée
-  // (ex : "quatorze heures trente-sept" pour "14:37")
   function timeToText(date: Date) {
     const heures = date.getHours();
     const minutes = date.getMinutes();
-    // Cartographie des valeurs de base, simplifiée
     const nums = [
       "zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept",
       "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze",
@@ -48,7 +47,7 @@ function getCreativeDateTimeInfo() {
   }
   const timeSpoken = timeToText(now);
 
-  // Salutation dynamique selon le moment de la journée, perfectionnée
+  // Salutation dynamique
   const hour = now.getHours();
   let greeting = "";
   if (hour < 6) greeting = "Bonne nuit";
@@ -57,7 +56,6 @@ function getCreativeDateTimeInfo() {
   else if (hour < 22) greeting = "Bonsoir";
   else greeting = "Bonne nuit";
 
-  // Ex : "Bonjour, il est 14:37:05 (quatorze heures trente-sept) – Mardi 2 avril 2024"
   return {
     prettyDate,
     time,
@@ -75,7 +73,6 @@ export default function OrganizationDashboardPage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Mettre à jour l'heure créative chaque seconde pour plus de fraîcheur
     const updateTime = () => setDateTimeInfo(getCreativeDateTimeInfo());
     updateTime();
     intervalRef.current = setInterval(updateTime, 1000);
@@ -84,11 +81,11 @@ export default function OrganizationDashboardPage() {
     };
   }, []);
 
-  // Format org name fallback if necessary
   const formatOrgName = (name: string) =>
     name.replace(/-/g, " ")
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .replace(/(^|\s)\S/g, (l) => l.toUpperCase());
+
   const orgName =
     organization?.name ||
     (typeof orgId === "string" ? formatOrgName(orgId) : "Organisation");
@@ -100,58 +97,61 @@ export default function OrganizationDashboardPage() {
     : null;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] p-8 flex flex-col items-center justify-center bg-background">
-      <div className="max-w-lg w-full flex flex-col items-center gap-6">
-        {/* Agrandir le logo */}
-        <div className="w-50 h-50 border bg-background flex items-center justify-center overflow-hidden">
-          {isLoading ? (
-            <Loader2 className="h-12 w-12 text-muted-foreground animate-spin" />
-          ) : logoUrl ? (
-            <img src={logoUrl} alt={orgName} className="w-full h-full object-contain p-3" />
-          ) : (
-            <span className="text-4xl font-semibold text-muted-foreground">
-              {orgName
-                .split(" ")
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </span>
-          )}
-        </div>
-
-        <h1 className="text-2xl font-semibold">{orgName}</h1>
-
-        {/* Heure créative améliorée + salutation */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="text-muted-foreground text-sm flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            <span className="font-mono tabular-nums">{dateTimeInfo.time}</span>
-            <span className="text-xs text-muted-foreground ml-2 italic hidden md:inline">
-              ({dateTimeInfo.timeSpoken})
-            </span>
+    <div className="min-h-[calc(100vh-4rem)] p-8 flex flex-col items-center justify-center bg-background/50">
+      <div className="max-w-md w-full flex flex-col items-center gap-8">
+        {/* Logo Section */}
+        <div className="relative group">
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+          <div className="relative w-40 h-40 rounded-full border bg-card flex items-center justify-center overflow-hidden shadow-sm">
+            {isLoading ? (
+              <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
+            ) : logoUrl ? (
+              <img src={logoUrl} alt={orgName} className="w-full h-full object-contain p-6" />
+            ) : (
+              <span className="text-5xl font-bold text-primary/20">
+                {orgName
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </span>
+            )}
           </div>
-          <div className="text-muted-foreground text-xs flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            <span className="capitalize">{dateTimeInfo.prettyDate}</span>
+        </div>
+
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">{orgName}</h1>
+          <p className="text-muted-foreground">Tableau de bord de l'organisation</p>
+        </div>
+
+        {/* Date & Time Section */}
+        <div className="flex flex-col items-center gap-4 w-full">
+          <div className="flex items-center gap-6 text-muted-foreground bg-muted/30 px-6 py-3 rounded-full border border-border/50 shadow-inner">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary/60" />
+              <span className="font-mono text-lg tabular-nums font-medium text-foreground">{dateTimeInfo.time}</span>
+            </div>
+            <div className="w-px h-4 bg-border"></div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary/60" />
+              <span className="capitalize text-sm">{dateTimeInfo.prettyDate}</span>
+            </div>
           </div>
-          <div className="text-primary font-medium text-base">{dateTimeInfo.greeting} 👋</div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-medium">{dateTimeInfo.greeting}</span>
+            <span className="text-2xl animate-bounce">👋</span>
+          </div>
         </div>
 
-        <div className="bg-card border p-5 rounded-lg text-center w-full shadow-none">
-          <p className="text-base text-muted-foreground">
-            Accédez à la gestion de votre organisation ou à ses paramètres.
-          </p>
-        </div>
-
-        {/* 
-        <Link href={`/apps/${slug}/dashboard/settings`}>
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Settings className="h-4 w-4" />
-            Paramètres
-          </Button>
-        </Link>
-        */}
+        <Card className="w-full border-dashed bg-transparent">
+          <CardContent className="pt-6 text-center">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Utilisez la barre latérale pour naviguer entre les différents modules de gestion de votre organisation.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

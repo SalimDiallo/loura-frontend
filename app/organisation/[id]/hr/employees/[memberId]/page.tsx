@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeStatus } from "@/components/BadgeStatus";
+import { DetailPageLayout } from "@/components/layout/DetailPageLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +22,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMember, useRemoveMember, useUpdateMember } from "@/lib/hooks/hr";
 import {
-    ArrowLeft,
     Calendar,
     Check,
     Mail,
@@ -122,114 +122,65 @@ export default function EmployeeDetailPage() {
   const { user } = employee;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header avec bouton retour */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push(`/organisation/${orgId}/hr/employees`)}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Détails de l'employé</h1>
-          <p className="text-muted-foreground mt-1">
-            Consultez et gérez les informations de l'employé
-          </p>
+    <DetailPageLayout
+      title={`${user.first_name} ${user.last_name}`}
+      subtitle="Consultez et gérez les informations de l'employé"
+      backLink={`/organisation/${orgId}/hr/employees`}
+      badge={
+        <div className="flex items-center gap-2">
+          <BadgeStatus status={is_active} />
+          {role && (
+            <Badge variant="outline" className="gap-1">
+              <Shield className="h-3 w-3" />
+              {role.name}
+            </Badge>
+          )}
         </div>
-      </div>
-
-      {/* Carte principale - Informations employé */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              {/* Avatar */}
-              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={`${user.first_name} ${user.last_name}`}
-                    className="h-20 w-20 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-2xl font-bold text-primary">
-                    {user.first_name[0]}
-                    {user.last_name[0]}
-                  </span>
-                )}
-              </div>
-
-              {/* Nom et statut */}
-              <div>
-                <CardTitle className="text-2xl">
-                  {user.first_name} {user.last_name}
-                </CardTitle>
-                <div className="flex items-center gap-2 mt-2">
-                <BadgeStatus status={is_active} withIcon />
-                  {role && (
-                    <Badge variant="outline" className="gap-1">
-                      <Shield className="h-3 w-3" />
-                      {role.name}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  router.push(`/organisation/${orgId}/hr/employees/${memberId}/edit`)
-                }
-                className="gap-2"
-              >
-                <FaEdit className="h-4 w-4" />
-                Modifier
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setConfirmToggleStatusOpen(true)}
-                className="gap-2"
-              >
-                {is_active ? (
-                  <>
-                    <UserX className="h-4 w-4" />
-                    Désactiver
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className="h-4 w-4" />
-                    Activer
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmRemoveOpen(true)}
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Retirer
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
+      }
+      avatar={
+        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-border shadow-sm">
+          {user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={`${user.first_name} ${user.last_name}`}
+              className="h-20 w-20 rounded-full object-cover"
+            />
+          ) : (
+            <span className="text-2xl font-bold text-primary">
+              {user.first_name[0]}
+              {user.last_name[0]}
+            </span>
+          )}
+        </div>
+      }
+      actions={[
+        {
+          label: "Modifier",
+          icon: FaEdit,
+          onClick: () => router.push(`/organisation/${orgId}/hr/employees/${memberId}/edit`),
+          variant: "outline",
+        },
+        {
+          label: is_active ? "Désactiver" : "Activer",
+          icon: is_active ? UserX : UserCheck,
+          onClick: () => setConfirmToggleStatusOpen(true),
+          variant: "outline",
+        },
+        {
+          label: "Retirer",
+          icon: Trash2,
+          onClick: () => setConfirmRemoveOpen(true),
+          variant: "destructive",
+        }
+      ]}
+    >
       {/* Grille d'informations */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Informations générales */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <User className="h-4 w-4" />
               Informations générales
             </CardTitle>
             <CardDescription>
@@ -237,40 +188,48 @@ export default function EmployeeDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{user.email}</p>
+                  <p className="text-xs text-muted-foreground uppercase font-medium">Email</p>
+                  <p className="text-sm font-medium">{user.email}</p>
                 </div>
               </div>
 
               {user.phone && (
                 <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Téléphone</p>
-                    <p className="font-medium">{user.phone}</p>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">Téléphone</p>
+                    <p className="text-sm font-medium">{user.phone}</p>
                   </div>
                 </div>
               )}
 
               {employee.employee_id && (
                 <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">ID Employé</p>
-                    <p className="font-medium font-mono">{employee.employee_id}</p>
+                    <p className="text-xs text-muted-foreground uppercase font-medium">ID Employé</p>
+                    <p className="text-sm font-medium font-mono">{employee.employee_id}</p>
                   </div>
                 </div>
               )}
 
               <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Date d'arrivée</p>
-                  <p className="font-medium">
+                  <p className="text-xs text-muted-foreground uppercase font-medium">Date d'arrivée</p>
+                  <p className="text-sm font-medium">
                     {new Date(joined_at).toLocaleDateString("fr-FR", {
                       year: "numeric",
                       month: "long",
@@ -286,8 +245,8 @@ export default function EmployeeDetailPage() {
         {/* Rôle et Permissions */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Shield className="h-4 w-4" />
               Rôle et Permissions
             </CardTitle>
             <CardDescription>
@@ -302,14 +261,14 @@ export default function EmployeeDetailPage() {
                 <div className="border rounded-lg p-3 bg-muted/30">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{role.name}</p>
+                      <p className="font-medium text-sm">{role.name}</p>
                       {role.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {role.description}
                         </p>
                       )}
                     </div>
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="text-xs">
                       {role.permissions.length} permission
                       {role.permissions.length > 1 ? "s" : ""}
                     </Badge>
@@ -350,7 +309,7 @@ export default function EmployeeDetailPage() {
             {/* Total des permissions */}
             <div className="border-t pt-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Total des permissions</p>
+                <p className="text-sm font-medium text-muted-foreground">Total des permissions</p>
                 <Badge variant="secondary" className="gap-1">
                   <Check className="h-3 w-3" />
                   {all_permissions.length}
@@ -358,14 +317,14 @@ export default function EmployeeDetailPage() {
               </div>
               {all_permissions.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {all_permissions.slice(0, 8).map((codename) => (
-                    <Badge key={codename} variant="outline" className="text-xs">
-                      {codename}
+                  {all_permissions.slice(0, 6).map((codename) => (
+                    <Badge key={codename} variant="outline" className="text-[10px] uppercase tracking-wider">
+                      {codename.split('.').pop()?.replace(/_/g, ' ')}
                     </Badge>
                   ))}
-                  {all_permissions.length > 8 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{all_permissions.length - 8} autres
+                  {all_permissions.length > 6 && (
+                    <Badge variant="outline" className="text-[10px]">
+                      +{all_permissions.length - 6}
                     </Badge>
                   )}
                 </div>
@@ -375,7 +334,7 @@ export default function EmployeeDetailPage() {
         </Card>
       </div>
 
-      {/* Dialog - Confirmer changement de statut */}
+      {/* Dialogs */}
       <Dialog
         open={confirmToggleStatusOpen}
         onOpenChange={setConfirmToggleStatusOpen}
@@ -412,7 +371,6 @@ export default function EmployeeDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog - Confirmer suppression */}
       <Dialog open={confirmRemoveOpen} onOpenChange={setConfirmRemoveOpen}>
         <DialogContent>
           <DialogHeader>
@@ -440,6 +398,6 @@ export default function EmployeeDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DetailPageLayout>
   );
 }
