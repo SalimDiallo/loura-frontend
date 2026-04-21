@@ -3,7 +3,6 @@
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { DetailPageLayout } from "@/components/layout/DetailPageLayout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
@@ -19,7 +18,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoField } from "@/components/ui/info-field";
+import { EntityAvatar } from "@/components/ui/entity-avatar";
+import { PermissionsBadgeList } from "@/components/ui/permissions-badge-list";
 import { useMember, useRemoveMember, useUpdateMember } from "@/lib/hooks/hr";
 import {
     Calendar,
@@ -120,10 +123,11 @@ export default function EmployeeDetailPage() {
 
   const { employee, role, extra_permissions, all_permissions, is_active, joined_at } = member;
   const { user } = employee;
+  const fullName = `${user.first_name} ${user.last_name}`;
 
   return (
     <DetailPageLayout
-      title={`${user.first_name} ${user.last_name}`}
+      title={fullName}
       subtitle="Consultez et gérez les informations de l'employé"
       backLink={`/organisation/${orgId}/hr/employees`}
       badge={
@@ -138,20 +142,7 @@ export default function EmployeeDetailPage() {
         </div>
       }
       avatar={
-        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-border shadow-sm">
-          {user.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              alt={`${user.first_name} ${user.last_name}`}
-              className="h-20 w-20 rounded-full object-cover"
-            />
-          ) : (
-            <span className="text-2xl font-bold text-primary">
-              {user.first_name[0]}
-              {user.last_name[0]}
-            </span>
-          )}
-        </div>
+        <EntityAvatar src={user.avatar_url} fallback={fullName} size="xl" />
       }
       actions={[
         {
@@ -187,58 +178,19 @@ export default function EmployeeDetailPage() {
               Coordonnées et informations de base
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">Email</p>
-                  <p className="text-sm font-medium">{user.email}</p>
-                </div>
-              </div>
-
-              {user.phone && (
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase font-medium">Téléphone</p>
-                    <p className="text-sm font-medium">{user.phone}</p>
-                  </div>
-                </div>
-              )}
-
-              {employee.employee_id && (
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase font-medium">ID Employé</p>
-                    <p className="text-sm font-medium font-mono">{employee.employee_id}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase font-medium">Date d'arrivée</p>
-                  <p className="text-sm font-medium">
-                    {new Date(joined_at).toLocaleDateString("fr-FR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <CardContent className="space-y-6">
+            <InfoField label="Email" value={user.email} icon={Mail} />
+            {user.phone && <InfoField label="Téléphone" value={user.phone} icon={Phone} />}
+            {employee.employee_id && <InfoField label="ID Employé" value={employee.employee_id} icon={User} />}
+            <InfoField 
+              label="Date d'arrivée" 
+              value={new Date(joined_at).toLocaleDateString("fr-FR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })} 
+              icon={Calendar} 
+            />
           </CardContent>
         </Card>
 
@@ -253,26 +205,17 @@ export default function EmployeeDetailPage() {
               Accès et droits de l'employé
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {/* Rôle assigné */}
-            <div>
-              <p className="text-sm font-medium mb-2">Rôle assigné</p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Rôle assigné</p>
               {role ? (
-                <div className="border rounded-lg p-3 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{role.name}</p>
-                      {role.description && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {role.description}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {role.permissions.length} permission
-                      {role.permissions.length > 1 ? "s" : ""}
-                    </Badge>
+                <div className="border rounded-lg p-3 bg-muted/30 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">{role.name}</p>
+                    {role.description && <p className="text-xs text-muted-foreground mt-1">{role.description}</p>}
                   </div>
+                  <Badge variant="outline" className="text-xs">{role.permissions.length} perms</Badge>
                 </div>
               ) : (
                 <div className="border border-dashed rounded-lg p-3 text-center">
@@ -283,22 +226,15 @@ export default function EmployeeDetailPage() {
 
             {/* Permissions supplémentaires */}
             {extra_permissions.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">
-                  Permissions supplémentaires
-                </p>
-                <div className="space-y-2">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Permissions supplémentaires</p>
+                <div className="grid gap-2">
                   {extra_permissions.map((perm) => (
-                    <div
-                      key={perm.id}
-                      className="flex items-center gap-2 text-sm border rounded-lg p-2"
-                    >
+                    <div key={perm.id} className="flex items-center gap-2 text-sm border rounded-lg p-2">
                       <ShieldAlert className="h-4 w-4 text-amber-600" />
                       <div className="flex-1">
-                        <p className="font-medium">{perm.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {perm.module}
-                        </p>
+                        <p className="font-medium text-xs">{perm.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{perm.module}</p>
                       </div>
                     </div>
                   ))}
@@ -308,42 +244,24 @@ export default function EmployeeDetailPage() {
 
             {/* Total des permissions */}
             <div className="border-t pt-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Total des permissions</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Total des permissions</p>
                 <Badge variant="secondary" className="gap-1">
                   <Check className="h-3 w-3" />
                   {all_permissions.length}
                 </Badge>
               </div>
-              {all_permissions.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {all_permissions.slice(0, 6).map((codename) => (
-                    <Badge key={codename} variant="outline" className="text-[10px] uppercase tracking-wider">
-                      {codename.split('.').pop()?.replace(/_/g, ' ')}
-                    </Badge>
-                  ))}
-                  {all_permissions.length > 6 && (
-                    <Badge variant="outline" className="text-[10px]">
-                      +{all_permissions.length - 6}
-                    </Badge>
-                  )}
-                </div>
-              )}
+              <PermissionsBadgeList permissions={all_permissions} />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Dialogs */}
-      <Dialog
-        open={confirmToggleStatusOpen}
-        onOpenChange={setConfirmToggleStatusOpen}
-      >
+      <Dialog open={confirmToggleStatusOpen} onOpenChange={setConfirmToggleStatusOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {is_active ? "Désactiver" : "Activer"} l'employé
-            </DialogTitle>
+            <DialogTitle>{is_active ? "Désactiver" : "Activer"} l'employé</DialogTitle>
             <DialogDescription>
               {is_active
                 ? "L'employé n'aura plus accès à l'organisation. Vous pourrez le réactiver plus tard."
@@ -351,21 +269,9 @@ export default function EmployeeDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmToggleStatusOpen(false)}
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleToggleStatus}
-              disabled={updateMember.isPending}
-            >
-              {updateMember.isPending
-                ? "En cours..."
-                : is_active
-                ? "Désactiver"
-                : "Activer"}
+            <Button variant="outline" onClick={() => setConfirmToggleStatusOpen(false)}>Annuler</Button>
+            <Button onClick={handleToggleStatus} disabled={updateMember.isPending}>
+              {updateMember.isPending ? "En cours..." : is_active ? "Désactiver" : "Activer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -376,23 +282,12 @@ export default function EmployeeDetailPage() {
           <DialogHeader>
             <DialogTitle>Retirer l'employé de l'organisation</DialogTitle>
             <DialogDescription>
-              Cette action est irréversible. L'employé perdra immédiatement
-              l'accès à l'organisation et toutes ses données de membership
-              seront supprimées.
+              Cette action est irréversible. L'employé perdra immédiatement l'accès à l'organisation.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmRemoveOpen(false)}
-            >
-              Annuler
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRemove}
-              disabled={removeMember.isPending}
-            >
+            <Button variant="outline" onClick={() => setConfirmRemoveOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleRemove} disabled={removeMember.isPending}>
               {removeMember.isPending ? "Suppression..." : "Retirer l'employé"}
             </Button>
           </DialogFooter>

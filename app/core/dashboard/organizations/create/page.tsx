@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { QuickSelect, type QuickSelectItem } from "@/components/ui/quick-select";
+import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
 import { useCategories, useCreateOrganization, useUploadOrganizationLogo } from "@/lib/hooks/core";
 import { cn } from "@/lib/utils";
@@ -12,16 +12,14 @@ import {
   ArrowRight,
   Building2,
   Check,
-  Coins,
   Globe,
   ImagePlus,
-  Layers,
   Loader2,
   PartyPopper,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 // ============================================================================
 // STEP DEFINITIONS
@@ -29,7 +27,7 @@ import { useCallback, useRef, useState } from "react";
 
 const STEPS = [
   { id: 1, label: "Nom", icon: Building2 },
-  { id: 2, label: "Catégorie", icon: Layers },
+  { id: 2, label: "Catégorie", icon: Check },
   { id: 3, label: "Paramètres", icon: Globe },
   { id: 4, label: "Finalisation", icon: Check },
 ] as const;
@@ -57,12 +55,22 @@ export default function CreateOrganizationPage() {
   const createMutation = useCreateOrganization();
   const logoMutation = useUploadOrganizationLogo();
 
-  // Map categories to QuickSelect format
-  const categoryItems: QuickSelectItem[] = categories.map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    subtitle: cat.description || undefined,
-  }));
+  // Map categories to SmartSelector format
+  const categoryItems: SmartSelectorItem[] = useMemo(() => 
+    categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      subtitle: cat.description || undefined,
+    }))
+  , [categories]);
+
+  const countryItems: SmartSelectorItem[] = useMemo(() => 
+    COUNTRIES.map(c => ({ id: c.id, name: c.name }))
+  , []);
+
+  const currencyItems: SmartSelectorItem[] = useMemo(() => 
+    CURRENCIES.map(c => ({ id: c.id, name: c.name }))
+  , []);
 
   // ========================================================================
   // HANDLERS
@@ -213,15 +221,12 @@ export default function CreateOrganizationPage() {
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <QuickSelect
-                    label="Catégorie"
+                  <SmartSelector
                     items={categoryItems}
-                    selectedId={categoryId}
-                    onSelect={setCategoryId}
-                    placeholder="Rechercher une catégorie…"
-                    icon={Layers}
+                    selectedIds={categoryId ? [categoryId] : []}
+                    onChange={(ids) => setCategoryId(ids[0] || "")}
+                    placeholder="Sélectionner une catégorie…"
                     accentColor="primary"
-                    canCreate={false}
                   />
                 )}
                 <p className="text-xs text-muted-foreground">
@@ -236,29 +241,23 @@ export default function CreateOrganizationPage() {
             <div className="space-y-5">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Pays</label>
-                <QuickSelect
-                  label="Pays"
-                  items={COUNTRIES}
-                  selectedId={country}
-                  onSelect={setCountry}
-                  placeholder="Rechercher un pays…"
-                  icon={Globe}
+                <SmartSelector
+                  items={countryItems}
+                  selectedIds={country ? [country] : []}
+                  onChange={(ids) => setCountry(ids[0] || "")}
+                  placeholder="Sélectionner un pays…"
                   accentColor="blue"
-                  canCreate={false}
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Devise</label>
-                <QuickSelect
-                  label="Devise"
-                  items={CURRENCIES}
-                  selectedId={currency}
-                  onSelect={setCurrency}
-                  placeholder="Rechercher une devise…"
-                  icon={Coins}
+                <SmartSelector
+                  items={currencyItems}
+                  selectedIds={currency ? [currency] : []}
+                  onChange={(ids) => setCurrency(ids[0] || "")}
+                  placeholder="Sélectionner une devise…"
                   accentColor="green"
-                  canCreate={false}
                 />
               </div>
             </div>

@@ -1,29 +1,29 @@
 /**
  * Constantes partagées pour le module Core (pays, devises)
- * Format compatible QuickSelect.
+ * Format compatible SmartSelector.
  */
 
-import type { QuickSelectItem } from "@/components/ui/quick-select";
+import type { SmartSelectorItem } from "@/components/ui/smart-selector";
 
 // ============================================================================
 // COUNTRIES
 // ============================================================================
 
-export const COUNTRIES: QuickSelectItem[] = [
-  { id: "Guinée", name: "Guinée", subtitle: "Afrique de l'Ouest" },
-  { id: "Sénégal", name: "Sénégal", subtitle: "Afrique de l'Ouest" },
-  { id: "Mali", name: "Mali", subtitle: "Afrique de l'Ouest" },
-  { id: "Côte d'Ivoire", name: "Côte d'Ivoire", subtitle: "Afrique de l'Ouest" },
-  { id: "Burkina Faso", name: "Burkina Faso", subtitle: "Afrique de l'Ouest" },
-  { id: "Niger", name: "Niger", subtitle: "Afrique de l'Ouest" },
-  { id: "Togo", name: "Togo", subtitle: "Afrique de l'Ouest" },
-  { id: "Bénin", name: "Bénin", subtitle: "Afrique de l'Ouest" },
-  { id: "Cameroun", name: "Cameroun", subtitle: "Afrique Centrale" },
-  { id: "Gabon", name: "Gabon", subtitle: "Afrique Centrale" },
-  { id: "France", name: "France", subtitle: "Europe" },
-  { id: "Belgique", name: "Belgique", subtitle: "Europe" },
-  { id: "Canada", name: "Canada", subtitle: "Amérique du Nord" },
-  { id: "Suisse", name: "Suisse", subtitle: "Europe" },
+export const COUNTRIES: SmartSelectorItem[] = [
+  { id: "Guinée", name: "Guinée", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Sénégal", name: "Sénégal", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Mali", name: "Mali", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Côte d'Ivoire", name: "Côte d'Ivoire", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Burkina Faso", name: "Burkina Faso", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Niger", name: "Niger", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Togo", name: "Togo", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Bénin", name: "Bénin", subtitle: "Afrique de l'Ouest", group: "Afrique" },
+  { id: "Cameroun", name: "Cameroun", subtitle: "Afrique Centrale", group: "Afrique" },
+  { id: "Gabon", name: "Gabon", subtitle: "Afrique Centrale", group: "Afrique" },
+  { id: "France", name: "France", subtitle: "Europe", group: "Europe" },
+  { id: "Belgique", name: "Belgique", subtitle: "Europe", group: "Europe" },
+  { id: "Canada", name: "Canada", subtitle: "Amérique du Nord", group: "Amérique" },
+  { id: "Suisse", name: "Suisse", subtitle: "Europe", group: "Europe" },
   { id: "Autre", name: "Autre" },
 ];
 
@@ -31,7 +31,7 @@ export const COUNTRIES: QuickSelectItem[] = [
 // CURRENCIES
 // ============================================================================
 
-export const CURRENCIES: QuickSelectItem[] = [
+export const CURRENCIES: SmartSelectorItem[] = [
   { id: "GNF", name: "Franc guinéen", subtitle: "GNF" },
   { id: "XOF", name: "Franc CFA (UEMOA)", subtitle: "XOF" },
   { id: "XAF", name: "Franc CFA (CEMAC)", subtitle: "XAF" },

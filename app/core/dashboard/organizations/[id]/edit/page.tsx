@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QuickSelect, type QuickSelectItem } from "@/components/ui/quick-select";
+import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import {
   useCategories,
   useOrganization,
@@ -25,7 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ============================================================================
 // COMPONENT
@@ -63,12 +63,22 @@ export default function EditOrganizationPage() {
     }
   }, [org]);
 
-  // Map categories to QuickSelect format
-  const categoryItems: QuickSelectItem[] = categories.map((cat) => ({
-    id: cat.id,
-    name: cat.name,
-    subtitle: cat.description || undefined,
-  }));
+  // Map categories to SmartSelector format
+  const categoryItems: SmartSelectorItem[] = useMemo(() => 
+    categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      subtitle: cat.description || undefined,
+    }))
+  , [categories]);
+
+  const countryItems: SmartSelectorItem[] = useMemo(() => 
+    COUNTRIES.map(c => ({ id: c.id, name: c.name }))
+  , []);
+
+  const currencyItems: SmartSelectorItem[] = useMemo(() => 
+    CURRENCIES.map(c => ({ id: c.id, name: c.name }))
+  , []);
 
   // ========================================================================
   // HANDLERS
@@ -276,7 +286,7 @@ export default function EditOrganizationPage() {
           />
         </div>
 
-        {/* Category (QuickSelect) */}
+        {/* Category (SmartSelector) */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Catégorie
@@ -284,15 +294,12 @@ export default function EditOrganizationPage() {
           {categoriesLoading ? (
             <Skeleton className="h-10 w-full" />
           ) : (
-            <QuickSelect
-              label="Catégorie"
+            <SmartSelector
               items={categoryItems}
-              selectedId={categoryId}
-              onSelect={setCategoryId}
-              placeholder="Rechercher une catégorie…"
-              icon={Layers}
+              selectedIds={categoryId ? [categoryId] : []}
+              onChange={(ids) => setCategoryId(ids[0] || "")}
+              placeholder="Sélectionner une catégorie…"
               accentColor="primary"
-              canCreate={false}
             />
           )}
         </div>
@@ -300,37 +307,31 @@ export default function EditOrganizationPage() {
         {/* Divider */}
         <div className="h-px bg-border/20" />
 
-        {/* Country (QuickSelect) */}
+        {/* Country (SmartSelector) */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Pays
           </label>
-          <QuickSelect
-            label="Pays"
-            items={COUNTRIES}
-            selectedId={country}
-            onSelect={setCountry}
-            placeholder="Rechercher un pays…"
-            icon={Globe}
+          <SmartSelector
+            items={countryItems}
+            selectedIds={country ? [country] : []}
+            onChange={(ids) => setCountry(ids[0] || "")}
+            placeholder="Sélectionner un pays…"
             accentColor="blue"
-            canCreate={false}
           />
         </div>
 
-        {/* Currency (QuickSelect) */}
+        {/* Currency (SmartSelector) */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Devise
           </label>
-          <QuickSelect
-            label="Devise"
-            items={CURRENCIES}
-            selectedId={currency}
-            onSelect={setCurrency}
-            placeholder="Rechercher une devise…"
-            icon={Coins}
+          <SmartSelector
+            items={currencyItems}
+            selectedIds={currency ? [currency] : []}
+            onChange={(ids) => setCurrency(ids[0] || "")}
+            placeholder="Sélectionner une devise…"
             accentColor="green"
-            canCreate={false}
           />
         </div>
       </Card>

@@ -1,8 +1,10 @@
 "use client";
+
 import { DetailPageLayout } from "@/components/layout/DetailPageLayout";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoField } from "@/components/ui/info-field";
+import { EntityAvatar } from "@/components/ui/entity-avatar";
 import { useCurrentUser } from "@/lib/hooks/auth/useCurrentUser";
 import {
   CheckCircle2,
@@ -17,7 +19,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -57,21 +58,16 @@ export default function ProfilePage() {
           <Card className="p-6 space-y-4">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-4 w-60" />
-            <div className="flex gap-4">
-              <Skeleton className="h-8 w-24 rounded-md" />
-              <Skeleton className="h-8 w-24 rounded-md" />
-            </div>
-          </Card>
+          </div>
         </div>
       </div>
     );
   }
 
   // Construction du nom à afficher
-  const userName =
-    user?.first_name && user?.last_name
+  const fullName = user?.first_name && user?.last_name
       ? `${user.first_name} ${user.last_name}`
-      : user?.email || "Mon profil";
+      : "Mon profil";
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return null;
@@ -84,21 +80,9 @@ export default function ProfilePage() {
 
   return (
     <DetailPageLayout
-      title={userName}
+      title={fullName}
       subtitle={user?.email}
-      avatar={
-        user?.avatar_url ? (
-          <img
-            src={user.avatar_url}
-            alt={userName}
-            className="w-20 h-20 rounded-full object-cover border-2 border-border shadow-sm"
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border-2 border-border shadow-sm">
-            <User className="h-10 w-10 text-primary" />
-          </div>
-        )
-      }
+      avatar={<EntityAvatar src={user?.avatar_url} fallback={fullName} size="xl" />}
       badge={
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
@@ -140,38 +124,11 @@ export default function ProfilePage() {
             Informations personnelles
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
-                <User className="h-3 w-3" /> Prénom
-              </div>
-              <div className="text-sm font-medium">
-                {user?.first_name || <span className="italic text-muted-foreground font-normal">Non renseigné</span>}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
-                <User className="h-3 w-3" /> Nom
-              </div>
-              <div className="text-sm font-medium">
-                {user?.last_name || <span className="italic text-muted-foreground font-normal">Non renseigné</span>}
-              </div>
-            </div>
-            {user?.phone && (
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
-                  <Phone className="h-3 w-3" /> Téléphone
-                </div>
-                <div className="text-sm font-medium">{user.phone}</div>
-              </div>
-            )}
-            {user?.date_of_birth && (
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> Date de naissance
-                </div>
-                <div className="text-sm font-medium">{formatDate(user.date_of_birth)}</div>
-              </div>
-            )}
+            <InfoField label="Prénom" value={user?.first_name} icon={User} />
+            <InfoField label="Nom" value={user?.last_name} icon={User} />
+            <InfoField label="Email" value={user?.email} icon={Mail} />
+            <InfoField label="Téléphone" value={user?.phone} icon={Phone} />
+            <InfoField label="Date de naissance" value={formatDate(user?.date_of_birth)} icon={Calendar} />
           </div>
         </Card>
 
@@ -182,14 +139,11 @@ export default function ProfilePage() {
               <MapPin className="h-4 w-4" />
               Adresse
             </div>
-            <div className="space-y-2">
-              {user?.address && (
-                <div className="text-sm">{user.address}</div>
-              )}
-              <div className="flex gap-2 text-sm">
-                {user?.city && <span className="font-medium">{user.city}</span>}
-                {user?.city && user?.country && <span>•</span>}
-                {user?.country && <span>{user.country}</span>}
+            <div className="space-y-4">
+              {user?.address && <InfoField label="Rue" value={user.address} />}
+              <div className="grid grid-cols-2 gap-4">
+                <InfoField label="Ville" value={user?.city} />
+                <InfoField label="Pays" value={user?.country} />
               </div>
             </div>
           </Card>
@@ -202,20 +156,8 @@ export default function ProfilePage() {
             Préférences
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground uppercase font-medium">Langue</div>
-              <div className="text-sm font-medium">
-                {user?.language || <span className="italic text-muted-foreground font-normal">Non renseigné</span>}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground uppercase font-medium flex items-center gap-1">
-                <Clock className="h-3 w-3" /> Fuseau horaire
-              </div>
-              <div className="text-sm font-medium">
-                {user?.timezone || <span className="italic text-muted-foreground font-normal">Non renseigné</span>}
-              </div>
-            </div>
+            <InfoField label="Langue" value={user?.language} />
+            <InfoField label="Fuseau horaire" value={user?.timezone} icon={Clock} />
           </div>
         </Card>
 

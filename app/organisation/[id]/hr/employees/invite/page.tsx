@@ -4,18 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { usePermissions, useRoles, useSendInvitation } from "@/lib/hooks/hr";
-import type { CreateInvitationData, Permission } from "@/lib/types";
-import { ArrowLeft, BadgeInfo, Check, Loader2, Mail, Send } from "lucide-react";
+import type { CreateInvitationData } from "@/lib/types";
+import { ArrowLeft, BadgeInfo, Loader2, Mail, Send, Shield } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { FaCheck } from "react-icons/fa";
 import { toast } from "sonner";
 
 /**
@@ -39,15 +34,25 @@ export default function InviteEmployeePage() {
   // Mutation
   const sendInvitation = useSendInvitation();
 
-  // Group permissions by module
-  const permissionsByModule = permissions.reduce(
-    (acc, perm) => {
-      if (!acc[perm.module]) acc[perm.module] = [];
-      acc[perm.module].push(perm);
-      return acc;
-    },
-    {} as Record<string, Permission[]>
-  );
+  // Map roles to SmartSelector format
+  const roleItems: SmartSelectorItem[] = useMemo(() => 
+    roles.map(r => ({
+      id: r.id,
+      name: r.name,
+      subtitle: r.description || undefined,
+      icon: Shield,
+    }))
+  , [roles]);
+
+  // Map permissions to SmartSelector format
+  const permissionItems: SmartSelectorItem[] = useMemo(() => 
+    permissions.map(p => ({
+      id: p.id,
+      name: p.label,
+      subtitle: p.codename,
+      group: p.module,
+    }))
+  , [permissions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,22 +84,12 @@ export default function InviteEmployeePage() {
     }
   };
 
-  const togglePermission = (permissionId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      permission_ids: prev.permission_ids?.includes(permissionId)
-        ? prev.permission_ids.filter((id) => id !== permissionId)
-        : [...(prev.permission_ids || []), permissionId],
-    }));
-  };
-
   // Nouvelle fonction pour description du rôle
   const getRoleDescription = (roleId: string | null) => {
-    if (!roleId || roleId === "none") return "Ne donne aucun accès particulier par défaut.";
+    if (!roleId) return "Ne donne aucun accès particulier par défaut.";
     const role = roles.find((r) => r.id === roleId);
     if (!role) return "";
     if (role.description) return role.description;
-    // Fallback : liste permissions pour le rôle (si possible)
     if (role.permissions && role.permissions.length > 0) {
       return `Ce rôle donne accès à : ${role.permissions.map((p: any) => p.label).join(", ")}`;
     }
@@ -160,37 +155,18 @@ export default function InviteEmployeePage() {
                     Rôle {roles.length > 0 && <span className="text-xs text-muted-foreground">(optionnel)</span>}
                   </Label>
                   <div className="flex flex-col gap-2">
-                    <Select
-                      value={formData.role_id || "none"}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, role_id: value === "none" ? null : value })
-                      }
-                    >
-                      <SelectTrigger aria-label="Sélectionner un rôle" className="w-full border">
-                        <SelectValue placeholder="Sélectionner un rôle" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none" className="flex items-center gap-2">
-                          <BadgeInfo className="h-4 w-4 mr-1 text-muted-foreground" />
-                          Aucun rôle
-                        </SelectItem>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            <span className="font-medium">{role.name}</span>
-                            {role.description && (
-                              <span className="block text-xs text-muted-foreground mt-1">
-                                {role.description}
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SmartSelector
+                      items={roleItems}
+                      selectedIds={formData.role_id ? [formData.role_id] : []}
+                      onChange={(ids) => setFormData({ ...formData, role_id: ids[0] || null })}
+                      placeholder="Sélectionner un rôle"
+                      accentColor="primary"
+                    />
                     {/* Affiche une description claire du rôle sélectionné */}
-                    <div className="rounded-md border p-2 bg-muted/40 text-xs flex items-center gap-2 transition-all">
-                      <BadgeInfo className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                        {getRoleDescription(formData.role_id || "none")}
+                    <div className="border p-3 bg-muted/40 text-xs flex items-start gap-2 transition-all">
+                      <BadgeInfo className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <span className="leading-relaxed">
+                        {getRoleDescription(formData?.role_id)}
                       </span>
                     </div>
                   </div>
@@ -208,41 +184,16 @@ export default function InviteEmployeePage() {
                   <p className="text-xs text-muted-foreground">
                     Sélectionnez des permissions en plus de celles du rôle
                   </p>
-                  <div className="space-y-4 border rounded-lg p-4 max-h-96 overflow-y-auto">
-                    {Object.entries(permissionsByModule).map(
-                      ([module, perms]) => (
-                        <div key={module} className="space-y-2">
-                          <h4 className="font-semibold text-sm capitalize">
-                            {module}
-                          </h4>
-                          <div className="space-y-1 pl-4">
-                            {perms.map((perm) => (
-                              <div
-                                key={perm.id}
-                                className="flex items-center gap-2"
-                              >
-                                <input
-                                  type="checkbox"
-                                  id={perm.id}
-                                  checked={formData.permission_ids?.includes(
-                                    perm.id
-                                  )}
-                                  onChange={() => togglePermission(perm.id)}
-                                  className="rounded"
-                                />
-                                <label
-                                  htmlFor={perm.id}
-                                  className="text-sm cursor-pointer"
-                                >
-                                  {perm.label}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
+                  <SmartSelector
+                    items={permissionItems}
+                    selectedIds={formData.permission_ids || []}
+                    onChange={(ids) => setFormData({ ...formData, permission_ids: ids })}
+                    multiple
+                    mode="inline"
+                    accentColor="blue"
+                    searchPlaceholder="Rechercher une permission ou un module..."
+                    maxHeight="300px"
+                  />
                 </div>
 
                 {/* Actions */}
@@ -312,7 +263,7 @@ export default function InviteEmployeePage() {
                           key={permId}
                           className="text-xs text-muted-foreground flex items-center gap-1"
                         >
-                          <Check className="h-3 w-3 text-green-600" />
+                          <FaCheck className="h-3 w-3 text-green-600" />
                           {perm?.label}
                         </div>
                       );
