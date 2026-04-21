@@ -1,31 +1,32 @@
 "use client";
 
+import { BadgeStatus } from "@/components/BadgeStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
-  useMember,
-  usePermissions,
-  useRoles,
-  useUpdateMember,
+    useMember,
+    usePermissions,
+    useRoles,
+    useUpdateMember,
 } from "@/lib/hooks/hr";
 import { ArrowLeft, Check, Save, Shield, ShieldAlert, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -422,9 +423,7 @@ export default function EditEmployeePage() {
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Statut</span>
-                  <Badge variant={isActive ? "default" : "secondary"}>
-                    {isActive ? "Actif" : "Inactif"}
-                  </Badge>
+                  <BadgeStatus status={isActive} withIcon={false} />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">

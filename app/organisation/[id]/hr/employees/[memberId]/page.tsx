@@ -1,36 +1,37 @@
 "use client";
 
+import { BadgeStatus } from "@/components/BadgeStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMember, useRemoveMember, useUpdateMember } from "@/lib/hooks/hr";
 import {
-  ArrowLeft,
-  Calendar,
-  Check,
-  Mail,
-  Phone,
-  Shield,
-  ShieldAlert,
-  Trash2,
-  User,
-  UserCheck,
-  UserX,
+    ArrowLeft,
+    Calendar,
+    Check,
+    Mail,
+    Phone,
+    Shield,
+    ShieldAlert,
+    Trash2,
+    User,
+    UserCheck,
+    UserX,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -166,17 +167,7 @@ export default function EmployeeDetailPage() {
                   {user.first_name} {user.last_name}
                 </CardTitle>
                 <div className="flex items-center gap-2 mt-2">
-                  {is_active ? (
-                    <Badge variant="default" className="bg-green-600 gap-1">
-                      <UserCheck className="h-3 w-3" />
-                      Actif
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="gap-1">
-                      <UserX className="h-3 w-3" />
-                      Inactif
-                    </Badge>
-                  )}
+                <BadgeStatus status={is_active} withIcon />
                   {role && (
                     <Badge variant="outline" className="gap-1">
                       <Shield className="h-3 w-3" />

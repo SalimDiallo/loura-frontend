@@ -1,5 +1,6 @@
 "use client";
 
+import { BadgeStatus } from "@/components/BadgeStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,47 +12,6 @@ import { Check, Clock, Mail, MailX, RefreshCw, Send, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-/**
- * Badge de statut d'invitation
- */
-function InvitationStatusBadge({ status }: { status: Invitation["status"] }) {
-  const statusConfig = {
-    pending: {
-      label: "En attente",
-      icon: Clock,
-      variant: "default" as const,
-      className: "bg-blue-600",
-    },
-    accepted: {
-      label: "Acceptée",
-      icon: Check,
-      variant: "default" as const,
-      className: "bg-green-600",
-    },
-    declined: {
-      label: "Refusée",
-      icon: X,
-      variant: "destructive" as const,
-      className: "",
-    },
-    expired: {
-      label: "Expirée",
-      icon: MailX,
-      variant: "secondary" as const,
-      className: "",
-    },
-  };
-
-  const config = statusConfig[status];
-  const Icon = config.icon;
-
-  return (
-    <Badge variant={config.variant} className={config.className}>
-      <Icon className="h-3 w-3 mr-1" />
-      {config.label}
-    </Badge>
-  );
-}
 
 /**
  * Page de gestion des invitations d'une organisation
@@ -250,7 +210,7 @@ export default function InvitationsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <InvitationStatusBadge status={invitation.status} />
+                        <BadgeStatus status={invitation.status} />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(invitation.created_at).toLocaleDateString("fr-FR", {
