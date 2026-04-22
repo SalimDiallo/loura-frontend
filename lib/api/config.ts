@@ -248,6 +248,16 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/sales/${id}/payments/${paymentId}/`,
       INSTALLMENTS: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/installments/`,
     },
+    // Analytics (BI)
+    ANALYTICS: {
+      OVERVIEW: (orgId: string) => `/inventory/organizations/${orgId}/analytics/overview/`,
+      SALES_TREND: (orgId: string) => `/inventory/organizations/${orgId}/analytics/sales-trend/`,
+      TOP_PRODUCTS: (orgId: string) => `/inventory/organizations/${orgId}/analytics/top-products/`,
+      STOCK_VALUE: (orgId: string) => `/inventory/organizations/${orgId}/analytics/stock-value/`,
+      STOCK_ALERTS: (orgId: string) => `/inventory/organizations/${orgId}/analytics/stock-alerts/`,
+      MARGIN: (orgId: string) => `/inventory/organizations/${orgId}/analytics/margin/`,
+      MOVEMENTS: (orgId: string) => `/inventory/organizations/${orgId}/analytics/movements/`,
+    },
     // Commandes fournisseur (Purchase Orders)
     PURCHASE_ORDERS: {
       LIST: (orgId: string) => `/inventory/organizations/${orgId}/purchase-orders/`,

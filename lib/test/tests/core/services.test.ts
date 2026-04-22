@@ -67,7 +67,7 @@ describe('settingsService', () => {
   it('get retourne les settings par défaut', async () => {
     const settings = await settingsService.get('org-1');
 
-    expect(settings.primary_color).toBe('#6366F1');
+    expect(settings.primary_color).toBe('#ffd15d');
     expect(settings.secondary_color).toBe('#E5E7EB');
     expect(settings.font_family).toBe('Inter');
     expect(settings.tax_rate).toBe('18.00');

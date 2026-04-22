@@ -232,7 +232,7 @@ export default function OrganizationSettingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ColorInput
             label="Couleur principale"
-            value={form.primary_color || "#6366F1"}
+            value={form.primary_color || "#ffd15d"}
             onChange={(v) => updateField("primary_color", v)}
           />
           <ColorInput

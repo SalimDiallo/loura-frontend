@@ -193,7 +193,7 @@ function CreateCategoryPage() {
                                     <Input
                                         id="color"
                                         type="text"
-                                        placeholder="#6366F1"
+                                        placeholder="#ffd15d"
                                         value={formData.color || ""}
                                         onChange={(e) =>
                                             setFormData({ ...formData, color: e.target.value })

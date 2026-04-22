@@ -5,25 +5,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useOrganization } from "@/lib/hooks/core";
 import { cn } from "@/lib/utils";
 import {
-    Box,
-    DollarSign,
-    Receipt,
-    ShoppingCart,
-    TrendingUp,
+  Box,
+  DollarSign,
+  Receipt,
+  ShoppingCart,
+  TrendingUp,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 
 // Charts directly from recharts
 import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from "recharts";
 
 const MOCK_STATS = [

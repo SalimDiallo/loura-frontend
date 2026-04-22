@@ -65,7 +65,7 @@ function getDefaultSettings(orgId: string) {
   return {
     id: `settings-${orgId}`,
     organization: orgId,
-    primary_color: '#6366F1',
+    primary_color: '#ffd15d',
     secondary_color: '#E5E7EB',
     font_family: 'Inter',
     address: '',

@@ -4,13 +4,13 @@
 
 import { tokenManager } from '@/lib/api';
 import {
-  useCategories,
-  useCreateOrganization,
-  useOrganization,
-  useOrganizationSettings,
-  useToggleOrganization,
-  useUpdateOrganization,
-  useUpdateOrganizationSettings,
+    useCategories,
+    useCreateOrganization,
+    useOrganization,
+    useOrganizationSettings,
+    useToggleOrganization,
+    useUpdateOrganization,
+    useUpdateOrganizationSettings,
 } from '@/lib/hooks/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
@@ -203,7 +203,7 @@ describe('useOrganizationSettings', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const settings = result.current.data!;
-    expect(settings.primary_color).toBe('#6366F1');
+    expect(settings.primary_color).toBe('#ffd15d');
     expect(settings.secondary_color).toBe('#E5E7EB');
     expect(settings.font_family).toBe('Inter');
     expect(settings.tax_rate).toBe('18.00');

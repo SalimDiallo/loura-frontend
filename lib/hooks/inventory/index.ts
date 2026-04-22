@@ -6,6 +6,8 @@
 
 "use client";
 
+export * from "./analytics";
+
 import {
   usePaginatedQuery,
   type UsePaginatedQueryReturn,

@@ -2,6 +2,7 @@
  * Exports centralisés des services du module Inventory.
  */
 
+export * from "./analytics.service";
 export * from "./categories.service";
 export * from "./customers.service";
 export * from "./products.service";
