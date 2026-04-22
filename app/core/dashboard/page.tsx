@@ -64,7 +64,7 @@ function OwnedOrgCard({ org, onClick }: { org: Organization; onClick: () => void
             </h3>
             <span
               className={cn(
-                "inline-flex items-center gap-1 px-1.5 py-px rounded text-[9px] uppercase font-bold tracking-wider shrink-0",
+                "inline-flex items-center gap-1 px-1.5 py-px text-[9px] uppercase font-bold tracking-wider shrink-0",
                 org.is_active
                   ? "bg-emerald-500/10 text-emerald-600"
                   : "bg-muted text-muted-foreground"
@@ -130,7 +130,7 @@ function MemberOrgCard({
               {membership.organization.name}
             </h3>
             {membership.role && (
-              <span className="inline-flex items-center px-1.5 py-px rounded text-[9px] font-semibold tracking-wide bg-violet-500/10 text-violet-600 shrink-0">
+              <span className="inline-flex items-center px-1.5 py-px text-[9px] font-semibold tracking-wide bg-violet-500/10 text-violet-600 shrink-0">
                 {membership.role.name}
               </span>
             )}
@@ -181,7 +181,7 @@ function InvitationRowWithConfirmDialog({
               {invitation.organization?.name || "Organisation"}
             </h3>
             {invitation.role && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[9px] font-semibold tracking-wide bg-blue-500/10 text-blue-600 shrink-0">
+              <span className="inline-flex items-center gap-1 px-1.5 py-px text-[9px] font-semibold tracking-wide bg-blue-500/10 text-blue-600 shrink-0">
                 <Shield className="h-2.5 w-2.5" />
                 {invitation.role.name}
               </span>

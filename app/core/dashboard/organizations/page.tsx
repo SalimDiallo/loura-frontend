@@ -3,32 +3,32 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  useOrganizations,
-  useToggleOrganization,
+    useOrganizations,
+    useToggleOrganization,
 } from "@/lib/hooks/core";
 import type { Organization } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Power,
-  Search,
-  Settings,
-  X
+    Building2,
+    ChevronLeft,
+    ChevronRight,
+    Loader2,
+    MoreHorizontal,
+    Pencil,
+    Plus,
+    Power,
+    Search,
+    Settings,
+    X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -187,7 +187,7 @@ export default function OrganizationsPage() {
                       <h3 className="font-medium text-sm text-foreground truncate group-hover:text-primary transition-colors">{org.name}</h3>
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 px-1.5 py-px rounded text-[9px] uppercase font-bold tracking-wider shrink-0",
+                          "inline-flex items-center gap-1 px-1.5 py-px text-[9px] uppercase font-bold tracking-wider shrink-0",
                           org.is_active
                             ? "bg-emerald-500/10 text-emerald-600"
                             : "bg-muted text-muted-foreground"

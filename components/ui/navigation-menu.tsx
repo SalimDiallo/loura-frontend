@@ -1,9 +1,9 @@
-import * as React from "react"
-import { cva } from "class-variance-authority"
-import { NavigationMenu as NavigationMenuPrimitive } from "radix-ui"
+import { cva } from "class-variance-authority";
+import { NavigationMenu as NavigationMenuPrimitive } from "radix-ui";
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { ChevronDownIcon } from "lucide-react"
+import { cn } from "@/lib/utils";
+import { ChevronDownIcon } from "lucide-react";
 
 function NavigationMenu({
   className,
@@ -108,7 +108,7 @@ function NavigationMenuViewport({
       <NavigationMenuPrimitive.Viewport
         data-slot="navigation-menu-viewport"
         className={cn(
-          "origin-top-center relative mt-1.5 h-(--radix-navigation-menu-viewport-height) w-full overflow-hidden rounded-none bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 md:w-(--radix-navigation-menu-viewport-width) data-open:animate-in data-open:zoom-in-90 data-closed:animate-out data-closed:zoom-out-90",
+          "origin-top-center relative mt-1.5 h-(--radix-navigation-menu-viewport-height) w-full overflow-hidden rounded-none bg-popover text-popover-foreground ring-1 ring-foreground/10 duration-100 md:w-(--radix-navigation-menu-viewport-width) data-open:animate-in data-open:zoom-in-90 data-closed:animate-out data-closed:zoom-out-90",
           className
         )}
         {...props}
@@ -146,19 +146,19 @@ function NavigationMenuIndicator({
       )}
       {...props}
     >
-      <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-none bg-border shadow-md" />
+      <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-none bg-border" />
     </NavigationMenuPrimitive.Indicator>
   )
 }
 
 export {
-  NavigationMenu,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuContent,
-  NavigationMenuTrigger,
-  NavigationMenuLink,
-  NavigationMenuIndicator,
-  NavigationMenuViewport,
-  navigationMenuTriggerStyle,
-}
+    NavigationMenu,
+    NavigationMenuContent,
+    NavigationMenuIndicator,
+    NavigationMenuItem,
+    NavigationMenuLink,
+    NavigationMenuList,
+    NavigationMenuTrigger,
+    navigationMenuTriggerStyle,
+    NavigationMenuViewport
+};

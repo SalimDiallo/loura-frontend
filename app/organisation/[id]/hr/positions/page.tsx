@@ -205,7 +205,7 @@ function PositionsPage() {
                   <ListTableColumn key="name" header="Nom du poste">
                     {({ value: position }) => (
                       <div className="font-medium flex items-center gap-2">
-                        <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                        <div className="h-8 w-8 bg-primary/10 flex items-center justify-center text-primary">
                           <FaUserTie className="h-4 w-4" />
                         </div>
                         <div>

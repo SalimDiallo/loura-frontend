@@ -2,6 +2,7 @@
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { PermissionGuard } from "@/components/permissions";
+import { AuditFootprint } from "@/components/services/AuditBadge";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -169,6 +170,13 @@ function EditLeaveBalancePage() {
                         <p className="text-xs text-muted-foreground italic pt-3 border-t">
                             Limite maximale : {balance.max_days} jours par an.
                         </p>
+                        <AuditFootprint
+                            created_at={balance.created_at}
+                            updated_at={balance.updated_at}
+                            created_by_info={balance.created_by_info ?? null}
+                            updated_by_info={balance.updated_by_info ?? null}
+                            className="pt-3 border-t"
+                        />
                     </CardContent>
                 </Card>
             }

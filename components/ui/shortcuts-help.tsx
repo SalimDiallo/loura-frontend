@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, Card } from "@/components/ui";
-import { Keyboard, X } from "lucide-react";
 import { KeyboardShortcut, formatShortcut } from "@/lib/hooks/use-keyboard-shortcuts";
+import { Keyboard, X } from "lucide-react";
 
 interface ShortcutsHelpModalProps {
   isOpen: boolean;
@@ -105,7 +105,7 @@ export function ShortcutsHelpModal({
         </div>
         <div className="mt-4 pt-4 border-t flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Appuyez sur <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">Esc</kbd> pour fermer
+            Appuyez sur <kbd className="px-1.5 py-0.5 border bg-muted font-mono">Esc</kbd> pour fermer
           </p>
           <p className="text-xs text-muted-foreground">
             {shortcuts.filter(s => s.description).length} raccourcis disponibles
@@ -130,7 +130,7 @@ function ShortcutItem({ shortcut }: ShortcutItemProps) {
         {keys.map((key, i) => (
           <kbd
             key={i}
-            className="px-2 py-1 rounded border bg-muted font-mono text-xs min-w-[24px] text-center"
+            className="px-2 py-1 border bg-muted font-mono text-xs min-w-[24px] text-center"
           >
             {key}
           </kbd>
@@ -156,7 +156,7 @@ export function ShortcutBadge({ shortcut, className = "" }: ShortcutBadgeProps) 
       {keys.map((key, i) => (
         <kbd
           key={i}
-          className="h-5 px-1.5 rounded border bg-muted/50 font-mono text-xs flex items-center justify-center"
+          className="h-5 px-1.5 border bg-muted/50 font-mono text-xs flex items-center justify-center"
         >
           {key}
         </kbd>
@@ -176,7 +176,7 @@ export function KeyboardHint({ className = "" }: KeyboardHintProps) {
   return (
     <p className={`text-center text-xs text-muted-foreground ${className}`}>
       Appuyez sur{" "}
-      <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">?</kbd>{" "}
+      <kbd className="px-1.5 py-0.5 border bg-muted font-mono">?</kbd>{" "}
       pour voir tous les raccourcis clavier
     </p>
   );

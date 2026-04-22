@@ -4,6 +4,35 @@
  */
 
 // ============================================================================
+// AUDIT TRAIL
+// ============================================================================
+
+/**
+ * Représentation compacte d'un utilisateur, utilisée partout où le back
+ * renvoie un champ d'audit ``created_by_info`` / ``updated_by_info`` ou
+ * tout autre référence légère à un ``BaseUser``.
+ *
+ * Correspond à ``loura.serializers.build_user_mini`` côté backend.
+ */
+export interface UserMiniInfo {
+  id: string | null;
+  name: string;
+  email: string;
+}
+
+/**
+ * Champs d'audit exposés en lecture sur toute entité héritant de
+ * ``TimeStampedModel`` côté backend. À composer avec le type spécifique
+ * d'une ressource via ``& AuditInfo``.
+ */
+export interface AuditInfo {
+  created_at: string;
+  updated_at: string;
+  created_by_info: UserMiniInfo | null;
+  updated_by_info: UserMiniInfo | null;
+}
+
+// ============================================================================
 // PERMISSIONS & CONTEXT
 // ============================================================================
 

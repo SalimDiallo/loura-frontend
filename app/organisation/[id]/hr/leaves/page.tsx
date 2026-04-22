@@ -218,7 +218,7 @@ function BalanceRow({
                         {Number(balance.remaining_days).toFixed(1)} restant(s)
                     </span>
                 </p>
-                <div className="mt-2 h-1.5 w-full rounded bg-muted overflow-hidden">
+                <div className="mt-2 h-1.5 w-full bg-muted overflow-hidden">
                     <div
                         className="h-full bg-primary transition-all"
                         style={{ width: `${pct}%` }}

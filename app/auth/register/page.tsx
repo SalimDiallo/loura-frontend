@@ -110,7 +110,7 @@ export default function RegisterPage() {
       {/* Bouton Retour */}
       <Link
         href="/"
-        className="absolute top-6 left-6 z-50 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded border border-border bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-900 transition"
+        className="absolute top-6 left-6 z-50 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-900 transition"
       >
         <ArrowLeft className="w-4 h-4" />
         Accueil
@@ -131,7 +131,7 @@ export default function RegisterPage() {
           <ul className="space-y-3 mb-12">
             {features.map((feature, idx) => (
               <li key={idx} className="flex items-center gap-3">
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-primary/10 dark:bg-primary/20 text-primary">
+                <span className="inline-flex items-center justify-center w-8 h-8 bg-primary/10 dark:bg-primary/20 text-primary">
                   <feature.icon className="w-4 h-4" />
                 </span>
                 <span className="text-black dark:text-white text-base">{feature.text}</span>
@@ -224,7 +224,7 @@ export default function RegisterPage() {
                 <input
                   type="checkbox"
                   id="terms"
-                  className="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  className="mt-1 w-4 h-4 border-border text-primary focus:ring-primary"
                 />
                 <label htmlFor="terms" className="text-sm text-neutral-600 dark:text-neutral-300">
                   J'accepte les{' '}

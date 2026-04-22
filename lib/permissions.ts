@@ -46,6 +46,16 @@ export const PERMISSIONS = {
     VIEW: 'inventory.view_products',
     MANAGE: 'inventory.manage_products',
   },
+  // ── Inventaire : Catégories ───────────────────────────────────────────────
+  PRODUCT_CATEGORIES: {
+    VIEW: 'inventory.view_categories',
+    MANAGE: 'inventory.manage_categories',
+  },
+  // ── Inventaire : Entrepôts ────────────────────────────────────────────────
+  WAREHOUSES: {
+    VIEW: 'inventory.view_warehouses',
+    MANAGE: 'inventory.manage_warehouses',
+  },
   // ── Inventaire : Stock ────────────────────────────────────────────────────
   STOCK: {
     VIEW: 'inventory.view_stock',

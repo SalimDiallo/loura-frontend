@@ -3,6 +3,7 @@
 import { GenerateDocumentButton } from "@/components/documents";
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { Can, useOrgPermissions } from "@/components/permissions";
+import { AuditBadge } from "@/components/services/AuditBadge";
 import { ReviewerBadge } from "@/components/services/hr/ReviewerBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -270,13 +271,31 @@ export default function PaymentDetailPage() {
                   </Button>
                 </div>
               )}
-              <div>
-                <p className="text-xs text-muted-foreground">Créé le</p>
-                <p>{new Date(payment.created_at).toLocaleDateString("fr-FR")}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Dernière modification</p>
-                <p>{new Date(payment.updated_at).toLocaleDateString("fr-FR")}</p>
+              <div className="space-y-1.5 pt-1 border-t">
+                <AuditBadge
+                  kind="created"
+                  user={payment.created_by_info}
+                  at={payment.created_at}
+                  fallback={
+                    <p className="text-xs text-muted-foreground">
+                      Créé le{" "}
+                      {new Date(payment.created_at).toLocaleDateString("fr-FR")}
+                    </p>
+                  }
+                />
+                {payment.updated_at !== payment.created_at && (
+                  <AuditBadge
+                    kind="updated"
+                    user={payment.updated_by_info}
+                    at={payment.updated_at}
+                    fallback={
+                      <p className="text-xs text-muted-foreground">
+                        Modifié le{" "}
+                        {new Date(payment.updated_at).toLocaleDateString("fr-FR")}
+                      </p>
+                    }
+                  />
+                )}
               </div>
             </CardContent>
           </Card>

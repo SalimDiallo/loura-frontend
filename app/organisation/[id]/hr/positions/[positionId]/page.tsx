@@ -2,6 +2,7 @@
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { PermissionGuard } from "@/components/permissions";
+import { AuditFootprint } from "@/components/services/AuditBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -178,6 +179,16 @@ function EditPositionPage() {
                     </span>
                   </div>
                 </div>
+
+                {position && (
+                  <AuditFootprint
+                    created_at={position.created_at}
+                    updated_at={position.updated_at}
+                    created_by_info={position.created_by_info ?? null}
+                    updated_by_info={position.updated_by_info ?? null}
+                    className="pt-4 border-t"
+                  />
+                )}
               </>
             )}
           </CardContent>

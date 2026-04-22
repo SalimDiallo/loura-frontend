@@ -1,6 +1,7 @@
 "use client";
 
 import { Can, PermissionGuard } from "@/components/permissions";
+import { AuditBadge } from "@/components/services/AuditBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -201,34 +202,50 @@ function RoleDetailPage() {
               </Badge>
             </div>
             <Separator />
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Créé le</p>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm font-medium">
-                  {new Date(role.created_at).toLocaleDateString("fr-FR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Créé</p>
+              <AuditBadge
+                kind="created"
+                user={role.created_by_info}
+                at={role.created_at}
+                fallback={
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-medium">
+                      {new Date(role.created_at).toLocaleDateString("fr-FR", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                }
+              />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Dernière modification
-              </p>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm font-medium">
-                  {new Date(role.updated_at).toLocaleDateString("fr-FR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+            {role.updated_at !== role.created_at && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Dernière modification
                 </p>
+                <AuditBadge
+                  kind="updated"
+                  user={role.updated_by_info}
+                  at={role.updated_at}
+                  fallback={
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        {new Date(role.updated_at).toLocaleDateString("fr-FR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  }
+                />
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 

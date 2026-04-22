@@ -1,6 +1,7 @@
-import { PageHeader, PageHeaderAction } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PageHeader, PageHeaderAction } from "@/components/ui/page-header";
 import {
     Table,
     TableBody,
@@ -9,7 +10,6 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import React, { useState } from "react";
 import { FaFilter, FaSearch, FaTimes } from "react-icons/fa";
 
@@ -101,7 +101,7 @@ export function ListSearchFilters({
         </Button>
         {popoverVisible && (
           <div
-            className="absolute z-50 mt-1 right-0 w-72 bg-popover border p-4 shadow-md rounded-md"
+            className="absolute z-50 mt-1 right-0 w-72 bg-popover border p-4 rounded-md"
             style={{ minWidth: "16rem" }}
             tabIndex={-1}
             onBlur={(e) => {

@@ -175,4 +175,34 @@ export const API_ENDPOINTS = {
     },
   },
 
+  // ── INVENTORY (Catalogue, Entrepôts) ────────────────────────────────────────
+  INVENTORY: {
+    // Catégories produits
+    CATEGORIES: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/categories/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/categories/`,
+      TREE: (orgId: string) => `/inventory/organizations/${orgId}/categories/tree/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/categories/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/categories/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/categories/${id}/`,
+    },
+    // Entrepôts
+    WAREHOUSES: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/warehouses/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/warehouses/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/warehouses/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/warehouses/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/warehouses/${id}/`,
+    },
+    // Produits
+    PRODUCTS: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/products/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/products/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/products/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/products/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/products/${id}/`,
+      IMAGE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/products/${id}/image/`,
+    },
+  },
+
 } as const;

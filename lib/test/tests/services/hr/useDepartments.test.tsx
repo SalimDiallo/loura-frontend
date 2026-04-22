@@ -1,11 +1,11 @@
-import { useDepartments, useDepartment, useCreateDepartment } from '@/lib/hooks/hr';
+import { API_CONFIG } from '@/lib/api';
+import { useCreateDepartment, useDepartment, useDepartments } from '@/lib/hooks/hr';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { http, HttpResponse } from 'msw';
 import { server } from '../../server';
-import { API_CONFIG } from '@/lib/api';
 
 const API_URL = API_CONFIG.baseURL;
 const orgId = 'org-123';
@@ -134,7 +134,7 @@ describe('useDepartments hooks', () => {
     
     // Le useCreateDepartment renvoie directement .data extrait du backend
     expect(result.current.data).toBeDefined();
-    expect(result.current.data?.name).toBe('IT Department');
-    expect(result.current.data?.id).toBe('dept-new');
+    expect(result.current.data?.data.name).toBe('IT Department');
+    expect(result.current.data?.data.id).toBe('dept-new');
   });
 });

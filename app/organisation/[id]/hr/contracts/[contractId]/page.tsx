@@ -3,16 +3,17 @@
 import { GenerateDocumentButton } from "@/components/documents";
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { Can, useOrgPermissions } from "@/components/permissions";
+import { AuditBadge } from "@/components/services/AuditBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,16 +22,16 @@ import { useContract, useDeleteContract, useUpdateContract } from "@/lib/hooks/h
 import { PERMISSIONS } from "@/lib/permissions";
 import type { ContractStatus, ContractType } from "@/lib/types";
 import {
-    AlertTriangle,
-    CalendarDays,
-    DollarSign,
-    FileText,
-    Loader2,
-    Pause,
-    Play,
-    Save,
-    Square,
-    Trash2,
+  AlertTriangle,
+  CalendarDays,
+  DollarSign,
+  FileText,
+  Loader2,
+  Pause,
+  Play,
+  Save,
+  Square,
+  Trash2,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -263,13 +264,33 @@ export default function ContractDetailPage() {
                 <p className="font-medium">{memberName}</p>
                 <p className="text-xs text-muted-foreground">{contract.membership?.employee?.user?.email}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Créé le</p>
-                <p>{new Date(contract.created_at).toLocaleDateString("fr-FR")}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Dernière modification</p>
-                <p>{new Date(contract.updated_at).toLocaleDateString("fr-FR")}</p>
+              <div className="space-y-1.5 pt-1 border-t">
+                <AuditBadge
+                  kind="created"
+                  user={contract.created_by_info}
+                  at={contract.created_at}
+                  fallback={
+                    <p className="text-xs text-muted-foreground">
+                      Créé le{" "}
+                      {new Date(contract.created_at).toLocaleDateString("fr-FR")}
+                    </p>
+                  }
+                />
+                {contract.updated_at !== contract.created_at && (
+                  <AuditBadge
+                    kind="updated"
+                    user={contract.updated_by_info}
+                    at={contract.updated_at}
+                    fallback={
+                      <p className="text-xs text-muted-foreground">
+                        Modifié le{" "}
+                        {new Date(contract.updated_at).toLocaleDateString(
+                          "fr-FR"
+                        )}
+                      </p>
+                    }
+                  />
+                )}
               </div>
             </CardContent>
           </Card>

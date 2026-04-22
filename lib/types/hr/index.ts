@@ -3,6 +3,8 @@
  * Gestion des employés, rôles, permissions et invitations
  */
 
+import type { UserMiniInfo } from "../shared";
+
 // ─── Permission ──────────────────────────────────────────────────────────────
 
 export interface Permission {
@@ -22,6 +24,8 @@ export interface Role {
   description: string;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreateRoleData {
@@ -53,6 +57,8 @@ export interface Employee {
   employee_id: string;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 // ─── Membership ──────────────────────────────────────────────────────────────
@@ -67,6 +73,8 @@ export interface Membership {
   is_active: boolean;
   joined_at: string;
   created_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface UpdateMembershipData {
@@ -143,6 +151,8 @@ export interface Invitation {
   expires_at: string;
   accepted_at: string | null;
   created_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreateInvitationData {
@@ -221,6 +231,8 @@ export interface Department {
   children_count: number;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface DepartmentTree {
@@ -264,6 +276,8 @@ export interface Position {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreatePositionData {
@@ -293,6 +307,8 @@ export interface PositionAssignment {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreatePositionAssignmentData {
@@ -371,6 +387,8 @@ export interface Contract {
   notes: string;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreateContractData {
@@ -465,6 +483,8 @@ export interface Payment {
   notes: string;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreatePaymentData {
@@ -517,6 +537,8 @@ export interface AdvanceRequest {
   rejection_reason: string;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreateAdvanceRequestData {
@@ -553,6 +575,8 @@ export interface LeaveBalance {
   max_days: number;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreateLeaveBalanceData {
@@ -601,6 +625,8 @@ export interface LeaveRequest {
   rejection_reason: string;
   created_at: string;
   updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreateLeaveRequestData {

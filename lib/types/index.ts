@@ -9,7 +9,7 @@ export * from './shared';
 
 // Types d'authentification (stricts - correspondent au backend)
 export type {
-  AuthResponse, AuthState, AuthTokens, BaseUser, ChangePasswordData, CurrentUser, LoginCredentials, LoginResponse, RegisterData, RegisterResponse, UpdateProfileData
+    AuthResponse, AuthState, AuthTokens, BaseUser, ChangePasswordData, CurrentUser, LoginCredentials, LoginResponse, RegisterData, RegisterResponse, UpdateProfileData
 } from './auth/auth';
 
 // Type guards pour l'authentification
@@ -17,4 +17,7 @@ export { isBaseUser, isLoginResponse } from './auth/auth';
 
 // Types HR (employés, rôles, permissions, invitations)
 export * from './hr';
+
+// Types Inventory (produits, catégories, entrepôts)
+export * from './inventory';
 

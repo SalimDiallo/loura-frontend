@@ -2,6 +2,7 @@
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { PermissionGuard } from "@/components/permissions";
+import { AuditFootprint } from "@/components/services/AuditBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -186,6 +187,16 @@ function EditDepartmentPage() {
                      <span>Ce département contient <strong>{department?.children_count || 0}</strong> sous-département(s).</span>
                    </p>
                 </div>
+
+                {department && (
+                  <AuditFootprint
+                    created_at={department.created_at}
+                    updated_at={department.updated_at}
+                    created_by_info={department.created_by_info ?? null}
+                    updated_by_info={department.updated_by_info ?? null}
+                    className="pt-4 border-t"
+                  />
+                )}
               </>
             )}
           </CardContent>

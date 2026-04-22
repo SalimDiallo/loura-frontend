@@ -39,6 +39,7 @@ import {
     FaClipboardList,
     FaCog,
     FaCreditCard,
+    FaExclamationTriangle,
     FaReceipt,
     FaShoppingCart,
     FaTachometerAlt,
@@ -124,8 +125,11 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
         { title: "Produits", url: `${b}/inventory/products`, icon: FaBox },
         { title: "Catégories", url: `${b}/inventory/categories`, icon: FaTags },
         { title: "Entrepôts", url: `${b}/inventory/warehouses`, icon: FaWarehouse },
+        { title: "Inventaires", url: `${b}/inventory/inventories`, icon: FaBoxOpen },
+        { title: "Alertes", url: `${b}/inventory/alerts`, icon: FaExclamationTriangle },
         { title: "Rapports", url: `${b}/inventory/reports`, icon: FaChartBar },
       ],
+ 
     },
     {
       id: "org",
@@ -311,7 +315,7 @@ function OrgSideBarInner() {
       <SidebarHeader className="p-3 pb-2">
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Org avatar */}
-          <div className="h-8 w-8 shrink-0 rounded-lg bg-sidebar-accent flex items-center justify-center overflow-hidden">
+          <div className="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center overflow-hidden">
             {org?.logo ? (
               <img
                 src={org.logo}

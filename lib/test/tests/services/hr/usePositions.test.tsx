@@ -1,11 +1,11 @@
-import { usePositions, usePosition, useCreatePosition, usePositionMembers } from '@/lib/hooks/hr';
+import { API_CONFIG } from '@/lib/api';
+import { useCreatePosition, usePosition, usePositionMembers, usePositions } from '@/lib/hooks/hr';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { http, HttpResponse } from 'msw';
 import { server } from '../../server';
-import { API_CONFIG } from '@/lib/api';
 
 const API_URL = API_CONFIG.baseURL;
 const orgId = 'org-123';
@@ -149,8 +149,8 @@ describe('usePositions hooks', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.name).toBe('Backend Engineer');
-    expect(result.current.data?.id).toBe('pos-new');
+    expect(result.current.data?.data.name).toBe('Backend Engineer');
+    expect(result.current.data?.data.id).toBe('pos-new');
   });
 
   it('usePositionMembers should fetch assignments for a specific position', async () => {

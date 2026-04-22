@@ -149,7 +149,7 @@ function LoginForm() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 text-primary focus:ring-primary"
                   />
                   <span className="text-muted-foreground">Se souvenir</span>
                 </label>

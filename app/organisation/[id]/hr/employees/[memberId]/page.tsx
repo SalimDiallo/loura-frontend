@@ -3,6 +3,7 @@
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { DetailPageLayout } from "@/components/layout/DetailPageLayout";
 import { Can, useOrgPermissions } from "@/components/permissions";
+import { AuditBadge } from "@/components/services/AuditBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -472,6 +473,18 @@ export default function EmployeeDetailPage() {
                   icon={Calendar}
                 />
               </div>
+              {member.created_by_info && (
+                <div className="mt-5 pt-4 border-t">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1.5">
+                    Ajouté par
+                  </p>
+                  <AuditBadge
+                    kind="created"
+                    user={member.created_by_info}
+                    at={member.created_at}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
