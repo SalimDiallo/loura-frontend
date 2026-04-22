@@ -1428,3 +1428,16 @@ export function useCancelLeaveRequest(): UseMutationResult<
     },
   });
 }
+
+// ─── Analytics (dashboard HR) ────────────────────────────────────────────────
+
+export {
+    hrAnalyticsKeys,
+    useHRContractsAnalytics,
+    useHRHeadcountAnalytics,
+    useHRLeavesAnalytics,
+    useHROverviewAnalytics,
+    useHRPayrollAnalytics,
+    useHRPendingActions
+} from './analytics';
+

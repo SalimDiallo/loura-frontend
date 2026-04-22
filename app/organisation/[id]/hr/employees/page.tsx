@@ -2,7 +2,7 @@
 
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { ListPageLayout, ListPagination, ListSearchFilters, ListStat, ListTable, ListTableColumn } from "@/components/layout/ListPageLayout";
-import { Can, useOrgPermissions } from "@/components/permissions";
+import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +19,15 @@ import { FaEnvelope, FaEye, FaUserPlus, FaUsers } from "react-icons/fa";
  * Page de gestion des employés (membres) d'une organisation
  * Utilise le composant ListPageLayout réutilisable pour unifier les pages de listes.
  */
-export default function EmployeesPage() {
+export default function EmployeesPageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.VIEW_EMPLOYEES}>
+      <EmployeesPage />
+    </PermissionGuard>
+  );
+}
+
+function EmployeesPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;

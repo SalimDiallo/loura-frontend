@@ -3,6 +3,7 @@
 import { GenerateDocumentButton } from "@/components/documents";
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { Can, useOrgPermissions } from "@/components/permissions";
+import { ReviewerBadge } from "@/components/services/hr/ReviewerBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,7 +165,6 @@ export default function PaymentDetailPage() {
   }
 
   const memberName = getMemberName(payment.membership) || payment.membership?.employee?.user?.email || "—";
-  const approverName = payment.approved_by ? getMemberName(payment.approved_by) : null;
 
   return (
     <FormPageLayout
@@ -209,9 +209,9 @@ export default function PaymentDetailPage() {
                   </Button>
                 </div>
               )}
-              {payment.status === "approved" && approverName && (
+              {payment.status === "approved" && payment.reviewer && (
                 <p className="text-xs text-muted-foreground">
-                  Approuvé par <span className="font-medium text-foreground">{approverName}</span>
+                  Approuvé par <ReviewerBadge reviewer={payment.reviewer} showIcon />
                 </p>
               )}
               {payment.status === "rejected" && (

@@ -2,7 +2,7 @@
 
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { ListPageLayout, ListPagination, ListSearchFilters, ListStat, ListTable, ListTableColumn } from "@/components/layout/ListPageLayout";
-import { Can, useOrgPermissions } from "@/components/permissions";
+import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,7 +23,15 @@ const POSITION_LEVELS: { id: PositionLevel; label: string }[] = [
   { id: "director", label: "Directeur" },
 ];
 
-export default function PositionsPage() {
+export default function PositionsPageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.VIEW_EMPLOYEES}>
+      <PositionsPage />
+    </PermissionGuard>
+  );
+}
+
+function PositionsPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;

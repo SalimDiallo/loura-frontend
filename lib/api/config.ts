@@ -164,6 +164,15 @@ export const API_ENDPOINTS = {
       CANCEL: (orgId: string, id: string) => `/hr/organizations/${orgId}/leaves/${id}/cancel/`,
       BY_MEMBER: (orgId: string, membershipId: string) => `/hr/organizations/${orgId}/members/${membershipId}/leaves/`,
     },
+    // Analytics (dashboard HR)
+    ANALYTICS: {
+      OVERVIEW: (orgId: string) => `/hr/organizations/${orgId}/analytics/overview/`,
+      HEADCOUNT: (orgId: string) => `/hr/organizations/${orgId}/analytics/headcount/`,
+      LEAVES: (orgId: string) => `/hr/organizations/${orgId}/analytics/leaves/`,
+      PAYROLL: (orgId: string) => `/hr/organizations/${orgId}/analytics/payroll/`,
+      CONTRACTS: (orgId: string) => `/hr/organizations/${orgId}/analytics/contracts/`,
+      PENDING_ACTIONS: (orgId: string) => `/hr/organizations/${orgId}/analytics/pending-actions/`,
+    },
   },
 
 } as const;

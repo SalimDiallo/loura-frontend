@@ -3,6 +3,7 @@
 import { GenerateDocumentButton } from "@/components/documents";
 import { ListPageLayout, ListSearchFilters, ListStat } from "@/components/layout/ListPageLayout";
 import { Can, useOrgPermissions } from "@/components/permissions";
+import { ReviewerBadge } from "@/components/services/hr/ReviewerBadge";
 import { Label } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -315,7 +316,12 @@ export default function PayrollPage() {
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {/* Utilisation de formatCurrency */}
                             {formatCurrency(Number(p.amount))} • {p.payment_date}
-                            {p.approved_by && ` • Validé par ${getMemberName(p.approved_by)}`}
+                            {p.reviewer && (
+                              <>
+                                {" • Validé par "}
+                                <ReviewerBadge reviewer={p.reviewer} showIcon />
+                              </>
+                            )}
                           </p>
                           {/* ==== Ajout du lien "Voir paiement" ==== */}
                           <Button
@@ -435,8 +441,11 @@ export default function PayrollPage() {
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.reason}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             Demandée le {a.request_date}
-                            {a.reviewed_by && (
-                              <> • {a.status === "approved" ? "Approuvée" : "Rejetée"} par <span className="font-medium text-foreground">{getMemberName(a.reviewed_by)}</span>
+                            {a.reviewer && (
+                              <>
+                                {" "}
+                                • {a.status === "approved" ? "Approuvée" : "Rejetée"} par{" "}
+                                <ReviewerBadge reviewer={a.reviewer} showIcon />
                                 {a.reviewed_at && ` le ${new Date(a.reviewed_at).toLocaleDateString("fr-FR")}`}
                               </>
                             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
+import { PermissionGuard } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { useCreateLeaveBalance, useMembers } from "@/lib/hooks/hr";
+import { PERMISSIONS } from "@/lib/permissions";
 import { Loader2, Save, UserCheck } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -22,7 +24,15 @@ import { toast } from "sonner";
 // création pour rester la source de vérité. On garde une limite conservatrice.
 const DEFAULT_MAX_DAYS = 60;
 
-export default function CreateLeaveBalancePage() {
+export default function CreateLeaveBalancePageWrapper() {
+    return (
+        <PermissionGuard permission={PERMISSIONS.LEAVES.MANAGE_BALANCES}>
+            <CreateLeaveBalancePage />
+        </PermissionGuard>
+    );
+}
+
+function CreateLeaveBalancePage() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();

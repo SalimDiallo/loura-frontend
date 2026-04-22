@@ -1,6 +1,7 @@
 "use client";
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
+import { PermissionGuard } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -25,6 +26,7 @@ import {
     useLeaveBalance,
     useUpdateLeaveBalance,
 } from "@/lib/hooks/hr";
+import { PERMISSIONS } from "@/lib/permissions";
 import { Loader2, Save, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -34,7 +36,15 @@ function getMemberName(m: any) {
     return `${m?.employee?.user?.first_name || ""} ${m?.employee?.user?.last_name || ""}`.trim();
 }
 
-export default function EditLeaveBalancePage() {
+export default function EditLeaveBalancePageWrapper() {
+    return (
+        <PermissionGuard permission={PERMISSIONS.LEAVES.MANAGE_BALANCES}>
+            <EditLeaveBalancePage />
+        </PermissionGuard>
+    );
+}
+
+function EditLeaveBalancePage() {
     const params = useParams();
     const router = useRouter();
     const orgId = params.id as string;

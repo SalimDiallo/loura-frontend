@@ -1,7 +1,7 @@
 "use client";
 
 import { ListPageLayout, ListStat } from "@/components/layout/ListPageLayout";
-import { Can, useOrgPermissions } from "@/components/permissions";
+import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,15 @@ import { toast } from "sonner";
 /**
  * Page de gestion des rôles d'une organisation
  */
-export default function RolesPage() {
+export default function RolesPageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.MANAGE_ROLES}>
+      <RolesPage />
+    </PermissionGuard>
+  );
+}
+
+function RolesPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;

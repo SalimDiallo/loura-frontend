@@ -2,7 +2,7 @@
 
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { ListPageLayout, ListPagination, ListSearchFilters, ListStat, ListTable, ListTableColumn } from "@/components/layout/ListPageLayout";
-import { Can, useOrgPermissions } from "@/components/permissions";
+import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -109,7 +109,15 @@ function DepartmentTreeNode({
   );
 }
 
-export default function DepartmentsPage() {
+export default function DepartmentsPageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.VIEW_EMPLOYEES}>
+      <DepartmentsPage />
+    </PermissionGuard>
+  );
+}
+
+function DepartmentsPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;

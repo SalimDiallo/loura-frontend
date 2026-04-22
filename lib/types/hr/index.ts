@@ -434,6 +434,22 @@ export interface DeleteContractResponse {
 export type PaymentType = 'salary' | 'bonus' | 'premium' | 'adjustment';
 export type PaymentStatus = 'pending' | 'approved' | 'rejected';
 
+/**
+ * Informations consolidées sur le reviewer / approbateur d'une demande
+ * (congé, avance, paiement). Vaut ``null`` pour une demande en attente.
+ *
+ * - ``type = "member"`` : validé par un membre de l'organisation.
+ * - ``type = "owner"``  : validé par le propriétaire (AdminUser) qui n'est
+ *   pas membre. ``role`` vaut alors ``null``.
+ */
+export interface ReviewerInfo {
+  type: 'member' | 'owner';
+  is_owner: boolean;
+  name: string;
+  email: string;
+  role: string | null;
+}
+
 export interface Payment {
   id: string;
   membership: Membership;
@@ -445,6 +461,7 @@ export interface Payment {
   status: PaymentStatus;
   status_display: string;
   approved_by: Membership | null;
+  reviewer: ReviewerInfo | null;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -495,6 +512,7 @@ export interface AdvanceRequest {
   status: AdvanceRequestStatus;
   status_display: string;
   reviewed_by: Membership | null;
+  reviewer: ReviewerInfo | null;
   reviewed_at: string | null;
   rejection_reason: string;
   created_at: string;
@@ -578,6 +596,7 @@ export interface LeaveRequest {
   status: LeaveRequestStatus;
   status_display: string;
   reviewed_by: Membership | null;
+  reviewer: ReviewerInfo | null;
   reviewed_at: string | null;
   rejection_reason: string;
   created_at: string;

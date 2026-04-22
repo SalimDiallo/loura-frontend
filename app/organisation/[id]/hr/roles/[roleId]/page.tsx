@@ -1,6 +1,6 @@
 "use client";
 
-import { Can } from "@/components/permissions";
+import { Can, PermissionGuard } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +37,15 @@ import { toast } from "sonner";
 /**
  * Page de détails d'un rôle
  */
-export default function RoleDetailPage() {
+export default function RoleDetailPageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.MANAGE_ROLES}>
+      <RoleDetailPage />
+    </PermissionGuard>
+  );
+}
+
+function RoleDetailPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;

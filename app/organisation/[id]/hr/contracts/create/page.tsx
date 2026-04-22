@@ -26,6 +26,20 @@ const CONTRACT_TYPES: { id: ContractType; label: string }[] = [
   { id: "other", label: "Autre" },
 ];
 
+/**
+ * Règles d'utilisation de la date de fin selon le type de contrat :
+ * - ``hidden``    : contrat à durée indéterminée → pas de date de fin.
+ * - ``required``  : contrat à durée déterminée → date de fin obligatoire.
+ * - ``optional``  : date de fin possible mais non imposée.
+ */
+const END_DATE_MODE: Record<ContractType, "hidden" | "required" | "optional"> = {
+  cdi: "hidden",
+  cdd: "required",
+  internship: "required",
+  freelance: "optional",
+  other: "optional",
+};
+
 const CONTRACT_STATUSES: { id: ContractStatus; label: string }[] = [
   { id: "active", label: "Actif" },
   { id: "suspended", label: "Suspendu" },
@@ -86,6 +100,16 @@ function CreateContractPage() {
 
   const selectedMember = members.find((m: any) => m.id === membershipId);
 
+  const endDateMode = END_DATE_MODE[contractType];
+
+  // Si l'utilisateur change pour un type sans date de fin (CDI), on réinitialise.
+  const handleContractTypeChange = (newType: ContractType) => {
+    setContractType(newType);
+    if (END_DATE_MODE[newType] === "hidden") {
+      setEndDate("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -97,10 +121,23 @@ function CreateContractPage() {
       toast.error("La date de début est obligatoire.");
       return;
     }
+    if (endDateMode === "required" && !endDate) {
+      toast.error("La date de fin est obligatoire pour ce type de contrat.");
+      return;
+    }
+    if (endDate && startDate && endDate < startDate) {
+      toast.error("La date de fin doit être postérieure à la date de début.");
+      return;
+    }
     if (!baseSalary || Number(baseSalary) <= 0) {
       toast.error("Le salaire de base doit être supérieur à 0.");
       return;
     }
+
+    // Pour un CDI on ne transmet jamais de date de fin, même si elle était
+    // saisie avant un changement de type.
+    const payloadEndDate =
+      endDateMode === "hidden" ? undefined : endDate || undefined;
 
     try {
       await createContract.mutateAsync({
@@ -109,7 +146,7 @@ function CreateContractPage() {
           membership_id: membershipId,
           contract_type: contractType,
           start_date: startDate,
-          end_date: endDate || undefined,
+          end_date: payloadEndDate,
           base_salary: baseSalary,
           status,
           notes,
@@ -176,7 +213,10 @@ function CreateContractPage() {
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase text-muted-foreground">Période</p>
               <p className="text-sm">
-                {startDate || "—"} → {endDate || "Indéterminée"}
+                {startDate || "—"} →{" "}
+                {endDateMode === "hidden"
+                  ? "Indéterminée"
+                  : endDate || (endDateMode === "required" ? "— (requise)" : "Indéterminée")}
               </p>
             </div>
             <div className="space-y-1">
@@ -261,7 +301,7 @@ function CreateContractPage() {
                 <select
                   className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   value={contractType}
-                  onChange={(e) => setContractType(e.target.value as ContractType)}
+                  onChange={(e) => handleContractTypeChange(e.target.value as ContractType)}
                 >
                   {CONTRACT_TYPES.map((t) => (
                     <option key={t.id} value={t.id}>{t.label}</option>
@@ -298,19 +338,39 @@ function CreateContractPage() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_date">Date de fin <span className="text-muted-foreground font-normal text-xs">(Optionnel)</span></Label>
-                <div className="relative">
-                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="end_date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="pl-10"
-                  />
+              {endDateMode === "hidden" ? (
+                <div className="space-y-2">
+                  <Label>Date de fin</Label>
+                  <div className="flex h-10 items-center rounded-md border border-dashed border-input bg-muted/40 px-3 text-sm text-muted-foreground">
+                    Durée indéterminée (CDI)
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="end_date">
+                    Date de fin{" "}
+                    {endDateMode === "required" ? (
+                      <span className="text-destructive">*</span>
+                    ) : (
+                      <span className="text-muted-foreground font-normal text-xs">
+                        (Optionnel)
+                      </span>
+                    )}
+                  </Label>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="end_date"
+                      type="date"
+                      value={endDate}
+                      min={startDate || undefined}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="pl-10"
+                      required={endDateMode === "required"}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

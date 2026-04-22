@@ -103,10 +103,10 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
         { title: "Postes", url: `${b}/hr/positions`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
         { title: "Employés", url: `${b}/hr/employees`, icon: FaUserCheck, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
         { title: "Rôles & Permissions", url: `${b}/hr/roles`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.MANAGE_ROLES },
-        { title: "Paie", url: `${b}/hr/payroll`, icon: FaCreditCard, requiredPermission: [PERMISSIONS.PAYMENTS.VIEW, PERMISSIONS.ADVANCES.VIEW, PERMISSIONS.ADVANCES.REQUEST] },
-        { title: "Contrats", url: `${b}/hr/contracts`, icon: FaClipboardList, requiredPermission: PERMISSIONS.CONTRACTS.VIEW },
+        { title: "Paie", url: `${b}/hr/payroll`, icon: FaCreditCard},
+        { title: "Contrats", url: `${b}/hr/contracts`, icon: FaClipboardList },
         { title: "Congés", url: `${b}/hr/leaves`, icon: FaUmbrellaBeach },
-        { title: "Pointage", url: `${b}/hr/attendance`, icon: FaClock },
+        // { title: "Pointage", url: `${b}/hr/attendance`, icon: FaClock },
       ],
     },
     {
@@ -140,7 +140,6 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
 }
 
 // Add missing FaClock import for the "Pointage" menu entry
-import { FaClock } from "react-icons/fa";
 
 // ============================================================================
 // ROUTE MATCHING

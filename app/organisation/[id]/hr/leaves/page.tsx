@@ -7,6 +7,7 @@ import {
     ListStat,
 } from "@/components/layout/ListPageLayout";
 import { useOrgPermissions } from "@/components/permissions";
+import { ReviewerBadge } from "@/components/services/hr/ReviewerBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,13 +122,11 @@ function LeaveRow({
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Du {leave.start_date} au {leave.end_date}
-                    {leave.reviewed_by && (
+                    {leave.reviewer && (
                         <>
                             {" "}
                             • {leave.status === "approved" ? "Approuvée" : "Rejetée"} par{" "}
-                            <span className="font-medium text-foreground">
-                                {getMemberName(leave.reviewed_by)}
-                            </span>
+                            <ReviewerBadge reviewer={leave.reviewer} showIcon />
                         </>
                     )}
                 </p>
