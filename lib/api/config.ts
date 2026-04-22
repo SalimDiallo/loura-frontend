@@ -203,6 +203,65 @@ export const API_ENDPOINTS = {
       DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/products/${id}/`,
       IMAGE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/products/${id}/image/`,
     },
+    // Stock (niveaux courants)
+    STOCKS: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/stocks/`,
+      ALERTS: (orgId: string) => `/inventory/organizations/${orgId}/stocks/alerts/`,
+    },
+    // Mouvements de stock
+    STOCK_MOVEMENTS: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/stock-movements/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/stock-movements/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/stock-movements/${id}/`,
+    },
+    // Transferts
+    STOCK_TRANSFERS: {
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/stock-transfers/`,
+    },
+    // Fournisseurs
+    SUPPLIERS: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/suppliers/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/suppliers/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/suppliers/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/suppliers/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/suppliers/${id}/`,
+    },
+    // Clients
+    CUSTOMERS: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/customers/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/customers/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/customers/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/customers/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/customers/${id}/`,
+    },
+    // Ventes (Sales)
+    SALES: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/sales/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/sales/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/`,
+      COMPLETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/complete/`,
+      CANCEL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/cancel/`,
+      PAYMENTS: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/payments/`,
+      PAYMENT_DETAIL: (orgId: string, id: string, paymentId: string) =>
+        `/inventory/organizations/${orgId}/sales/${id}/payments/${paymentId}/`,
+      INSTALLMENTS: (orgId: string, id: string) => `/inventory/organizations/${orgId}/sales/${id}/installments/`,
+    },
+    // Commandes fournisseur (Purchase Orders)
+    PURCHASE_ORDERS: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/purchase-orders/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/purchase-orders/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/purchase-orders/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/purchase-orders/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/purchase-orders/${id}/`,
+      SEND: (orgId: string, id: string) => `/inventory/organizations/${orgId}/purchase-orders/${id}/send/`,
+      CANCEL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/purchase-orders/${id}/cancel/`,
+      RECEIVE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/purchase-orders/${id}/receive/`,
+      PAYMENTS: (orgId: string, id: string) => `/inventory/organizations/${orgId}/purchase-orders/${id}/payments/`,
+      PAYMENT_DETAIL: (orgId: string, id: string, paymentId: string) =>
+        `/inventory/organizations/${orgId}/purchase-orders/${id}/payments/${paymentId}/`,
+    },
   },
 
 } as const;

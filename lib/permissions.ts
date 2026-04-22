@@ -61,6 +61,21 @@ export const PERMISSIONS = {
     VIEW: 'inventory.view_stock',
     MANAGE: 'inventory.manage_stock',
   },
+  // ── Inventaire : Fournisseurs ─────────────────────────────────────────────
+  SUPPLIERS: {
+    VIEW: 'inventory.view_suppliers',
+    MANAGE: 'inventory.manage_suppliers',
+  },
+  // ── Inventaire : Approvisionnements ───────────────────────────────────────
+  PURCHASE_ORDERS: {
+    VIEW: 'inventory.view_purchase_orders',
+    MANAGE: 'inventory.manage_purchase_orders',
+  },
+  // ── Inventaire : Clients ──────────────────────────────────────────────────
+  CUSTOMERS: {
+    VIEW: 'inventory.view_customers',
+    MANAGE: 'inventory.manage_customers',
+  },
   // ── Inventaire : Ventes ───────────────────────────────────────────────────
   SALES: {
     VIEW: 'inventory.view_sales',

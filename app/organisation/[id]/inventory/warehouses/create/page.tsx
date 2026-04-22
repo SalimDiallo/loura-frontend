@@ -30,7 +30,7 @@ import {
     Warehouse as WarehouseIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function CreateWarehousePageWrapper() {
@@ -75,6 +75,22 @@ function CreateWarehousePage() {
             })),
         [membersList]
     );
+
+    // --- Fix for Switch not working bindings ---
+    // Use useCallback to ensure referential equality for setFormData updates
+    const handleDefaultSwitch = useCallback((checked: boolean) => {
+        setFormData((prev) => ({
+            ...prev,
+            is_default: checked,
+        }));
+    }, []);
+
+    const handleActiveSwitch = useCallback((checked: boolean) => {
+        setFormData((prev) => ({
+            ...prev,
+            is_active: checked,
+        }));
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -307,10 +323,8 @@ function CreateWarehousePage() {
                                     </p>
                                 </div>
                                 <Switch
-                                    checked={formData.is_default ?? false}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, is_default: checked })
-                                    }
+                                    checked={!!formData.is_default}
+                                    onCheckedChange={handleDefaultSwitch}
                                 />
                             </div>
                             <div className="flex flex-row items-center justify-between border p-4 rounded-md">
@@ -321,10 +335,8 @@ function CreateWarehousePage() {
                                     </p>
                                 </div>
                                 <Switch
-                                    checked={formData.is_active ?? true}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, is_active: checked })
-                                    }
+                                    checked={!!formData.is_active}
+                                    onCheckedChange={handleActiveSwitch}
                                 />
                             </div>
                         </div>
