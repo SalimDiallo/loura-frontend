@@ -1,54 +1,86 @@
 /**
  * Fonctions utilitaires de formatage
+ *
+ * La devise peut provenir de trois sources, dans cet ordre de priorité :
+ *   1. Paramètre explicite passé à la fonction (`currency` arg).
+ *   2. Clé localStorage `loura-currency` (synchronisée par `useOrgCurrency`).
+ *   3. Valeur par défaut "GNF".
+ *
+ * Pour utiliser la devise de l'organisation courante dans un composant React,
+ * préférez le hook `useCurrencyFormatter` depuis `@/lib/hooks/useCurrency`.
  */
+
+export const CURRENCY_STORAGE_KEY = "loura-currency";
+const DEFAULT_CURRENCY = "GNF";
 
 /**
- * Récupère l'organisation courante depuis les utilitaires locaux
- * Si non disponible, tente de la récupérer via le backend (organizationService)
+ * Récupère la devise depuis le localStorage (fallback safe côté serveur).
+ * Utilisé en interne par les formatters purs. Les composants React devraient
+ * plutôt utiliser `useCurrencyFormatter` qui suit la devise de l'org active.
  */
-
-
-/**
- * Formate un montant en devise
- */
-export const formatCurrency = (amount: number, currency: string = "GNF") => {
-  // On récupère la devise locale depuis le localStorage, sinon on utilise le paramètre ou "GNF"
-  let localCurrency: string | null = null;
-  if (typeof window !== "undefined") {
-    try {
-      localCurrency = window.localStorage.getItem("loura-currency");
-    } catch {
-      // ignore erreurs d'accès au localStorage
-      localCurrency = null;
-    }
+export const getStoredCurrency = (): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(CURRENCY_STORAGE_KEY);
+  } catch {
+    return null;
   }
-  
-  const currencyUsed = localCurrency || currency || "GNF";
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: currencyUsed,
-    minimumFractionDigits: 0,
-  }).format(amount);
 };
 
 /**
- * Formate un montant en devise de manière compacte pour les dashboards
- * Ex: 120 002 267 836 → "120B MAD", 7 500 000 → "7.5M MAD"
+ * Écrit la devise dans le localStorage (no-op côté serveur).
  */
-export const formatCompactCurrency = (amount: number, currency: string = "GNF") => {
-  let localCurrency: string | null = null;
-  if (typeof window !== "undefined") {
-    try {
-      localCurrency = window.localStorage.getItem("loura-currency");
-    } catch {
-      localCurrency = null;
-    }
+export const setStoredCurrency = (currency: string): void => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
+  } catch {
+    // ignore
   }
-  
-  const currencyUsed = localCurrency || currency || "GNF";
+};
+
+/**
+ * Résout la devise à utiliser selon la priorité : arg > localStorage > défaut.
+ */
+const resolveCurrency = (explicitCurrency?: string): string => {
+  if (explicitCurrency) return explicitCurrency;
+  return getStoredCurrency() || DEFAULT_CURRENCY;
+};
+
+/**
+ * Formate un montant en devise.
+ *
+ * @param amount Montant à formater.
+ * @param currency Devise explicite. Si omise, utilise la devise de
+ *                 `localStorage.loura-currency` ou "GNF".
+ */
+export const formatCurrency = (amount: number, currency?: string): string => {
+  const currencyUsed = resolveCurrency(currency);
+  try {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: currencyUsed,
+      minimumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    // Fallback pour devises non reconnues par Intl
+    return `${new Intl.NumberFormat("fr-FR").format(amount)} ${currencyUsed}`;
+  }
+};
+
+/**
+ * Formate un montant en devise de manière compacte pour les dashboards.
+ * Ex : 120 002 267 836 → "120B MAD", 7 500 000 → "7.5M MAD"
+ *
+ * @param amount Montant à formater.
+ * @param currency Devise explicite. Si omise, utilise la devise de
+ *                 `localStorage.loura-currency` ou "GNF".
+ */
+export const formatCompactCurrency = (amount: number, currency?: string): string => {
+  const currencyUsed = resolveCurrency(currency);
   const abs = Math.abs(amount);
   const sign = amount < 0 ? "-" : "";
-  
+
   let formatted: string;
   if (abs >= 1_000_000_000) {
     formatted = `${sign}${(abs / 1_000_000_000).toFixed(1)}B`;
@@ -59,7 +91,7 @@ export const formatCompactCurrency = (amount: number, currency: string = "GNF") 
   } else {
     formatted = `${sign}${abs.toFixed(0)}`;
   }
-  
+
   return `${formatted} ${currencyUsed}`;
 };
 

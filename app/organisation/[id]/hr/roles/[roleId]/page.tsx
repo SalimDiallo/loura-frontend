@@ -1,32 +1,34 @@
 "use client";
 
+import { Can } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDeleteRole, useRole } from "@/lib/hooks/hr";
+import { PERMISSIONS } from "@/lib/permissions";
 import {
-  ArrowLeft,
-  Calendar,
-  Check,
-  Edit,
-  Shield,
-  Trash2,
+    ArrowLeft,
+    Calendar,
+    Check,
+    Edit,
+    Shield,
+    Trash2,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -135,28 +137,30 @@ export default function RoleDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  router.push(`/organisation/${orgId}/hr/roles/${roleId}/edit`)
-                }
-                className="gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Modifier
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmDeleteOpen(true)}
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Supprimer
-              </Button>
-            </div>
+            <Can permission={PERMISSIONS.HR.MANAGE_ROLES}>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(`/organisation/${orgId}/hr/roles/${roleId}/edit`)
+                  }
+                  className="gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Modifier
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Supprimer
+                </Button>
+              </div>
+            </Can>
           </div>
         </CardHeader>
       </Card>

@@ -52,6 +52,8 @@ export const API_ENDPOINTS = {
       DEACTIVATE: (id: string) => `/core/organizations/${id}/deactivate/`,
       UPLOAD_LOGO: (id: string) => `/core/organizations/${id}/logo/`,
       SETTINGS: (id: string) => `/core/organizations/${id}/settings/`,
+      DOCUMENT: (id: string, docType: string, objectId: string) =>
+        `/core/organizations/${id}/documents/${docType}/${objectId}/`,
     },
     // Catégories
     CATEGORIES: {
@@ -81,6 +83,7 @@ export const API_ENDPOINTS = {
       UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/members/${id}/`,
       DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/members/${id}/`,
       MY_MEMBERSHIPS: '/hr/my-memberships/',
+      MY_PERMISSIONS: (orgId: string) => `/hr/organizations/${orgId}/my-permissions/`,
     },
     // Invitations
     INVITATIONS: {
@@ -89,6 +92,77 @@ export const API_ENDPOINTS = {
       PENDING: '/hr/invitations/pending/',
       ACCEPT: (id: string) => `/hr/invitations/${id}/accept/`,
       DECLINE: (id: string) => `/hr/invitations/${id}/decline/`,
+    },
+    // Départements
+    DEPARTMENTS: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/departments/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/departments/`,
+      TREE: (orgId: string) => `/hr/organizations/${orgId}/departments/tree/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/departments/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/departments/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/departments/${id}/`,
+    },
+    // Postes
+    POSITIONS: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/positions/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/positions/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/positions/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/positions/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/positions/${id}/`,
+      MEMBERS: (orgId: string, positionId: string) => `/hr/organizations/${orgId}/positions/${positionId}/members/`,
+    },
+    // Assignations de postes
+    ASSIGNMENTS: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/assignments/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/assignments/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/assignments/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/assignments/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/assignments/${id}/`,
+      BY_MEMBER: (orgId: string, membershipId: string) => `/hr/organizations/${orgId}/members/${membershipId}/assignments/`,
+    },
+    // Contrats
+    CONTRACTS: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/contracts/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/contracts/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/contracts/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/contracts/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/contracts/${id}/`,
+      BY_MEMBER: (orgId: string, membershipId: string) => `/hr/organizations/${orgId}/members/${membershipId}/contracts/`,
+    },
+    // Paiements
+    PAYMENTS: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/payments/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/payments/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/payments/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/payments/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/payments/${id}/`,
+      BY_MEMBER: (orgId: string, membershipId: string) => `/hr/organizations/${orgId}/members/${membershipId}/payments/`,
+    },
+    // Demandes d'avance
+    ADVANCES: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/advances/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/advances/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/advances/${id}/`,
+      REVIEW: (orgId: string, id: string) => `/hr/organizations/${orgId}/advances/${id}/review/`,
+      BY_MEMBER: (orgId: string, membershipId: string) => `/hr/organizations/${orgId}/members/${membershipId}/advances/`,
+    },
+    // Soldes de congés
+    LEAVE_BALANCES: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/leave-balances/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/leave-balances/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/leave-balances/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/leave-balances/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/leave-balances/${id}/`,
+      BY_MEMBER: (orgId: string, membershipId: string) => `/hr/organizations/${orgId}/members/${membershipId}/leave-balances/`,
+    },
+    // Demandes de congé
+    LEAVES: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/leaves/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/leaves/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/leaves/${id}/`,
+      REVIEW: (orgId: string, id: string) => `/hr/organizations/${orgId}/leaves/${id}/review/`,
+      CANCEL: (orgId: string, id: string) => `/hr/organizations/${orgId}/leaves/${id}/cancel/`,
+      BY_MEMBER: (orgId: string, membershipId: string) => `/hr/organizations/${orgId}/members/${membershipId}/leaves/`,
     },
   },
 

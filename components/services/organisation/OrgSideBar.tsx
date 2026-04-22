@@ -1,5 +1,6 @@
 "use client";
 
+import { useOrgPermissions } from "@/components/permissions";
 import {
     Collapsible,
     CollapsibleContent,
@@ -21,6 +22,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar";
 import { useOrganization } from "@/lib/hooks/core";
+import { PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -42,6 +44,7 @@ import {
     FaTachometerAlt,
     FaTags,
     FaTruck,
+    FaUmbrellaBeach,
     FaUserCheck,
     FaUsers,
     FaWallet,
@@ -56,6 +59,12 @@ interface MenuItem {
   title: string;
   url: string;
   icon: React.ElementType;
+  /**
+   * Permission(s) requise(s) pour voir l'item.
+   * Si absent, l'item est visible pour tout membre.
+   * Si array, tout match (mode "any").
+   */
+  requiredPermission?: string | string[];
 }
 
 interface MenuGroup {
@@ -90,12 +99,13 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
       defaultOpen: false,
       items: [
         { title: "Vue d'ensemble", url: `${b}/hr`, icon: FaClipboardList },
-        { title: "Départements & Postes", url: `${b}/hr/departments`, icon: FaBriefcase },
-        { title: "Employés", url: `${b}/hr/employees`, icon: FaUserCheck },
-        { title: "Rôles & Permissions", url: `${b}/hr/roles`, icon: FaBriefcase },
-        { title: "Paie", url: `${b}/hr/payroll`, icon: FaCreditCard },
-        { title: "Contrats", url: `${b}/hr/contracts`, icon: FaClipboardList },
-        { title: "Congés", url: `${b}/hr/leaves`, icon: FaBriefcase },
+        { title: "Départements", url: `${b}/hr/departments`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
+        { title: "Postes", url: `${b}/hr/positions`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
+        { title: "Employés", url: `${b}/hr/employees`, icon: FaUserCheck, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
+        { title: "Rôles & Permissions", url: `${b}/hr/roles`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.MANAGE_ROLES },
+        { title: "Paie", url: `${b}/hr/payroll`, icon: FaCreditCard, requiredPermission: [PERMISSIONS.PAYMENTS.VIEW, PERMISSIONS.ADVANCES.VIEW, PERMISSIONS.ADVANCES.REQUEST] },
+        { title: "Contrats", url: `${b}/hr/contracts`, icon: FaClipboardList, requiredPermission: PERMISSIONS.CONTRACTS.VIEW },
+        { title: "Congés", url: `${b}/hr/leaves`, icon: FaUmbrellaBeach },
         { title: "Pointage", url: `${b}/hr/attendance`, icon: FaClock },
       ],
     },
@@ -266,7 +276,27 @@ function OrgSideBarInner() {
   const orgId = params.id as string;
 
   const { data: org } = useOrganization(orgId);
-  const menuGroups = buildMenuGroups(orgId);
+  const { canAny, isOwner, isLoading: permsLoading } = useOrgPermissions();
+
+  const menuGroups = useMemo(() => {
+    const allGroups = buildMenuGroups(orgId);
+    // Ne pas filtrer tant que les permissions ne sont pas chargées (éviter un flash vide)
+    if (permsLoading) return allGroups;
+
+    return allGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          if (!item.requiredPermission) return true;
+          if (isOwner) return true;
+          const perms = Array.isArray(item.requiredPermission)
+            ? item.requiredPermission
+            : [item.requiredPermission];
+          return canAny(perms);
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [orgId, canAny, isOwner, permsLoading]);
 
   const orgName = org?.name || "Organisation";
   const orgInitials = orgName

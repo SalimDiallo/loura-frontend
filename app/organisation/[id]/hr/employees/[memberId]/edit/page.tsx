@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeStatus } from "@/components/BadgeStatus";
+import { PermissionGuard } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,12 @@ import {
     useRoles,
     useUpdateMember,
 } from "@/lib/hooks/hr";
+import {
+    getDependentSelectedIds,
+    getRequiredIds,
+    resolvePermissionSelection,
+} from "@/lib/permission-dependencies";
+import { PERMISSIONS } from "@/lib/permissions";
 import { ArrowLeft, Check, Save, Shield, ShieldAlert, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -36,7 +43,15 @@ import { toast } from "sonner";
 /**
  * Page d'édition d'un employé (membre)
  */
-export default function EditEmployeePage() {
+export default function EditEmployeePageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.MANAGE_EMPLOYEES}>
+      <EditEmployeePage />
+    </PermissionGuard>
+  );
+}
+
+function EditEmployeePage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
@@ -80,11 +95,20 @@ export default function EditEmployeePage() {
 
   // Handlers
   const handleTogglePermission = (permId: string) => {
-    setSelectedPermissions((prev) =>
-      prev.includes(permId)
+    setSelectedPermissions((prev) => {
+      const nextRaw = prev.includes(permId)
         ? prev.filter((id) => id !== permId)
-        : [...prev, permId]
-    );
+        : [...prev, permId];
+      // Les permissions déjà apportées par le rôle sont "implicites" :
+      // pas besoin de les répéter dans les extras lors d'un auto-add.
+      const implicitIds = roles?.find((r) => r.id === selectedRoleId)?.permissions.map((p) => p.id) ?? [];
+      return resolvePermissionSelection(
+        prev,
+        nextRaw,
+        permissions ?? [],
+        { implicitIds },
+      );
+    });
   };
 
   const handleSubmit = async () => {
@@ -319,8 +343,31 @@ export default function EditEmployeePage() {
                     <div className="space-y-3 ml-2">
                       {perms.map((perm) => {
                         const isFromRole = rolePermissionIds.has(perm.id);
-                        const isChecked =
-                          isFromRole || selectedPermissions.includes(perm.id);
+                        const isExtra = selectedPermissions.includes(perm.id);
+                        const isChecked = isFromRole || isExtra;
+
+                        // Décochage bloqué si une extra-permission sélectionnée
+                        // dépend de celle-ci.
+                        const lockingIds = isExtra
+                          ? getDependentSelectedIds(
+                              perm.id,
+                              selectedPermissions,
+                              permissions ?? [],
+                            )
+                          : [];
+                        const isLocked = lockingIds.length > 0;
+                        const lockingLabels = lockingIds
+                          .map((id) => permissions?.find((p) => p.id === id)?.label)
+                          .filter((l): l is string => Boolean(l));
+                        const requiredIds = !isChecked
+                          ? getRequiredIds(perm.id, permissions ?? [])
+                          : [];
+                        const requiredLabels = requiredIds
+                          .filter((id) => !rolePermissionIds.has(id))
+                          .map((id) => permissions?.find((p) => p.id === id)?.label)
+                          .filter((l): l is string => Boolean(l));
+
+                        const disabled = isFromRole || isLocked;
 
                         return (
                           <div key={perm.id} className="flex items-start space-x-3">
@@ -328,17 +375,17 @@ export default function EditEmployeePage() {
                               id={perm.id}
                               checked={isChecked}
                               onCheckedChange={() =>
-                                !isFromRole && handleTogglePermission(perm.id)
+                                !disabled && handleTogglePermission(perm.id)
                               }
-                              disabled={isFromRole}
+                              disabled={disabled}
                               className="mt-0.5"
                             />
                             <div className="flex-1 space-y-0.5">
                               <label
                                 htmlFor={perm.id}
-                                className={`text-sm font-medium leading-none cursor-pointer flex items-center gap-2 ${
+                                className={`text-sm font-medium leading-none flex items-center gap-2 ${
                                   isFromRole ? "text-muted-foreground" : ""
-                                }`}
+                                } ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                               >
                                 {perm.label}
                                 {isFromRole && (
@@ -350,6 +397,16 @@ export default function EditEmployeePage() {
                               <p className="text-xs text-muted-foreground">
                                 {perm.codename}
                               </p>
+                              {isLocked && (
+                                <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                                  Requise par : {lockingLabels.join(", ")}
+                                </p>
+                              )}
+                              {!isChecked && requiredLabels.length > 0 && (
+                                <p className="text-[10px] text-muted-foreground/70">
+                                  Implique : {requiredLabels.join(", ")}
+                                </p>
+                              )}
                             </div>
                           </div>
                         );

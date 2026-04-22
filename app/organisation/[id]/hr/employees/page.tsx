@@ -2,6 +2,7 @@
 
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { ListPageLayout, ListPagination, ListSearchFilters, ListStat, ListTable, ListTableColumn } from "@/components/layout/ListPageLayout";
+import { Can, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePaginatedMembers } from "@/lib/hooks/hr";
+import { PERMISSIONS } from "@/lib/permissions";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { FaEnvelope, FaEye, FaUserPlus, FaUsers } from "react-icons/fa";
@@ -21,6 +23,9 @@ export default function EmployeesPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
+  const { can } = useOrgPermissions();
+  const canInvite = can(PERMISSIONS.HR.INVITE_EMPLOYEES);
+  const canManage = can(PERMISSIONS.HR.MANAGE_EMPLOYEES);
 
   // Filtres locaux employés
   const [search, setSearch] = useState("");
@@ -107,17 +112,21 @@ export default function EmployeesPage() {
       icon={FaUsers}
       description="Gérez les membres de votre organisation"
       headerActions={[
-        {
-          label: "Voir les invitations",
-          icon: FaEye,
-          onClick: () => router.push(`/organisation/${orgId}/hr/employees/invitations`),
-          variant: "outline"
-        },
-        {
-          label: "Ajouter un employé",
-          icon: FaUserPlus,
-          onClick: () => router.push(`/organisation/${orgId}/hr/employees/invite`),
-        }
+        ...(canInvite
+          ? [
+              {
+                label: "Voir les invitations",
+                icon: FaEye,
+                onClick: () => router.push(`/organisation/${orgId}/hr/employees/invitations`),
+                variant: "outline" as const,
+              },
+              {
+                label: "Ajouter un employé",
+                icon: FaUserPlus,
+                onClick: () => router.push(`/organisation/${orgId}/hr/employees/invite`),
+              },
+            ]
+          : []),
       ]}
       stats={[
         <ListStat
@@ -256,15 +265,17 @@ export default function EmployeesPage() {
                   ? "Essayez de modifier votre recherche ou vos filtres"
                   : "Commencez par inviter des membres"}
               </p>
-              <div className="mt-6 flex justify-center">
-                <Button
-                  variant="default"
-                  onClick={() => router.push(`/organisation/${orgId}/hr/employees/invite`)}
-                >
-                  <FaUserPlus className="mr-2" />
-                  Inviter un membre
-                </Button>
-              </div>
+              <Can permission={PERMISSIONS.HR.INVITE_EMPLOYEES}>
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    variant="default"
+                    onClick={() => router.push(`/organisation/${orgId}/hr/employees/invite`)}
+                  >
+                    <FaUserPlus className="mr-2" />
+                    Inviter un membre
+                  </Button>
+                </div>
+              </Can>
             </div>
        
           ) : (
@@ -346,17 +357,19 @@ export default function EmployeesPage() {
                         <FaEye className="h-4 w-4" />
                         Voir
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          router.push(
-                            `/organisation/${orgId}/hr/employees/${member.id}?edit=1`
-                          )
-                        }
-                      >
-                        Modifier
-                      </Button>
+                      {canManage && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            router.push(
+                              `/organisation/${orgId}/hr/employees/${member.id}?edit=1`
+                            )
+                          }
+                        >
+                          Modifier
+                        </Button>
+                      )}
                     </div>
                   )}
                 </ListTableColumn>

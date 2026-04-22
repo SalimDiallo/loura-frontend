@@ -1,6 +1,7 @@
 "use client";
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
+import { PermissionGuard } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateRole, usePermissions } from "@/lib/hooks/hr";
+import { resolvePermissionSelection } from "@/lib/permission-dependencies";
+import { PERMISSIONS } from "@/lib/permissions";
 import type { CreateRoleData } from "@/lib/types";
 import { Save, Shield, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -26,7 +29,15 @@ import { toast } from "sonner";
 /**
  * Page de création d'un nouveau rôle
  */
-export default function CreateRolePage() {
+export default function CreateRolePageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.MANAGE_ROLES}>
+      <CreateRolePage />
+    </PermissionGuard>
+  );
+}
+
+function CreateRolePage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
@@ -55,7 +66,14 @@ export default function CreateRolePage() {
 
   // Handlers
   const handlePermissionsChange = (newIds: string[]) => {
-    setFormData(prev => ({ ...prev, permission_ids: newIds }));
+    setFormData((prev) => ({
+      ...prev,
+      permission_ids: resolvePermissionSelection(
+        prev.permission_ids,
+        newIds,
+        permissions,
+      ),
+    }));
   };
 
   const handleSubmit = async () => {

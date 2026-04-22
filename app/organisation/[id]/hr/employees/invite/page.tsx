@@ -1,13 +1,16 @@
 "use client";
 
+import { PermissionGuard } from "@/components/permissions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
-import { usePermissions, useRoles, useSendInvitation } from "@/lib/hooks/hr";
+import { useDepartments, usePermissions, usePositions, useRoles, useSendInvitation } from "@/lib/hooks/hr";
+import { PERMISSIONS } from "@/lib/permissions";
 import type { CreateInvitationData } from "@/lib/types";
-import { ArrowLeft, BadgeInfo, Loader2, Mail, Send, Shield } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BadgeInfo, Briefcase, Building, Crown, Loader2, Mail, Send, Shield, UserCheck } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FaCheck } from "react-icons/fa";
@@ -16,7 +19,15 @@ import { toast } from "sonner";
 /**
  * Page d'invitation d'un nouvel employé
  */
-export default function InviteEmployeePage() {
+export default function InviteEmployeePageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.INVITE_EMPLOYEES}>
+      <InviteEmployeePage />
+    </PermissionGuard>
+  );
+}
+
+function InviteEmployeePage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
@@ -25,11 +36,26 @@ export default function InviteEmployeePage() {
     email: "",
     role_id: null,
     permission_ids: [],
+    department_id: null,
+    position_id: null,
   });
 
-  // Fetch roles et permissions
+  // Erreur structurée du backend (is_owner, already_member, already_invited)
+  const [serverError, setServerError] = useState<
+    | { code?: string; message?: string; membership_id?: string }
+    | null
+  >(null);
+
+  // Fetch roles, permissions, departments, positions
   const { data: roles = [] } = useRoles(orgId);
   const { data: permissions = [] } = usePermissions();
+  const { data: departments = [] } = useDepartments(orgId, { page_size: "all" as any });
+  const { data: positions = [] } = usePositions(
+    orgId,
+    formData.department_id
+      ? { department: formData.department_id, page_size: "all" as any }
+      : { page_size: "all" as any },
+  );
 
   // Mutation
   const sendInvitation = useSendInvitation();
@@ -54,8 +80,37 @@ export default function InviteEmployeePage() {
     }))
   , [permissions]);
 
+  // Departments
+  const deptList: any[] = Array.isArray(departments)
+    ? departments
+    : ((departments as any)?.results || []);
+  const departmentItems: SmartSelectorItem[] = useMemo(() =>
+    deptList.map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      subtitle: d.description || undefined,
+      icon: Building,
+    })),
+    [deptList]
+  );
+
+  // Positions (already filtered by department via hook)
+  const positionList: any[] = Array.isArray(positions)
+    ? positions
+    : ((positions as any)?.results || []);
+  const positionItems: SmartSelectorItem[] = useMemo(() =>
+    positionList.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      subtitle: `${p.level_display || p.level}${p.department?.name ? ` • ${p.department.name}` : ""}`,
+      icon: Briefcase,
+    })),
+    [positionList]
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setServerError(null);
 
     if (!formData.email) {
       toast("Email requis", {
@@ -74,14 +129,26 @@ export default function InviteEmployeePage() {
         description: result.message || `Invitation envoyée à ${formData.email}`,
       });
 
-      // Rediriger vers la liste des employés
       router.push(`/organisation/${orgId}/hr/employees`);
     } catch (error: any) {
+      // Extraire l'erreur structurée éventuelle
+      const emailErr = error?.data?.email;
+      if (emailErr && typeof emailErr === "object" && !Array.isArray(emailErr) && emailErr.code) {
+        setServerError(emailErr);
+        return;
+      }
+
       toast("Erreur", {
         description:
           error.message || "Impossible d'envoyer l'invitation",
       });
     }
+  };
+
+  // Réinitialiser l'erreur quand l'email change
+  const handleEmailChange = (newEmail: string) => {
+    setFormData({ ...formData, email: newEmail });
+    if (serverError) setServerError(null);
   };
 
   // Nouvelle fonction pour description du rôle
@@ -140,13 +207,122 @@ export default function InviteEmployeePage() {
                       type="email"
                       placeholder="nom@exemple.com"
                       value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
+                      onChange={(e) => handleEmailChange(e.target.value)}
                       className="pl-10"
                       required
                     />
                   </div>
+
+                  {/* Feedback structuré pour l'email */}
+                  {serverError?.code === "is_owner" && (
+                    <Alert className="mt-2 border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+                      <Crown className="h-4 w-4 text-amber-600" />
+                      <AlertTitle>Propriétaire de l'organisation</AlertTitle>
+                      <AlertDescription>
+                        {serverError.message ||
+                          "Ce compte est le propriétaire de l'organisation et a déjà tous les droits."}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {serverError?.code === "already_member" && (
+                    <Alert className="mt-2 border-blue-300 bg-blue-50 dark:bg-blue-950/20">
+                      <UserCheck className="h-4 w-4 text-blue-600" />
+                      <AlertTitle>Déjà membre</AlertTitle>
+                      <AlertDescription className="flex flex-col gap-2">
+                        <span>{serverError.message}</span>
+                        {serverError.membership_id && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-fit gap-2"
+                            onClick={() =>
+                              router.push(
+                                `/organisation/${orgId}/hr/employees/${serverError.membership_id}`
+                              )
+                            }
+                          >
+                            <UserCheck className="h-4 w-4" /> Voir la fiche
+                          </Button>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {serverError?.code === "already_invited" && (
+                    <Alert className="mt-2 border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertTitle>Invitation en cours</AlertTitle>
+                      <AlertDescription className="flex flex-col gap-2">
+                        <span>{serverError.message}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-fit"
+                          onClick={() =>
+                            router.push(`/organisation/${orgId}/hr/employees/invitations`)
+                          }
+                        >
+                          Voir les invitations
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+
+                {/* Département */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Département <span className="text-xs text-muted-foreground">(optionnel)</span>
+                  </Label>
+                  <SmartSelector
+                    items={departmentItems}
+                    selectedIds={formData.department_id ? [formData.department_id] : []}
+                    onChange={(ids) => {
+                      const newDept = ids[0] || null;
+                      setFormData((prev) => ({
+                        ...prev,
+                        department_id: newDept,
+                        // Réinitialiser le poste si incompatible avec le nouveau département
+                        position_id: null,
+                      }));
+                    }}
+                    placeholder="Sélectionner un département"
+                    accentColor="primary"
+                  />
+                </div>
+
+                {/* Poste */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Poste <span className="text-xs text-muted-foreground">(optionnel)</span>
+                  </Label>
+                  <SmartSelector
+                    items={positionItems}
+                    selectedIds={formData.position_id ? [formData.position_id] : []}
+                    onChange={(ids) => {
+                      const newPos = ids[0] || null;
+                      const selected = positionList.find((p: any) => p.id === newPos);
+                      setFormData((prev) => ({
+                        ...prev,
+                        position_id: newPos,
+                        // Synchroniser automatiquement le département si le poste en a un
+                        department_id:
+                          selected?.department?.id || prev.department_id || null,
+                      }));
+                    }}
+                    placeholder={
+                      formData.department_id
+                        ? "Sélectionner un poste dans ce département"
+                        : "Sélectionner un poste"
+                    }
+                    accentColor="primary"
+                  />
+                  {formData.department_id && positionItems.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Aucun poste dans ce département. Créez-en un depuis la section Postes.
+                    </p>
+                  )}
                 </div>
 
                 {/* Nouvelle section Role UX amélioré */}
@@ -166,7 +342,7 @@ export default function InviteEmployeePage() {
                     <div className="border p-3 bg-muted/40 text-xs flex items-start gap-2 transition-all">
                       <BadgeInfo className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                       <span className="leading-relaxed">
-                        {getRoleDescription(formData?.role_id)}
+                        {getRoleDescription(formData?.role_id ?? null)}
                       </span>
                     </div>
                   </div>
@@ -237,6 +413,24 @@ export default function InviteEmployeePage() {
                 <p className="text-sm font-medium">Email</p>
                 <p className="text-sm text-muted-foreground">
                   {formData.email || "Non renseigné"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Département</p>
+                <p className="text-sm text-muted-foreground">
+                  {formData.department_id
+                    ? deptList.find((d: any) => d.id === formData.department_id)?.name
+                    : "Non assigné"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Poste</p>
+                <p className="text-sm text-muted-foreground">
+                  {formData.position_id
+                    ? positionList.find((p: any) => p.id === formData.position_id)?.name
+                    : "Non assigné"}
                 </p>
               </div>
 

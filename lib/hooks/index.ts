@@ -5,15 +5,17 @@
 
 // Auth hooks
 export {
-  useCurrentUser, useIsAuthenticated, useLogin, useLogout, useRefreshToken, useRegister
+    useCurrentUser, useIsAuthenticated, useLogin, useLogout, useRefreshToken, useRegister
 } from './auth';
 
 export { useAuth, useRequireAuth } from './useAuth';
+export { useCurrencyFormatter, useOrgCurrency } from './useCurrency';
 export { useUser } from './useUser';
 
 // Form hooks
 export { useZodForm } from './useZodForm';
 
 // Pagination hooks
-export { usePaginatedQuery, useAllQuery } from './usePagination';
+export { useAllQuery, usePaginatedQuery } from './usePagination';
 export type { PaginationMeta, PaginationState, UsePaginatedQueryReturn } from './usePagination';
+

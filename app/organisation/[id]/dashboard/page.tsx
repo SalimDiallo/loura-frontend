@@ -1,11 +1,10 @@
 "use client";
 
-import { API_CONFIG } from "@/lib/api/config";
+import { Card, CardContent } from "@/components/ui/card";
 import { useOrganization } from "@/lib/hooks/core";
 import { Calendar, Clock, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 
 // Fonctions améliorées pour afficher l'heure précise + salutation dynamique
 function getCreativeDateTimeInfo() {
@@ -90,19 +89,15 @@ export default function OrganizationDashboardPage() {
     organization?.name ||
     (typeof orgId === "string" ? formatOrgName(orgId) : "Organisation");
 
-  const logoUrl = organization?.logo
-    ? organization.logo.startsWith("http")
-      ? organization.logo
-      : `${API_CONFIG.baseURL}/media/${organization.logo}`
-    : null;
+  const logoUrl = organization?.logo ?? null;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] p-8 flex flex-col items-center justify-center bg-background/50">
       <div className="max-w-md w-full flex flex-col items-center gap-8">
         {/* Logo Section */}
         <div className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-          <div className="relative w-40 h-40 rounded-full border bg-card flex items-center justify-center overflow-hidden shadow-sm">
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+          <div className="relative w-50 h-50 border bg-card flex items-center justify-center overflow-hidden shadow-sm">
             {isLoading ? (
               <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
             ) : logoUrl ? (
@@ -127,7 +122,7 @@ export default function OrganizationDashboardPage() {
 
         {/* Date & Time Section */}
         <div className="flex flex-col items-center gap-4 w-full">
-          <div className="flex items-center gap-6 text-muted-foreground bg-muted/30 px-6 py-3 rounded-full border border-border/50 shadow-inner">
+          <div className="flex items-center gap-6 text-muted-foreground bg-muted/30 px-6 py-3 border border-border/50 shadow-inner">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary/60" />
               <span className="font-mono text-lg tabular-nums font-medium text-foreground">{dateTimeInfo.time}</span>

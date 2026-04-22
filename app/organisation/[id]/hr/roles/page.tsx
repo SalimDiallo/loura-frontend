@@ -1,6 +1,7 @@
 "use client";
 
 import { ListPageLayout, ListStat } from "@/components/layout/ListPageLayout";
+import { Can, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDeleteRole, useRoles } from "@/lib/hooks/hr";
+import { PERMISSIONS } from "@/lib/permissions";
 import type { Role } from "@/lib/types";
 import { Check, Eye, Plus, Shield, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -27,6 +29,8 @@ export default function RolesPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
+  const { can } = useOrgPermissions();
+  const canManage = can(PERMISSIONS.HR.MANAGE_ROLES);
 
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
 
@@ -67,13 +71,11 @@ export default function RolesPage() {
       title="Rôles & Permissions"
       description="Gérez les rôles et permissions de votre organisation"
       icon={Shield}
-      headerActions={[
-        {
-          label: "Créer un rôle",
-          icon: Plus,
-          onClick: () => router.push(`/organisation/${orgId}/hr/roles/create`),
-        }
-      ]}
+      headerActions={
+        canManage
+          ? [{ label: "Créer un rôle", icon: Plus, onClick: () => router.push(`/organisation/${orgId}/hr/roles/create`) }]
+          : []
+      }
       stats={[
         <ListStat
           key="total"
@@ -104,14 +106,16 @@ export default function RolesPage() {
                 <Shield className="h-12 w-12 mb-2 text-muted-foreground" />
                 <p className="text-lg font-medium mb-2">Aucun rôle trouvé</p>
                 <p className="mb-4">Créez un rôle pour gérer les permissions de votre organisation.</p>
-                <Button
-                  onClick={() => router.push(`/organisation/${orgId}/hr/roles/create`)}
-                  className="gap-2"
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nouveau rôle
-                </Button>
+                <Can permission={PERMISSIONS.HR.MANAGE_ROLES}>
+                  <Button
+                    onClick={() => router.push(`/organisation/${orgId}/hr/roles/create`)}
+                    className="gap-2"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nouveau rôle
+                  </Button>
+                </Can>
               </div>
             ) : (
               roles.map((role) => (
@@ -138,15 +142,17 @@ export default function RolesPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeletingRole(role)}
-                          disabled={deleteRole.isPending}
-                          title="Supprimer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canManage && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeletingRole(role)}
+                            disabled={deleteRole.isPending}
+                            title="Supprimer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardHeader>

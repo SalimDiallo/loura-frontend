@@ -1,6 +1,7 @@
 "use client";
 
 import AppHeader from "@/components/AppHeader";
+import { PermissionsProvider } from "@/components/permissions";
 import OrgSideBar from "@/components/services/organisation/OrgSideBar";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,14 +14,16 @@ export default function OrganisationLayout({
 }) {
   return (
     <TooltipProvider>
-      <OrgSideBar>
-        <SidebarInset>
-          <AppHeader />
-          <main className="flex-1 overflow-y-auto">
-            {children}
-          </main>
-        </SidebarInset>
-      </OrgSideBar>
+      <PermissionsProvider>
+        <OrgSideBar>
+          <SidebarInset>
+            <AppHeader />
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+          </SidebarInset>
+        </OrgSideBar>
+      </PermissionsProvider>
     </TooltipProvider>
   );
 }

@@ -1,12 +1,14 @@
 "use client";
 
 import { BadgeStatus } from "@/components/BadgeStatus";
+import { PermissionGuard } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useOrgInvitations, useSendInvitation } from "@/lib/hooks/hr";
+import { PERMISSIONS } from "@/lib/permissions";
 import type { Invitation, Permission } from "@/lib/types";
 import { Check, Clock, Mail, MailX, RefreshCw, Send, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -16,7 +18,15 @@ import { toast } from "sonner";
 /**
  * Page de gestion des invitations d'une organisation
  */
-export default function InvitationsPage() {
+export default function InvitationsPageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.INVITE_EMPLOYEES}>
+      <InvitationsPage />
+    </PermissionGuard>
+  );
+}
+
+function InvitationsPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
@@ -49,6 +59,8 @@ export default function InvitationsPage() {
           email: invitation.email,
           role_id: invitation.role?.id,
           permission_ids: invitation.permissions.map((p: Permission) => p.id),
+          department_id: invitation.department?.id || null,
+          position_id: invitation.position?.id || null,
         },
       });
       toast("Invitation renvoyée", {
@@ -184,6 +196,7 @@ export default function InvitationsPage() {
                   <TableRow>
                     <TableHead>Email</TableHead>
                     <TableHead>Rôle</TableHead>
+                    <TableHead>Département / Poste</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Envoyée le</TableHead>
                     <TableHead>Expire le</TableHead>
@@ -207,6 +220,24 @@ export default function InvitationsPage() {
                           <span className="text-sm text-muted-foreground">
                             Aucun rôle
                           </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {invitation.department || invitation.position ? (
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            {invitation.department && (
+                              <span className="text-muted-foreground">
+                                {invitation.department.name}
+                              </span>
+                            )}
+                            {invitation.position && (
+                              <span className="font-medium">
+                                {invitation.position.name}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>

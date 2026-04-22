@@ -11,7 +11,7 @@ import type {
     MyMembership,
     PaginatedResponse,
     UpdateMembershipData,
-    UpdateMembershipResponse,
+    UpdateMembershipResponse
 } from '@/lib/types';
 
 export interface MemberListParams extends FilterParams {
@@ -73,6 +73,15 @@ class MemberService {
   async getMyMemberships(): Promise<MyMembership[]> {
     return apiClient.get<MyMembership[]>(
       API_ENDPOINTS.HR.MEMBERS.MY_MEMBERSHIPS
+    );
+  }
+
+  /**
+   * Récupère les permissions de l'utilisateur connecté dans une organisation
+   */
+  async getMyPermissions(orgId: string): Promise<MyOrgPermissions> {
+    return apiClient.get<MyOrgPermissions>(
+      API_ENDPOINTS.HR.MEMBERS.MY_PERMISSIONS(orgId)
     );
   }
 }

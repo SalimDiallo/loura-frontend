@@ -1,5 +1,6 @@
 "use client";
 
+import { PermissionGuard } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,12 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions, useRole, useUpdateRole } from "@/lib/hooks/hr";
+import {
+    getDependentSelectedIds,
+    getRequiredIds,
+    resolvePermissionSelection,
+} from "@/lib/permission-dependencies";
+import { PERMISSIONS } from "@/lib/permissions";
 import type { UpdateRoleData } from "@/lib/types";
 import { ArrowLeft, Check, Save, Shield, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -25,7 +32,15 @@ import { toast } from "sonner";
 /**
  * Page d'édition d'un rôle
  */
-export default function EditRolePage() {
+export default function EditRolePageWrapper() {
+  return (
+    <PermissionGuard permission={PERMISSIONS.HR.MANAGE_ROLES}>
+      <EditRolePage />
+    </PermissionGuard>
+  );
+}
+
+function EditRolePage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
@@ -71,12 +86,19 @@ export default function EditRolePage() {
 
   // Handlers
   const handleTogglePermission = (permId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      permission_ids: prev.permission_ids.includes(permId)
+    setFormData((prev) => {
+      const nextRaw = prev.permission_ids.includes(permId)
         ? prev.permission_ids.filter((id) => id !== permId)
-        : [...prev.permission_ids, permId],
-    }));
+        : [...prev.permission_ids, permId];
+      return {
+        ...prev,
+        permission_ids: resolvePermissionSelection(
+          prev.permission_ids,
+          nextRaw,
+          permissions ?? [],
+        ),
+      };
+    });
   };
 
   const handleSubmit = async () => {
@@ -303,12 +325,30 @@ export default function EditRolePage() {
                         const isChecked = formData.permission_ids.includes(
                           perm.id
                         );
+                        const lockingIds = isChecked
+                          ? getDependentSelectedIds(
+                              perm.id,
+                              formData.permission_ids,
+                              permissions ?? [],
+                            )
+                          : [];
+                        const isLocked = lockingIds.length > 0;
+                        const lockingLabels = lockingIds
+                          .map((id) => permissions?.find((p) => p.id === id)?.label)
+                          .filter((l): l is string => Boolean(l));
+                        const requiredIds = !isChecked
+                          ? getRequiredIds(perm.id, permissions ?? [])
+                          : [];
+                        const requiredLabels = requiredIds
+                          .map((id) => permissions?.find((p) => p.id === id)?.label)
+                          .filter((l): l is string => Boolean(l));
 
                         return (
                           <div key={perm.id} className="flex items-start space-x-3">
                             <Checkbox
                               id={perm.id}
                               checked={isChecked}
+                              disabled={isLocked}
                               onCheckedChange={() =>
                                 handleTogglePermission(perm.id)
                               }
@@ -317,13 +357,25 @@ export default function EditRolePage() {
                             <div className="flex-1 space-y-0.5">
                               <label
                                 htmlFor={perm.id}
-                                className="text-sm font-medium leading-none cursor-pointer"
+                                className={`text-sm font-medium leading-none ${
+                                  isLocked ? "cursor-not-allowed" : "cursor-pointer"
+                                }`}
                               >
                                 {perm.label}
                               </label>
                               <p className="text-xs text-muted-foreground">
                                 {perm.codename}
                               </p>
+                              {isLocked && (
+                                <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                                  Requise par : {lockingLabels.join(", ")}
+                                </p>
+                              )}
+                              {!isChecked && requiredLabels.length > 0 && (
+                                <p className="text-[10px] text-muted-foreground/70">
+                                  Implique : {requiredLabels.join(", ")}
+                                </p>
+                              )}
                             </div>
                           </div>
                         );

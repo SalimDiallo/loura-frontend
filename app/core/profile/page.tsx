@@ -2,20 +2,20 @@
 
 import { DetailPageLayout } from "@/components/layout/DetailPageLayout";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { InfoField } from "@/components/ui/info-field";
 import { EntityAvatar } from "@/components/ui/entity-avatar";
+import { InfoField } from "@/components/ui/info-field";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/lib/hooks/auth/useCurrentUser";
 import {
-  CheckCircle2,
-  XCircle,
-  MapPin,
-  Phone,
-  Globe,
-  Calendar,
-  User,
-  Mail,
-  Clock
+    Calendar,
+    CheckCircle2,
+    Clock,
+    Globe,
+    Mail,
+    MapPin,
+    Phone,
+    User,
+    XCircle
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -58,9 +58,9 @@ export default function ProfilePage() {
           <Card className="p-6 space-y-4">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-4 w-60" />
+            </Card>
           </div>
         </div>
-      </div>
     );
   }
 
