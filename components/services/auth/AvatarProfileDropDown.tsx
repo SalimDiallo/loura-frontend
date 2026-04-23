@@ -19,6 +19,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCurrentUser } from "@/lib/hooks/auth/useCurrentUser";
+import { useLogout } from "@/lib/hooks/auth/useLogout";
 import { LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -27,6 +28,9 @@ export function AvatarProfileDropDown() {
   const router = useRouter();
   const { data: user } = useCurrentUser();
   const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
+
+  // useLogout hook for proper logout
+  const { mutate: logout, isPending: isLogoutPending } = useLogout();
 
   const userInitials = React.useMemo(() => {
     if (!user) return "U";
@@ -41,8 +45,14 @@ export function AvatarProfileDropDown() {
       : user?.email || "Utilisateur";
 
   const handleLogout = () => {
-    localStorage.removeItem("loura_access_token");
-    router.push("/auth");
+    logout(undefined, {
+      onSuccess: () => {
+        router.push("/auth");
+      },
+      onError: () => {
+        router.push("/auth");
+      },
+    });
   };
 
   return (
@@ -105,6 +115,7 @@ export function AvatarProfileDropDown() {
             <Button
               variant="outline"
               onClick={() => setLogoutDialogOpen(false)}
+              disabled={isLogoutPending}
             >
               Annuler
             </Button>
@@ -112,8 +123,9 @@ export function AvatarProfileDropDown() {
               variant="destructive"
               onClick={handleLogout}
               autoFocus
+              disabled={isLogoutPending}
             >
-              Se déconnecter
+              {isLogoutPending ? "Déconnexion..." : "Se déconnecter"}
             </Button>
           </DialogFooter>
         </DialogContent>

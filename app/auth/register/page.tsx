@@ -85,7 +85,7 @@ export default function RegisterPage() {
   });
 
   if (user?.id) {
-    router.push('/dashboard');
+    router.push('/core/dashboard');
     return null;
   }
 

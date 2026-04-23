@@ -265,7 +265,7 @@
   --card-foreground: #182132;
   --popover: #ffffff;
   --popover-foreground: #222d3b;
-  --primary: #ffd15d;
+  --primary: #c58d00;
   --primary-foreground: #f6f6f4;
   --success: #14cc57;
   --secondary: #f8f8f8;
@@ -305,7 +305,7 @@
   --popover: #24232e;
   --popover-foreground: #edece6;
   --success: #14cc57;
-  --primary: hwb(48 0% 62% / 0.733);
+  --primary: hwb(40 0% 3% / 0.905);
   /* Même couleur que clair, chaleur sobre */
   --primary-foreground: #191922;
   --secondary: #f3b414;

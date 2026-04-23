@@ -1,7 +1,7 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/lib/services/auth/auth.service';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 /**
  * Hook pour la déconnexion utilisateur
