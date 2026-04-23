@@ -2,25 +2,25 @@
 
 import { Can } from "@/components/permissions";
 import {
-  CHART_CSS_VARS,
-  chartAxisLine,
-  chartAxisTick,
-  chartGrid,
-  chartTooltipItemStyle,
-  chartTooltipLabelStyle,
-  chartTooltipStyle,
-  compactNumber,
+    CHART_CSS_VARS,
+    chartAxisLine,
+    chartAxisTick,
+    chartGrid,
+    chartTooltipItemStyle,
+    chartTooltipLabelStyle,
+    chartTooltipStyle,
+    compactNumber,
 } from "@/components/reports/chartTheme";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import { useOrganization } from "@/lib/hooks/core";
 import {
-  useAnalyticsOverview,
-  useAnalyticsSalesTrend,
-  useAnalyticsStockAlerts,
-  useAnalyticsTopProducts,
-  useSales,
+    useAnalyticsOverview,
+    useAnalyticsSalesTrend,
+    useAnalyticsStockAlerts,
+    useAnalyticsTopProducts,
+    useSales,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { Sale } from "@/lib/types";
@@ -31,24 +31,25 @@ import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import type { IconType } from "react-icons";
 import {
-  FaBox,
-  FaDollarSign,
-  FaPlus,
-  FaReceipt,
-  FaShoppingCart,
-  FaWarehouse,
+    FaBox,
+    FaClipboardCheck,
+    FaDollarSign,
+    FaPlus,
+    FaReceipt,
+    FaShoppingCart,
+    FaWarehouse,
 } from "react-icons/fa";
 import { HiReceiptPercent } from "react-icons/hi2";
 import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from "recharts";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -174,6 +175,12 @@ function QuickActions({ orgId }: { orgId: string }) {
             href: `/organisation/${orgId}/inventory/purchase-orders/create`,
             icon: HiReceiptPercent,
             perm: PERMISSIONS.PURCHASE_ORDERS.MANAGE,
+        },
+        {
+            label: "Inventaire physique",
+            href: `/organisation/${orgId}/inventory/physical-inventories/create`,
+            icon: FaClipboardCheck,
+            perm: PERMISSIONS.STOCK.MANAGE,
         },
         {
             label: "Rapports",

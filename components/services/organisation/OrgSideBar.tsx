@@ -43,6 +43,7 @@ import {
     FaBriefcase,
     FaChartBar,
     FaChevronDown,
+    FaClipboardCheck,
     FaClipboardList,
     FaCog,
     FaCreditCard,
@@ -151,6 +152,7 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
         { title: "Clients", url: `${b}/inventory/clients`, icon: FaUserCheck },
         { title: "Entrepôts", url: `${b}/inventory/warehouses`, icon: FaWarehouse },
         { title: "Inventaires", url: `${b}/inventory/inventories`, icon: FaBoxOpen },
+        { title: "Inventaires physiques", url: `${b}/inventory/physical-inventories`, icon: FaClipboardCheck, requiredPermission: PERMISSIONS.STOCK.VIEW },
         { title: "Alertes", url: `${b}/inventory/alerts`, icon: FaExclamationTriangle },
         { title: "Rapports", url: `${b}/inventory/reports`, icon: FaChartBar },
    

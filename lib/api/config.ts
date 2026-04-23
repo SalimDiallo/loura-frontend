@@ -272,6 +272,17 @@ export const API_ENDPOINTS = {
       PAYMENT_DETAIL: (orgId: string, id: string, paymentId: string) =>
         `/inventory/organizations/${orgId}/purchase-orders/${id}/payments/${paymentId}/`,
     },
+    PHYSICAL_INVENTORIES: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/physical-inventories/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/physical-inventories/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/`,
+      POPULATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/populate/`,
+      ITEMS: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/items/`,
+      COMPLETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/complete/`,
+      CANCEL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/cancel/`,
+    },
   },
 
 } as const;

@@ -106,8 +106,8 @@ export default function OrganizationDashboardPage() {
       <div className="max-w-md w-full flex flex-col items-center gap-8">
         {/* Logo smooth et adaptatif */}
         <div className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 blur-sm opacity-30 group-hover:opacity-50 transition duration-700"></div>
-          <div className="relative w-48 h-48 md:w-52 md:h-52 border bg-card flex items-center justify-center overflow-hidden shadow ring-1 ring-primary/5">
+          {/* <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 blur-sm opacity-30 group-hover:opacity-50 transition duration-700"></div> */}
+          <div className="relative w-48 h-48 md:w-52 md:h-52 bg-card flex items-center justify-center overflow-hidden  ring-1 ring-primary/5">
             {isLoading ? (
               <Loader2 className="h-10 w-10 text-muted-foreground animate-spin-smooth" />
             ) : logoUrl ? (
@@ -138,7 +138,7 @@ export default function OrganizationDashboardPage() {
 
         {/* Date et heure fluide */}
         <div className="flex flex-col items-center gap-4 w-full">
-          <div className="flex items-center gap-6 text-muted-foreground bg-muted/30 px-6 py-3 border border-border/50 shadow-inner rounded-lg">
+          <div className="flex items-center gap-6 text-muted-foreground bg-muted/30 px-6 py-3 border border-border/50">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary/60" />
               <span className="font-mono text-lg tabular-nums font-medium text-foreground transition-all duration-300">{dateTimeInfo.time}</span>

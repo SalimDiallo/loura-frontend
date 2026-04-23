@@ -890,6 +890,99 @@ export const SALE_PAYMENT_METHODS: {
   { value: "other", label: "Autre" },
 ];
 
+// ─── Inventaires physiques (stocktaking) ────────────────────────────────────
+
+export type PhysicalInventoryStatus = "draft" | "completed" | "cancelled";
+
+export interface PhysicalInventoryItem {
+  id: string;
+  product: StockProductMini;
+  expected_quantity: string;
+  counted_quantity: string | null;
+  unit_cost: string;
+  notes: string;
+  delta: string | null;
+  has_discrepancy: boolean;
+  delta_value: string;
+  adjustment_movement: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
+}
+
+export interface PhysicalInventoryTotals {
+  total_items: number;
+  counted_items: number;
+  uncounted_items: number;
+  discrepancy_items: number;
+  expected_total: string;
+  counted_total: string;
+  delta_total: string;
+}
+
+export interface PhysicalInventory {
+  id: string;
+  organization: string;
+  warehouse: StockWarehouseMini;
+  reference: string;
+  status: PhysicalInventoryStatus;
+  status_display: string;
+  count_date: string;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  notes: string;
+  items: PhysicalInventoryItem[];
+  totals: PhysicalInventoryTotals;
+  is_editable: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
+}
+
+export interface CreatePhysicalInventoryData {
+  warehouse_id: string;
+  count_date: string;
+  notes?: string;
+}
+
+export interface UpdatePhysicalInventoryData {
+  count_date?: string;
+  notes?: string;
+}
+
+export interface PopulatePhysicalInventoryData {
+  include_zero?: boolean;
+  product_ids?: string[];
+}
+
+export interface UpdatePhysicalInventoryItemInput {
+  id?: string;
+  product_id?: string;
+  counted_quantity?: string | number | null;
+  notes?: string;
+}
+
+export interface UpdatePhysicalInventoryItemsData {
+  items: UpdatePhysicalInventoryItemInput[];
+}
+
+export interface PhysicalInventoryResponse {
+  message: string;
+  data: PhysicalInventory;
+}
+
+export interface ListPhysicalInventoriesParams {
+  search?: string;
+  status?: PhysicalInventoryStatus;
+  warehouse?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  page_size?: number | string;
+}
+
 // ─── Constantes UI (unités) ──────────────────────────────────────────────────
 
 export const PRODUCT_UNITS: { value: ProductUnit; label: string }[] = [

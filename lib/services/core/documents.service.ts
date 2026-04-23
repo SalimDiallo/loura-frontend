@@ -18,7 +18,8 @@ export type DocumentType =
   | "sale_invoice"
   | "sale_payment_receipt"
   | "purchase_order"
-  | "purchase_payment_receipt";
+  | "purchase_payment_receipt"
+  | "physical_inventory";
 
 export const documentsService = {
   /**
