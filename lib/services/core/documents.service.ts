@@ -6,10 +6,19 @@
  * forme de string, à injecter dans un iframe `srcdoc` pour prévisualisation.
  */
 
-import { API_CONFIG, API_ENDPOINTS } from "@/lib/api/config";
 import { ApiError, tokenManager } from "@/lib/api/client";
+import { API_CONFIG, API_ENDPOINTS } from "@/lib/api/config";
 
-export type DocumentType = "contract" | "payment" | "advance";
+export type DocumentType =
+  // HR
+  | "contract"
+  | "payment"
+  | "advance"
+  // Inventory
+  | "sale_invoice"
+  | "sale_payment_receipt"
+  | "purchase_order"
+  | "purchase_payment_receipt";
 
 export const documentsService = {
   /**

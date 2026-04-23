@@ -1,5 +1,6 @@
 "use client";
 
+import { GenerateDocumentButton } from "@/components/documents";
 import { PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { AuditFootprint } from "@/components/services/AuditBadge";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,7 @@ import {
     FaHourglassHalf,
     FaPaperPlane,
     FaPlus,
+    FaReceipt,
     FaTimes,
     FaTrash,
     FaTruckLoading,
@@ -321,6 +323,17 @@ function PurchaseOrderDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
+                        <GenerateDocumentButton
+                            orgId={orgId}
+                            docType="purchase_order"
+                            objectId={po.id}
+                            modalTitle={`Bon de commande · ${po.order_number}`}
+                            modalSubtitle={po.supplier.name}
+                            variant="outline"
+                            className="gap-2"
+                        >
+                            Bon de commande
+                        </GenerateDocumentButton>
                         {canManage && po.status === "draft" && (
                             <>
                                 <Button
@@ -820,17 +833,31 @@ function PurchaseOrderDetailPage() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {canManage && (
-                                                        <Button
+                                                    <div className="flex items-center gap-1">
+                                                        <GenerateDocumentButton
+                                                            orgId={orgId}
+                                                            docType="purchase_payment_receipt"
+                                                            objectId={p.id}
+                                                            modalTitle={`Reçu fournisseur · ${po.order_number}`}
+                                                            modalSubtitle={po.supplier.name}
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="text-destructive hover:text-destructive"
-                                                            onClick={() => handleDeletePayment(p.id)}
-                                                            disabled={deletePaymentMutation.isPending}
+                                                            hideIcon
                                                         >
-                                                            <FaTrash className="h-3 w-3" />
-                                                        </Button>
-                                                    )}
+                                                            <FaReceipt className="h-3 w-3" />
+                                                        </GenerateDocumentButton>
+                                                        {canManage && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-destructive hover:text-destructive"
+                                                                onClick={() => handleDeletePayment(p.id)}
+                                                                disabled={deletePaymentMutation.isPending}
+                                                            >
+                                                                <FaTrash className="h-3 w-3" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

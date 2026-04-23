@@ -1,5 +1,6 @@
 "use client";
 
+import { GenerateDocumentButton } from "@/components/documents";
 import {
     ListPageLayout,
     ListPagination,
@@ -351,17 +352,32 @@ function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                         align="right"
                                     >
                                         {({ value: s }) => (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    router.push(
-                                                        `/organisation/${orgId}/inventory/sales/${s.id}`
-                                                    )
-                                                }
-                                            >
-                                                <FaEye className="h-3.5 w-3.5" />
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <GenerateDocumentButton
+                                                    orgId={orgId}
+                                                    docType="sale_invoice"
+                                                    objectId={s.id}
+                                                    modalTitle={`Facture · ${s.sale_number}`}
+                                                    modalSubtitle={s.customer?.name ?? "Comptoir"}
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    hideIcon
+                                                    aria-label="Imprimer la facture"
+                                                >
+                                                    <FaReceipt className="h-3.5 w-3.5" />
+                                                </GenerateDocumentButton>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        router.push(
+                                                            `/organisation/${orgId}/inventory/sales/${s.id}`
+                                                        )
+                                                    }
+                                                >
+                                                    <FaEye className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
                                         )}
                                     </ListTableColumn>,
                                 ]}

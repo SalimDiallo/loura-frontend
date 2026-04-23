@@ -1,5 +1,6 @@
 "use client";
 
+import { GenerateDocumentButton } from "@/components/documents";
 import { PermissionGuard } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,14 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -207,6 +216,11 @@ function POSPage() {
     const [showInstallments, setShowInstallments] = useState(false);
     const [showNotes, setShowNotes] = useState(false);
 
+    // Dernière vente encaissée : déclenche la modale de succès (aperçu facture).
+    const [lastSale, setLastSale] = useState<
+        { id: string; number: string; total: number; customerName: string | null } | null
+    >(null);
+
     // Totaux
     const totals = useMemo(() => {
         let subtotal = 0;
@@ -327,6 +341,14 @@ function POSPage() {
             toast.success(`Vente ${created.data.sale_number} enregistrée`, {
                 description: `Total : ${formatCurrency(totals.total)}`,
             });
+            // Capture pour la modale facture
+            setLastSale({
+                id: saleId,
+                number: created.data.sale_number,
+                total: totals.total,
+                customerName:
+                    customers.find((c) => c.id === customerId)?.name ?? null,
+            });
             // Reset
             clearCart();
             setCustomerId("");
@@ -364,6 +386,7 @@ function POSPage() {
     };
 
     return (
+        <>
         <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
             {/* ──── Grille produits ──── */}
             <div className="flex-1 flex flex-col gap-4 min-w-0">
@@ -1015,5 +1038,58 @@ function POSPage() {
                 </CardContent>
             </Card>
         </div>
+
+        {/* Modale succès + aperçu facture */}
+        <Dialog
+            open={!!lastSale}
+            onOpenChange={(open) => {
+                if (!open) setLastSale(null);
+            }}
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <FaReceipt className="h-4 w-4 text-primary" />
+                        Vente enregistrée
+                    </DialogTitle>
+                    <DialogDescription>
+                        {lastSale && (
+                            <>
+                                <span className="font-mono font-semibold">
+                                    {lastSale.number}
+                                </span>{" "}
+                                · {formatCurrency(lastSale.total)}
+                                {lastSale.customerName && (
+                                    <> · {lastSale.customerName}</>
+                                )}
+                            </>
+                        )}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setLastSale(null)}
+                    >
+                        Nouvelle vente
+                    </Button>
+                    {lastSale && (
+                        <GenerateDocumentButton
+                            orgId={orgId}
+                            docType="sale_invoice"
+                            objectId={lastSale.id}
+                            modalTitle={`Facture · ${lastSale.number}`}
+                            modalSubtitle={
+                                lastSale.customerName ?? "Comptoir"
+                            }
+                            variant="default"
+                        >
+                            Imprimer la facture
+                        </GenerateDocumentButton>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }

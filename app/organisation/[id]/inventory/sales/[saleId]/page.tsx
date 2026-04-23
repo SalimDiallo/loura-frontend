@@ -1,5 +1,6 @@
 "use client";
 
+import { GenerateDocumentButton } from "@/components/documents";
 import { PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { AuditFootprint } from "@/components/services/AuditBadge";
 import { Badge } from "@/components/ui/badge";
@@ -47,16 +48,14 @@ import {
     FaArrowLeft,
     FaCalendarAlt,
     FaCheckCircle,
-    FaClock,
     FaCreditCard,
     FaEdit,
     FaExclamationTriangle,
-    FaEye,
     FaMoneyBillWave,
     FaPlus,
     FaReceipt,
     FaTimes,
-    FaTrash,
+    FaTrash
 } from "react-icons/fa";
 import { toast } from "sonner";
 
@@ -268,6 +267,17 @@ function SaleDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
+                        <GenerateDocumentButton
+                            orgId={orgId}
+                            docType="sale_invoice"
+                            objectId={sale.id}
+                            modalTitle={`Facture · ${sale.sale_number}`}
+                            modalSubtitle={sale.customer?.name ?? "Comptoir"}
+                            variant="outline"
+                            className="gap-2"
+                        >
+                            Facture
+                        </GenerateDocumentButton>
                         {canManage && sale.status === "draft" && (
                             <>
                                 <Button
@@ -658,17 +668,31 @@ function SaleDetailPage() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {canManage && (
-                                                        <Button
+                                                    <div className="flex items-center gap-1">
+                                                        <GenerateDocumentButton
+                                                            orgId={orgId}
+                                                            docType="sale_payment_receipt"
+                                                            objectId={p.id}
+                                                            modalTitle={`Reçu · ${sale.sale_number}`}
+                                                            modalSubtitle={sale.customer?.name ?? "Comptoir"}
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="text-destructive hover:text-destructive"
-                                                            onClick={() => handleDeletePayment(p.id)}
-                                                            disabled={deletePaymentMutation.isPending}
+                                                            hideIcon
                                                         >
-                                                            <FaTrash className="h-3 w-3" />
-                                                        </Button>
-                                                    )}
+                                                            <FaReceipt className="h-3 w-3" />
+                                                        </GenerateDocumentButton>
+                                                        {canManage && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-destructive hover:text-destructive"
+                                                                onClick={() => handleDeletePayment(p.id)}
+                                                                disabled={deletePaymentMutation.isPending}
+                                                            >
+                                                                <FaTrash className="h-3 w-3" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

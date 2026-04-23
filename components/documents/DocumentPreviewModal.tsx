@@ -28,9 +28,15 @@ import { toast } from "sonner";
 // 
 
 const DOC_TYPE_LABELS: Record<DocumentType, string> = {
+  // HR
   contract: "Contrat",
   payment: "Reçu de paiement",
   advance: "Demande d'avance",
+  // Inventory
+  sale_invoice: "Facture de vente",
+  sale_payment_receipt: "Reçu de paiement",
+  purchase_order: "Bon de commande",
+  purchase_payment_receipt: "Reçu de paiement fournisseur",
 };
 
 interface DocumentPreviewModalProps {

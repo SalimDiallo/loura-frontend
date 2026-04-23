@@ -1,5 +1,6 @@
 "use client";
 
+import { GenerateDocumentButton } from "@/components/documents";
 import {
     ListPageLayout,
     ListPagination,
@@ -30,11 +31,11 @@ import {
     FaCheckCircle,
     FaClock,
     FaEdit,
-    FaExclamationCircle,
     FaHourglassHalf,
     FaPlus,
+    FaReceipt,
     FaTimes,
-    FaTruck,
+    FaTruck
 } from "react-icons/fa";
 
 export default function PurchaseOrdersPageWrapper() {
@@ -343,17 +344,32 @@ function PurchaseOrdersPage() {
                                         align="right"
                                     >
                                         {({ value: po }) => (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    router.push(
-                                                        `/organisation/${orgId}/inventory/purchase-orders/${po.id}`
-                                                    )
-                                                }
-                                            >
-                                                <FaEdit className="h-3.5 w-3.5" />
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <GenerateDocumentButton
+                                                    orgId={orgId}
+                                                    docType="purchase_order"
+                                                    objectId={po.id}
+                                                    modalTitle={`Bon de commande · ${po.order_number}`}
+                                                    modalSubtitle={po.supplier?.name}
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    hideIcon
+                                                    aria-label="Imprimer le bon de commande"
+                                                >
+                                                    <FaReceipt className="h-3.5 w-3.5" />
+                                                </GenerateDocumentButton>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        router.push(
+                                                            `/organisation/${orgId}/inventory/purchase-orders/${po.id}`
+                                                        )
+                                                    }
+                                                >
+                                                    <FaEdit className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
                                         )}
                                     </ListTableColumn>,
                                 ]}
