@@ -59,7 +59,6 @@ import {
     FaUmbrellaBeach,
     FaUserCheck,
     FaUsers,
-    FaWallet,
     FaWarehouse
 } from "react-icons/fa";
 
@@ -139,22 +138,102 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
       icon: FaBoxOpen,
       defaultOpen: false,
       items: [
-        { title: "Vue d'ensemble", url: `${b}/inventory`, icon: FaClipboardList },
-        { title: "Caisse", url: `${b}/inventory/pos`, icon: FaShoppingCart },
-        { title: "Ventes", url: `${b}/inventory/sales`, icon: FaReceipt },
-        { title: "Créances", url: `${b}/inventory/credit-sales`, icon: FaCreditCard },
-        { title: "Approvisionnements", url: `${b}/inventory/purchase-orders`, icon: FaTruck },
-        { title: "Dépenses", url: `${b}/inventory/expenses`, icon: FaWallet },
-        { title: "Produits", url: `${b}/inventory/products`, icon: FaBox },
-        { title: "Catégories", url: `${b}/inventory/categories`, icon: FaTags },
-        { title: "Fournisseurs", url: `${b}/inventory/suppliers`, icon: FaUserCheck },
-        { title: "Documents", url: `${b}/inventory/documents`, icon: FaDochub },
-        { title: "Clients", url: `${b}/inventory/clients`, icon: FaUserCheck },
-        { title: "Entrepôts", url: `${b}/inventory/warehouses`, icon: FaWarehouse },
-        { title: "Inventaires", url: `${b}/inventory/inventories`, icon: FaBoxOpen },
-        { title: "Inventaires physiques", url: `${b}/inventory/physical-inventories`, icon: FaClipboardCheck, requiredPermission: PERMISSIONS.STOCK.VIEW },
-        { title: "Alertes", url: `${b}/inventory/alerts`, icon: FaExclamationTriangle },
-        { title: "Rapports", url: `${b}/inventory/reports`, icon: FaChartBar },
+        { 
+          title: "Vue d'ensemble", 
+          url: `${b}/inventory`, 
+          icon: FaClipboardList, 
+          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW 
+        },
+        { 
+          title: "Caisse", 
+          url: `${b}/inventory/pos`, 
+          icon: FaShoppingCart, 
+          requiredPermission: PERMISSIONS.SALES.VIEW 
+        },
+        { 
+          title: "Ventes", 
+          url: `${b}/inventory/sales`, 
+          icon: FaReceipt, 
+          requiredPermission: PERMISSIONS.SALES.VIEW 
+        },
+        { 
+          title: "Créances", 
+          url: `${b}/inventory/credit-sales`, 
+          icon: FaCreditCard,
+          requiredPermission: PERMISSIONS.SALES.VIEW 
+        },
+        { 
+          title: "Approvisionnements", 
+          url: `${b}/inventory/purchase-orders`, 
+          icon: FaTruck,
+          requiredPermission: PERMISSIONS.PURCHASE_ORDERS.VIEW 
+        },
+        // { 
+        //   title: "Dépenses", 
+        //   url: `${b}/inventory/expenses`, 
+        //   icon: FaWallet,
+        //   requiredPermission: PERMISSIONS.PURCHASE_ORDERS.VIEW 
+        // },
+        { 
+          title: "Produits", 
+          url: `${b}/inventory/products`, 
+          icon: FaBox, 
+          requiredPermission: PERMISSIONS.PRODUCTS.VIEW 
+        },
+        { 
+          title: "Catégories", 
+          url: `${b}/inventory/categories`, 
+          icon: FaTags,
+          requiredPermission: PERMISSIONS.PRODUCT_CATEGORIES.VIEW 
+        },
+        { 
+          title: "Fournisseurs", 
+          url: `${b}/inventory/suppliers`, 
+          icon: FaUserCheck,
+          requiredPermission: PERMISSIONS.SUPPLIERS.VIEW 
+        },
+        { 
+          title: "Devis & Pro Forma", 
+          url: `${b}/inventory/quotes`, 
+          icon: FaDochub,
+          // requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW 
+        },
+        { 
+          title: "Clients", 
+          url: `${b}/inventory/clients`, 
+          icon: FaUserCheck,
+          requiredPermission: PERMISSIONS.CUSTOMERS.VIEW 
+        },
+        { 
+          title: "Entrepôts", 
+          url: `${b}/inventory/warehouses`, 
+          icon: FaWarehouse,
+          requiredPermission: PERMISSIONS.WAREHOUSES.VIEW 
+        },
+        { 
+          title: "Inventaires", 
+          url: `${b}/inventory/inventories`, 
+          icon: FaBoxOpen,
+          requiredPermission: PERMISSIONS.STOCK.VIEW 
+        },
+        { 
+          title: "Inventaires physiques", 
+          url: `${b}/inventory/physical-inventories`, 
+          icon: FaClipboardCheck, 
+          requiredPermission: PERMISSIONS.STOCK.VIEW 
+        },
+        { 
+          title: "Alertes", 
+          url: `${b}/inventory/alerts`, 
+          icon: FaExclamationTriangle,
+          requiredPermission: PERMISSIONS.STOCK.VIEW 
+        },
+        { 
+          title: "Rapports", 
+          url: `${b}/inventory/reports`, 
+          icon: FaChartBar,
+          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW 
+        },
    
       ],
  

@@ -983,6 +983,176 @@ export interface ListPhysicalInventoriesParams {
   page_size?: number | string;
 }
 
+// ─── Devis / Pro forma (Quotes) ──────────────────────────────────────────────
+
+export type QuoteType = "quote" | "proforma";
+
+export type QuoteStatus =
+  | "draft"
+  | "sent"
+  | "accepted"
+  | "rejected"
+  | "expired"
+  | "converted";
+
+export type QuoteDiscountType = SaleDiscountType;
+
+export interface QuoteCustomerMini {
+  id: string;
+  name: string;
+  code: string;
+  customer_type: CustomerType;
+  customer_type_display: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+export interface QuoteWarehouseMini {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface QuoteSaleMini {
+  id: string;
+  sale_number: string;
+  status: SaleStatus;
+  total: string;
+}
+
+export interface QuoteProductMini {
+  id: string;
+  name: string;
+  sku: string;
+  unit: ProductUnit;
+  unit_display: string;
+  selling_price: string;
+}
+
+export interface QuoteItem {
+  id: string;
+  product: QuoteProductMini;
+  quantity: string;
+  unit_price: string;
+  discount_type: QuoteDiscountType;
+  discount_type_display: string;
+  discount_value: string;
+  tax_rate: string;
+  description: string;
+  line_subtotal: string;
+  line_discount_amount: string;
+  line_after_discount: string;
+  line_tax: string;
+  line_total: string;
+}
+
+export interface Quote {
+  id: string;
+  organization: string;
+  customer: QuoteCustomerMini | null;
+  customer_name_snapshot: string;
+  warehouse: QuoteWarehouseMini;
+  quote_number: string;
+  quote_type: QuoteType;
+  quote_type_display: string;
+  status: QuoteStatus;
+  status_display: string;
+  issue_date: string;
+  valid_until: string | null;
+  subtotal: string;
+  discount_type: QuoteDiscountType;
+  discount_type_display: string;
+  discount_value: string;
+  discount_amount: string;
+  tax_amount: string;
+  total: string;
+  currency: string;
+  notes: string;
+  terms: string;
+  sent_at: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  rejection_reason: string;
+  converted_at: string | null;
+  converted_to_sale: QuoteSaleMini | null;
+  items: QuoteItem[];
+  is_editable: boolean;
+  is_terminal: boolean;
+  is_expired_by_date: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by_info?: UserMiniInfo | null;
+  updated_by_info?: UserMiniInfo | null;
+}
+
+export interface CreateQuoteItemData {
+  product_id: string;
+  quantity: string;
+  unit_price: string;
+  discount_type?: QuoteDiscountType;
+  discount_value?: string;
+  tax_rate?: string;
+  description?: string;
+}
+
+export interface CreateQuoteData {
+  customer_id?: string | null;
+  customer_name_snapshot?: string;
+  warehouse_id: string;
+  quote_type?: QuoteType;
+  issue_date: string;
+  valid_until?: string | null;
+  discount_type?: QuoteDiscountType;
+  discount_value?: string;
+  currency?: string;
+  notes?: string;
+  terms?: string;
+  items: CreateQuoteItemData[];
+}
+
+export interface UpdateQuoteData {
+  customer_id?: string | null;
+  customer_name_snapshot?: string;
+  warehouse_id?: string;
+  quote_type?: QuoteType;
+  issue_date?: string;
+  valid_until?: string | null;
+  discount_type?: QuoteDiscountType;
+  discount_value?: string;
+  currency?: string;
+  notes?: string;
+  terms?: string;
+  items?: CreateQuoteItemData[];
+}
+
+export interface QuoteResponse {
+  message: string;
+  data: Quote;
+}
+
+export interface ConvertQuoteData {
+  sale_type?: SaleType;
+  sale_date?: string;
+  due_date?: string | null;
+}
+
+export interface RejectQuoteData {
+  reason?: string;
+}
+
+export interface ListQuotesParams {
+  search?: string;
+  status?: QuoteStatus;
+  quote_type?: QuoteType;
+  customer?: string;
+  warehouse?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  page_size?: number | string;
+}
+
 // ─── Constantes UI (unités) ──────────────────────────────────────────────────
 
 export const PRODUCT_UNITS: { value: ProductUnit; label: string }[] = [

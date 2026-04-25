@@ -2,20 +2,20 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import { documentsService, type DocumentType } from "@/lib/services/core";
 import {
-  AlertTriangle,
-  Download,
-  Loader2,
-  Printer,
-  RefreshCcw,
+    AlertTriangle,
+    Download,
+    Loader2,
+    Printer,
+    RefreshCcw,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -38,6 +38,8 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   purchase_order: "Bon de commande",
   purchase_payment_receipt: "Reçu de paiement fournisseur",
   physical_inventory: "Rapport d'inventaire physique",
+  quote: "Devis",
+  proforma: "Facture pro forma",
 };
 
 interface DocumentPreviewModalProps {

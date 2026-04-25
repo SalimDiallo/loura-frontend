@@ -1,5 +1,6 @@
 "use client";
 
+import { BadgeStatus } from "@/components/BadgeStatus";
 import { GenerateDocumentButton } from "@/components/documents";
 import { ListPageLayout, ListSearchFilters, ListStat } from "@/components/layout/ListPageLayout";
 import { Can, useOrgPermissions } from "@/components/permissions";
@@ -333,12 +334,7 @@ export default function PayrollPage() {
                             Voir paiement
                           </Button>
                         </div>
-                        <Badge variant={paymentStatusVariant(p.status)} className="shrink-0">
-                          {p.status === "pending" && <FaClock className="mr-1 h-3 w-3" />}
-                          {p.status === "approved" && <FaClock className="mr-1 h-3 w-3" />}
-                          {p.status === "rejected" && <FaX className="mr-1 h-3 w-3" />}
-                          {p.status_display}
-                        </Badge>
+                        <BadgeStatus status={p.status} />
                         {/* Reçu PDF */}
                         <GenerateDocumentButton
                           orgId={orgId}

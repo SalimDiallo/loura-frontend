@@ -63,21 +63,21 @@ const TYPE_OPTIONS: {
         label: "Entrée",
         description: "Réception, retour client, correction positive",
         icon: ArrowUp,
-        color: "text-green-600 bg-green-50 border-green-200",
+        color: "text-green-600 bg-green-50/70 border-green-200 dark:text-green-400 dark:bg-green-900/50 dark:border-green-800",
     },
     {
         value: "out",
         label: "Sortie",
         description: "Vente, perte, retour fournisseur",
         icon: ArrowDown,
-        color: "text-red-600 bg-red-50 border-red-200",
+        color: "text-red-600 bg-red-50/70 border-red-200 dark:text-red-400 dark:bg-red-900/50 dark:border-red-800",
     },
     {
         value: "adjust",
         label: "Ajustement",
         description: "Inventaire physique, correction",
         icon: Scale,
-        color: "text-blue-600 bg-blue-50 border-blue-200",
+        color: "text-blue-600 bg-blue-50/70 border-blue-200 dark:text-blue-400 dark:bg-blue-900/50 dark:border-blue-800",
     },
 ];
 

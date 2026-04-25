@@ -272,6 +272,19 @@ export const API_ENDPOINTS = {
       PAYMENT_DETAIL: (orgId: string, id: string, paymentId: string) =>
         `/inventory/organizations/${orgId}/purchase-orders/${id}/payments/${paymentId}/`,
     },
+    QUOTES: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/quotes/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/quotes/`,
+      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/`,
+      SEND: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/send/`,
+      ACCEPT: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/accept/`,
+      REJECT: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/reject/`,
+      EXPIRE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/expire/`,
+      CONVERT: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/convert/`,
+      DUPLICATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/quotes/${id}/duplicate/`,
+    },
     PHYSICAL_INVENTORIES: {
       LIST: (orgId: string) => `/inventory/organizations/${orgId}/physical-inventories/`,
       CREATE: (orgId: string) => `/inventory/organizations/${orgId}/physical-inventories/`,

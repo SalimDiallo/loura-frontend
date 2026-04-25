@@ -1,6 +1,6 @@
 "use client";
 
-import { Can } from "@/components/permissions";
+import { Can, useOrgPermissions } from "@/components/permissions";
 import {
     CHART_CSS_VARS,
     chartAxisLine,
@@ -59,13 +59,42 @@ import {
 export default function InventoryDashboardPage() {
     const params = useParams();
     const orgId = params.id as string;
+    const { canAny, isLoading: permsLoading } = useOrgPermissions();
+
+    // Accès minimum au module Inventaire : au moins une permission Inventaire.
+    const hasAnyInventoryAccess =
+      !permsLoading &&
+      canAny([
+        PERMISSIONS.PRODUCTS.VIEW,
+        PERMISSIONS.PRODUCT_CATEGORIES.VIEW,
+        PERMISSIONS.WAREHOUSES.VIEW,
+        PERMISSIONS.STOCK.VIEW,
+        PERMISSIONS.SUPPLIERS.VIEW,
+        PERMISSIONS.PURCHASE_ORDERS.VIEW,
+        PERMISSIONS.CUSTOMERS.VIEW,
+        PERMISSIONS.SALES.VIEW,
+        PERMISSIONS.INVENTORY_REPORTS.VIEW,
+      ]);
+  
 
     return (
         <div className="container mx-auto p-6 md:p-8 space-y-10">
             <Hero orgId={orgId} />
             <QuickActions orgId={orgId} />
 
-            <Can permission={PERMISSIONS.INVENTORY_REPORTS.VIEW}>
+            {
+                !hasAnyInventoryAccess ?    <div className="border border-border/60 bg-card p-8 text-center">
+                <h2 className="text-base font-semibold text-foreground">
+                  Aucun accès tableau de board stocks
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Vous n'avez pas de permission vous donnant accès aux données stocks de
+                  cette organisation.
+                </p>
+              </div> :null 
+            }
+
+            <Can permission={PERMISSIONS.INVENTORY_REPORTS.VIEW} >
                 <KpisRow orgId={orgId} />
                 <div className="grid gap-6 lg:grid-cols-3">
                     <SalesTrendWidget orgId={orgId} />

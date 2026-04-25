@@ -19,7 +19,9 @@ export type DocumentType =
   | "sale_payment_receipt"
   | "purchase_order"
   | "purchase_payment_receipt"
-  | "physical_inventory";
+  | "physical_inventory"
+  | "quote"
+  | "proforma";
 
 export const documentsService = {
   /**

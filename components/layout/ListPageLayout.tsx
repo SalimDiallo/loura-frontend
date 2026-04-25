@@ -10,7 +10,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FaFilter, FaSearch, FaTimes } from "react-icons/fa";
 
 /* --------------------------
@@ -54,66 +54,88 @@ export function ListSearchFilters({
   filtersAreActive: boolean;
   filters: React.ReactNode;
 }) {
-  const [popoverVisible, setPopoverVisible] = useState(false);
+  const [collapseVisible, setCollapseVisible] = useState(filtersOpen);
+  const collapseRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    setPopoverVisible(filtersOpen);
+  useEffect(() => {
+    setCollapseVisible(filtersOpen);
   }, [filtersOpen]);
 
+  // Gestion fermeture sur clic extérieur pour la zone collapse
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        collapseRef.current &&
+        !collapseRef.current.contains(event.target as Node)
+      ) {
+        setCollapseVisible(false);
+        onFiltersOpenChange(false);
+      }
+    }
+    if (collapseVisible) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [collapseVisible, onFiltersOpenChange]);
+
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-      <div className="relative flex-1">
-        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={searchPlaceholder}
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10"
-          spellCheck={false}
-        />
-        {searchValue && (
-          <button
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-            aria-label="Effacer la recherche"
-            onClick={() => onSearchChange("")}
-            type="button"
-            tabIndex={0}
-          >
-            <FaTimes className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-      <div className="relative">
-        <Button
-          size="icon"
-          variant={filtersAreActive ? "secondary" : "ghost"}
-          className={`ml-0 sm:ml-2 ${filtersAreActive ? "text-primary border border-primary/40" : ""}`}
-          aria-label="Filtrer"
-          onClick={() => {
-            setPopoverVisible((pv) => !pv);
-            onFiltersOpenChange(!popoverVisible);
-          }}
-        >
-          <FaFilter className="h-5 w-5" />
-          {filtersAreActive && (
-            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full">
+        {/* Barre de recherche */}
+        <div className="relative flex-1">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10"
+            spellCheck={false}
+          />
+          {searchValue && (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+              aria-label="Effacer la recherche"
+              onClick={() => onSearchChange("")}
+              type="button"
+              tabIndex={0}
+            >
+              <FaTimes className="h-4 w-4" />
+            </button>
           )}
-        </Button>
-        {popoverVisible && (
-          <div
-            className="absolute z-50 mt-1 right-0 w-72 bg-popover border p-4 rounded-md"
-            style={{ minWidth: "16rem" }}
-            tabIndex={-1}
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                setPopoverVisible(false);
-                onFiltersOpenChange(false);
-              }
+        </div>
+        {/* Bouton Filtre à droite */}
+        <div className="flex-shrink-0 relative">
+          <Button
+            size="icon"
+            variant={filtersAreActive ? "secondary" : "ghost"}
+            className={`ml-0 sm:ml-2 ${filtersAreActive ? "text-primary border border-primary/40" : ""}`}
+            aria-label="Filtrer"
+            onClick={() => {
+              setCollapseVisible((pv) => !pv);
+              onFiltersOpenChange(!collapseVisible);
             }}
           >
-            <div className="space-y-4">{filters}</div>
-          </div>
-        )}
+            <FaFilter className="h-5 w-5" />
+            {filtersAreActive && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+            )}
+          </Button>
+        </div>
+      </div>
+      {/* Collapse sur toute la largeur */}
+      <div
+        ref={collapseRef}
+        className={`transition-all duration-300 overflow-hidden bg-popover border mt-2 ${collapseVisible ? "max-h-[600px] opacity-100 p-4" : "max-h-0 opacity-0 p-0"
+          } w-full`}
+        style={{ width: "100%" }}
+      >
+        {collapseVisible &&
+          <div className="space-y-4">{filters}</div>
+        }
       </div>
     </div>
   );

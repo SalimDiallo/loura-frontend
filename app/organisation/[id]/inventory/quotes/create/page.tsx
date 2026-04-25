@@ -18,25 +18,23 @@ import {
 } from "@/components/ui/smart-selector";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
-    useCreateSale,
+    useCreateQuote,
     useCustomers,
     useProducts,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
-    CreateSaleData,
-    CreateSaleInstallmentData,
-    CreateSaleItemData,
+    CreateQuoteData,
+    CreateQuoteItemData,
     Customer,
     Product,
-    SaleDiscountType,
-    SaleType,
+    QuoteDiscountType,
+    QuoteType,
     Warehouse,
 } from "@/lib/types";
 import {
     Box,
-    CreditCard,
     DollarSign,
     FileText,
     Loader2,
@@ -45,45 +43,42 @@ import {
     User,
     Warehouse as WarehouseIcon,
 } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { FaMoneyBillWave, FaPlus } from "react-icons/fa";
+import { FaFileAlt, FaFileInvoice, FaPlus } from "react-icons/fa";
 import { toast } from "sonner";
 
-export default function CreateSalePageWrapper() {
+export default function CreateQuotePageWrapper() {
     return (
         <PermissionGuard permission={PERMISSIONS.SALES.MANAGE}>
-            <CreateSalePage />
+            <CreateQuotePage />
         </PermissionGuard>
     );
 }
 
-type FormItem = CreateSaleItemData & { _key: string };
-type FormInstallment = CreateSaleInstallmentData & { _key: string };
+type FormItem = CreateQuoteItemData & { _key: string };
 
 let itemKey = 0;
 const nextKey = () => `itm-${++itemKey}`;
 
-function CreateSalePage() {
+function CreateQuotePage() {
     const params = useParams();
-    const searchParams = useSearchParams();
     const router = useRouter();
     const orgId = params.id as string;
     const { formatCurrency } = useCurrencyFormatter();
 
     const today = new Date().toISOString().split("T")[0];
 
-    const initialType: SaleType =
-        searchParams.get("mode") === "credit" ? "credit" : "cash";
-
-    const [saleType, setSaleType] = useState<SaleType>(initialType);
+    const [quoteType, setQuoteType] = useState<QuoteType>("quote");
     const [customerId, setCustomerId] = useState<string>("");
+    const [customerNameSnapshot, setCustomerNameSnapshot] = useState<string>("");
     const [warehouseId, setWarehouseId] = useState<string>("");
-    const [saleDate, setSaleDate] = useState<string>(today);
-    const [dueDate, setDueDate] = useState<string>("");
-    const [discountType, setDiscountType] = useState<SaleDiscountType>("none");
+    const [issueDate, setIssueDate] = useState<string>(today);
+    const [validUntil, setValidUntil] = useState<string>("");
+    const [discountType, setDiscountType] = useState<QuoteDiscountType>("none");
     const [discountValue, setDiscountValue] = useState<string>("0");
     const [notes, setNotes] = useState<string>("");
+    const [terms, setTerms] = useState<string>("");
     const [items, setItems] = useState<FormItem[]>([
         {
             _key: nextKey(),
@@ -93,9 +88,9 @@ function CreateSalePage() {
             discount_type: "none",
             discount_value: "0",
             tax_rate: "0",
+            description: "",
         },
     ]);
-    const [installments, setInstallments] = useState<FormInstallment[]>([]);
 
     const { data: customersList = [] } = useCustomers(orgId, {
         page_size: "all",
@@ -114,19 +109,20 @@ function CreateSalePage() {
     const warehouses = warehousesList as unknown as Warehouse[];
     const products = productsList as unknown as Product[];
 
-    const createSale = useCreateSale();
+    const createQuote = useCreateQuote();
 
     const customerItems: SmartSelectorItem[] = useMemo(
         () =>
-            customers
-                .filter((c) => (saleType === "credit" ? Number(c.credit_limit) > 0 : true))
-                .map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                    subtitle: c.customer_type === "company" ? "Entreprise" : "Particulier",
-                    icon: User,
-                })),
-        [customers, saleType]
+            customers.map((c) => ({
+                id: c.id,
+                name: c.name,
+                subtitle:
+                    c.customer_type === "company"
+                        ? "Entreprise"
+                        : "Particulier",
+                icon: User,
+            })),
+        [customers]
     );
 
     const warehouseItems: SmartSelectorItem[] = useMemo(
@@ -189,15 +185,6 @@ function CreateSalePage() {
         };
     }, [items, discountType, discountValue]);
 
-    const installmentsTotal = useMemo(
-        () =>
-            installments.reduce(
-                (acc, i) => acc + (parseFloat(String(i.amount || 0)) || 0),
-                0
-            ),
-        [installments]
-    );
-
     const addItem = () => {
         setItems((prev) => [
             ...prev,
@@ -209,12 +196,15 @@ function CreateSalePage() {
                 discount_type: "none",
                 discount_value: "0",
                 tax_rate: "0",
+                description: "",
             },
         ]);
     };
 
     const removeItem = (key: string) => {
-        setItems((prev) => (prev.length > 1 ? prev.filter((i) => i._key !== key) : prev));
+        setItems((prev) =>
+            prev.length > 1 ? prev.filter((i) => i._key !== key) : prev
+        );
     };
 
     const updateItem = (key: string, patch: Partial<FormItem>) => {
@@ -232,38 +222,18 @@ function CreateSalePage() {
         });
     };
 
-    const addInstallment = () => {
-        setInstallments((prev) => [
-            ...prev,
-            {
-                _key: nextKey(),
-                due_date: saleDate,
-                amount: "0",
-            },
-        ]);
-    };
-
-    const removeInstallment = (key: string) => {
-        setInstallments((prev) => prev.filter((i) => i._key !== key));
-    };
-
-    const updateInstallment = (key: string, patch: Partial<FormInstallment>) => {
-        setInstallments((prev) =>
-            prev.map((i) => (i._key === key ? { ...i, ...patch } : i))
-        );
+    const handleCustomerChange = (ids: string[]) => {
+        const id = ids[0] || "";
+        setCustomerId(id);
+        const c = customers.find((x) => x.id === id);
+        setCustomerNameSnapshot(c?.name ?? "");
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!warehouseId || !saleDate) {
+        if (!warehouseId || !issueDate) {
             toast("Champs manquants", {
-                description: "Entrepôt et date sont obligatoires.",
-            });
-            return;
-        }
-        if (saleType === "credit" && !customerId) {
-            toast("Client requis", {
-                description: "Une vente à crédit nécessite un client avec limite de crédit.",
+                description: "Entrepôt et date d'émission sont obligatoires.",
             });
             return;
         }
@@ -275,32 +245,38 @@ function CreateSalePage() {
         );
         if (validItems.length === 0) {
             toast("Aucune ligne valide", {
-                description: "Ajoutez au moins un produit avec quantité et prix.",
+                description:
+                    "Ajoutez au moins un produit avec quantité et prix.",
             });
             return;
         }
 
-        const payload: CreateSaleData = {
+        const payload: CreateQuoteData = {
             customer_id: customerId || null,
+            customer_name_snapshot: customerNameSnapshot || undefined,
             warehouse_id: warehouseId,
-            sale_type: saleType,
-            sale_date: saleDate,
-            due_date: dueDate || null,
+            quote_type: quoteType,
+            issue_date: issueDate,
+            valid_until: validUntil || null,
             discount_type: discountType,
             discount_value: discountValue || "0",
             notes,
+            terms,
             items: validItems.map(({ _key, ...rest }) => rest),
-            installments:
-                saleType === "credit" && installments.length > 0
-                    ? installments.map(({ _key, ...rest }) => rest)
-                    : undefined,
         };
 
         try {
-            const response = await createSale.mutateAsync({ orgId, data: payload });
-            toast.success("Vente créée en brouillon.");
+            const response = await createQuote.mutateAsync({
+                orgId,
+                data: payload,
+            });
+            toast.success(
+                quoteType === "quote"
+                    ? "Devis créé en brouillon."
+                    : "Pro forma créée en brouillon."
+            );
             router.push(
-                `/organisation/${orgId}/inventory/sales/${response.data.id}`
+                `/organisation/${orgId}/inventory/quotes/${response.data.id}`
             );
         } catch (error: any) {
             toast.error("Erreur", {
@@ -309,7 +285,7 @@ function CreateSalePage() {
                     error?.data?.items?.[0] ||
                     error?.data?.customer_id?.[0] ||
                     error?.message ||
-                    "Impossible de créer la vente",
+                    "Impossible de créer le document",
             });
         }
     };
@@ -318,30 +294,36 @@ function CreateSalePage() {
 
     return (
         <FormPageLayout
-            title="Nouvelle vente"
-            subtitle="Créez un brouillon puis finalisez pour décompter le stock"
-            backLink={`/organisation/${orgId}/inventory/sales`}
+            title={
+                quoteType === "quote"
+                    ? "Nouveau devis"
+                    : "Nouvelle facture pro forma"
+            }
+            subtitle="Le document est créé en brouillon. Vous pourrez ensuite l'envoyer ou le convertir en vente."
+            backLink={`/organisation/${orgId}/inventory/quotes`}
             sidebar={
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm">Récapitulatif</CardTitle>
-                        <CardDescription>Calculé en temps réel</CardDescription>
+                        <CardDescription>
+                            Calculé en temps réel
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
                         {selectedCustomer && (
                             <div className="pb-3 border-b">
-                                <p className="text-xs text-muted-foreground">Client</p>
-                                <p className="text-sm font-medium">{selectedCustomer.name}</p>
-                                {saleType === "credit" && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Limite :{" "}
-                                        {formatCurrency(Number(selectedCustomer.credit_limit))}
-                                    </p>
-                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Client
+                                </p>
+                                <p className="text-sm font-medium">
+                                    {selectedCustomer.name}
+                                </p>
                             </div>
                         )}
                         <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Sous-total</span>
+                            <span className="text-muted-foreground">
+                                Sous-total
+                            </span>
                             <span className="font-medium">
                                 {formatCurrency(totals.subtotal)}
                             </span>
@@ -356,7 +338,9 @@ function CreateSalePage() {
                         )}
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Taxes</span>
-                            <span className="font-medium">{formatCurrency(totals.tax)}</span>
+                            <span className="font-medium">
+                                {formatCurrency(totals.tax)}
+                            </span>
                         </div>
                         <div className="flex justify-between pt-3 border-t">
                             <span className="font-semibold">Total TTC</span>
@@ -364,55 +348,49 @@ function CreateSalePage() {
                                 {formatCurrency(totals.total)}
                             </span>
                         </div>
-                        {saleType === "credit" && installments.length > 0 && (
-                            <div className="pt-3 border-t space-y-1">
-                                <p className="text-xs text-muted-foreground">
-                                    Total échéances : {formatCurrency(installmentsTotal)}
-                                </p>
-                                {Math.abs(installmentsTotal - totals.total) > 0.01 && (
-                                    <p className="text-xs text-amber-600">
-                                        ⚠ Les échéances doivent couvrir le total
-                                    </p>
-                                )}
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             }
         >
             <Card>
                 <CardHeader>
-                    <CardTitle>Détails de la vente</CardTitle>
+                    <CardTitle>Détails du document</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Type de vente */}
+                        {/* Type de document */}
                         <div className="space-y-2">
-                            <Label>Type de vente *</Label>
+                            <Label>Type de document *</Label>
                             <div className="grid gap-3 md:grid-cols-2">
                                 {[
                                     {
-                                        value: "cash" as SaleType,
-                                        label: "Comptant",
-                                        icon: FaMoneyBillWave,
-                                        description: "Payée au moment de la vente",
-                                        color: "text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-700 dark:bg-green-900/40",
+                                        value: "quote" as QuoteType,
+                                        label: "Devis",
+                                        icon: FaFileAlt,
+                                        description:
+                                            "Proposition commerciale avec conditions",
+                                        color: "text-blue-600 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-600 dark:bg-blue-900/30",
+                                   
                                     },
                                     {
-                                        value: "credit" as SaleType,
-                                        label: "À crédit",
-                                        icon: CreditCard,
-                                        description: "Avec échéancier et contrôle du crédit client",
-                                        color: "text-amber-600 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:bg-amber-900/40",
+                                        value: "proforma" as QuoteType,
+                                        label: "Facture pro forma",
+                                        icon: FaFileInvoice,
+                                        description:
+                                            "Facture prévisionnelle avant livraison",
+                                        color: "text-violet-600 border-violet-200 bg-violet-50 dark:text-violet-400 dark:border-violet-600 dark:bg-violet-900/30",
+                                   
                                     },
                                 ].map((opt) => {
                                     const Icon = opt.icon as any;
-                                    const selected = saleType === opt.value;
+                                    const selected = quoteType === opt.value;
                                     return (
                                         <button
                                             key={opt.value}
                                             type="button"
-                                            onClick={() => setSaleType(opt.value)}
+                                            onClick={() =>
+                                                setQuoteType(opt.value)
+                                            }
                                             className={`p-4 border-2 rounded-md text-left transition-all ${
                                                 selected
                                                     ? opt.color
@@ -435,60 +413,66 @@ function CreateSalePage() {
                         {/* Client + Entrepôt + Dates */}
                         <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
                             <div className="space-y-2">
-                                <Label>
-                                    Client{" "}
-                                    {saleType === "credit" ? "*" : "(optionnel pour comptoir)"}
-                                </Label>
+                                <Label>Client (optionnel)</Label>
                                 <SmartSelector
                                     items={customerItems}
-                                    selectedIds={customerId ? [customerId] : []}
-                                    onChange={(ids) => setCustomerId(ids[0] || "")}
+                                    selectedIds={
+                                        customerId ? [customerId] : []
+                                    }
+                                    onChange={handleCustomerChange}
                                     placeholder="Rechercher un client"
                                     accentColor="primary"
                                 />
-                                {saleType === "credit" && customerItems.length === 0 && (
-                                    <p className="text-xs text-amber-600">
-                                        Aucun client avec limite de crédit configurée.
-                                    </p>
-                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label>Entrepôt *</Label>
                                 <SmartSelector
                                     items={warehouseItems}
-                                    selectedIds={warehouseId ? [warehouseId] : []}
-                                    onChange={(ids) => setWarehouseId(ids[0] || "")}
+                                    selectedIds={
+                                        warehouseId ? [warehouseId] : []
+                                    }
+                                    onChange={(ids) =>
+                                        setWarehouseId(ids[0] || "")
+                                    }
                                     placeholder="Sélectionner un entrepôt"
                                     accentColor="blue"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="sale_date">Date de vente *</Label>
+                                <Label htmlFor="issue_date">
+                                    Date d&apos;émission *
+                                </Label>
                                 <Input
-                                    id="sale_date"
+                                    id="issue_date"
                                     type="date"
-                                    value={saleDate}
-                                    onChange={(e) => setSaleDate(e.target.value)}
+                                    value={issueDate}
+                                    onChange={(e) =>
+                                        setIssueDate(e.target.value)
+                                    }
                                     required
                                 />
                             </div>
-                            {saleType === "credit" && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="due_date">Échéance finale</Label>
-                                    <Input
-                                        id="due_date"
-                                        type="date"
-                                        value={dueDate}
-                                        onChange={(e) => setDueDate(e.target.value)}
-                                    />
-                                </div>
-                            )}
+                            <div className="space-y-2">
+                                <Label htmlFor="valid_until">
+                                    Valide jusqu&apos;au
+                                </Label>
+                                <Input
+                                    id="valid_until"
+                                    type="date"
+                                    value={validUntil}
+                                    onChange={(e) =>
+                                        setValidUntil(e.target.value)
+                                    }
+                                />
+                            </div>
                         </div>
 
                         {/* Lignes avec remises */}
                         <div className="space-y-3 pt-4 border-t">
                             <div className="flex items-center justify-between">
-                                <p className="text-sm font-semibold">Articles vendus</p>
+                                <p className="text-sm font-semibold">
+                                    Articles
+                                </p>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -502,15 +486,24 @@ function CreateSalePage() {
                             </div>
                             <div className="space-y-3">
                                 {items.map((item) => {
-                                    const qty = parseFloat(String(item.quantity || 0));
-                                    const price = parseFloat(String(item.unit_price || 0));
+                                    const qty = parseFloat(
+                                        String(item.quantity || 0)
+                                    );
+                                    const price = parseFloat(
+                                        String(item.unit_price || 0)
+                                    );
                                     const lineBase = qty * price;
-                                    const dv = parseFloat(String(item.discount_value || 0));
+                                    const dv = parseFloat(
+                                        String(item.discount_value || 0)
+                                    );
                                     let afterDisc = lineBase;
                                     if (item.discount_type === "percentage") {
-                                        afterDisc = lineBase - (lineBase * dv) / 100;
+                                        afterDisc =
+                                            lineBase -
+                                            (lineBase * dv) / 100;
                                     } else if (item.discount_type === "fixed") {
-                                        afterDisc = lineBase - Math.min(dv, lineBase);
+                                        afterDisc =
+                                            lineBase - Math.min(dv, lineBase);
                                     }
                                     return (
                                         <div
@@ -519,11 +512,17 @@ function CreateSalePage() {
                                         >
                                             <div className="grid grid-cols-12 gap-2">
                                                 <div className="col-span-12 md:col-span-5">
-                                                    <Label className="text-xs">Produit</Label>
+                                                    <Label className="text-xs">
+                                                        Produit
+                                                    </Label>
                                                     <SmartSelector
                                                         items={productItems}
                                                         selectedIds={
-                                                            item.product_id ? [item.product_id] : []
+                                                            item.product_id
+                                                                ? [
+                                                                      item.product_id,
+                                                                  ]
+                                                                : []
                                                         }
                                                         onChange={(ids) =>
                                                             handleProductChange(
@@ -536,44 +535,72 @@ function CreateSalePage() {
                                                     />
                                                 </div>
                                                 <div className="col-span-4 md:col-span-2">
-                                                    <Label className="text-xs">Qté</Label>
+                                                    <Label className="text-xs">
+                                                        Qté
+                                                    </Label>
                                                     <Input
                                                         type="number"
                                                         min="0"
                                                         step="0.001"
-                                                        value={String(item.quantity)}
+                                                        value={String(
+                                                            item.quantity
+                                                        )}
                                                         onChange={(e) =>
-                                                            updateItem(item._key, {
-                                                                quantity: e.target.value,
-                                                            })
+                                                            updateItem(
+                                                                item._key,
+                                                                {
+                                                                    quantity:
+                                                                        e.target
+                                                                            .value,
+                                                                }
+                                                            )
                                                         }
                                                     />
                                                 </div>
                                                 <div className="col-span-4 md:col-span-2">
-                                                    <Label className="text-xs">Prix unit.</Label>
+                                                    <Label className="text-xs">
+                                                        Prix unit.
+                                                    </Label>
                                                     <Input
                                                         type="number"
                                                         min="0"
                                                         step="0.01"
-                                                        value={String(item.unit_price)}
+                                                        value={String(
+                                                            item.unit_price
+                                                        )}
                                                         onChange={(e) =>
-                                                            updateItem(item._key, {
-                                                                unit_price: e.target.value,
-                                                            })
+                                                            updateItem(
+                                                                item._key,
+                                                                {
+                                                                    unit_price:
+                                                                        e.target
+                                                                            .value,
+                                                                }
+                                                            )
                                                         }
                                                     />
                                                 </div>
                                                 <div className="col-span-3 md:col-span-1">
-                                                    <Label className="text-xs">TVA %</Label>
+                                                    <Label className="text-xs">
+                                                        TVA %
+                                                    </Label>
                                                     <Input
                                                         type="number"
                                                         min="0"
                                                         step="0.01"
-                                                        value={String(item.tax_rate ?? "0")}
+                                                        value={String(
+                                                            item.tax_rate ??
+                                                                "0"
+                                                        )}
                                                         onChange={(e) =>
-                                                            updateItem(item._key, {
-                                                                tax_rate: e.target.value,
-                                                            })
+                                                            updateItem(
+                                                                item._key,
+                                                                {
+                                                                    tax_rate:
+                                                                        e.target
+                                                                            .value,
+                                                                }
+                                                            )
                                                         }
                                                     />
                                                 </div>
@@ -584,7 +611,9 @@ function CreateSalePage() {
                                                         </div>
                                                         <div className="text-sm font-semibold">
                                                             {formatCurrency(
-                                                                Number.isFinite(afterDisc)
+                                                                Number.isFinite(
+                                                                    afterDisc
+                                                                )
                                                                     ? afterDisc
                                                                     : 0
                                                             )}
@@ -594,12 +623,45 @@ function CreateSalePage() {
                                                         type="button"
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => removeItem(item._key)}
-                                                        disabled={items.length === 1}
+                                                        onClick={() =>
+                                                            removeItem(
+                                                                item._key
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            items.length === 1
+                                                        }
                                                         className="text-destructive hover:text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Description ligne */}
+                                            <div className="grid grid-cols-12 gap-2">
+                                                <div className="col-span-12 md:col-span-7">
+                                                    <Label className="text-xs">
+                                                        Description (optionnel)
+                                                    </Label>
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="Détail de la ligne…"
+                                                        value={
+                                                            item.description ??
+                                                            ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateItem(
+                                                                item._key,
+                                                                {
+                                                                    description:
+                                                                        e.target
+                                                                            .value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
                                                 </div>
                                             </div>
 
@@ -611,25 +673,40 @@ function CreateSalePage() {
                                                         Remise ligne
                                                     </Label>
                                                     <select
-                                                        value={item.discount_type ?? "none"}
+                                                        value={
+                                                            item.discount_type ??
+                                                            "none"
+                                                        }
                                                         onChange={(e) =>
-                                                            updateItem(item._key, {
-                                                                discount_type: e.target
-                                                                    .value as SaleDiscountType,
-                                                            })
+                                                            updateItem(
+                                                                item._key,
+                                                                {
+                                                                    discount_type:
+                                                                        e.target
+                                                                            .value as QuoteDiscountType,
+                                                                }
+                                                            )
                                                         }
                                                         className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
                                                     >
-                                                        <option value="none">Aucune</option>
-                                                        <option value="percentage">%</option>
-                                                        <option value="fixed">Montant</option>
+                                                        <option value="none">
+                                                            Aucune
+                                                        </option>
+                                                        <option value="percentage">
+                                                            %
+                                                        </option>
+                                                        <option value="fixed">
+                                                            Montant
+                                                        </option>
                                                     </select>
                                                 </div>
-                                                {item.discount_type !== "none" && (
+                                                {item.discount_type !==
+                                                    "none" && (
                                                     <div className="col-span-12 md:col-span-3">
                                                         <Label className="text-xs">
                                                             Valeur{" "}
-                                                            {item.discount_type === "percentage"
+                                                            {item.discount_type ===
+                                                            "percentage"
                                                                 ? "(%)"
                                                                 : "(montant)"}
                                                         </Label>
@@ -637,11 +714,20 @@ function CreateSalePage() {
                                                             type="number"
                                                             min="0"
                                                             step="0.01"
-                                                            value={String(item.discount_value ?? "0")}
+                                                            value={String(
+                                                                item.discount_value ??
+                                                                    "0"
+                                                            )}
                                                             onChange={(e) =>
-                                                                updateItem(item._key, {
-                                                                    discount_value: e.target.value,
-                                                                })
+                                                                updateItem(
+                                                                    item._key,
+                                                                    {
+                                                                        discount_value:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    }
+                                                                )
                                                             }
                                                         />
                                                     </div>
@@ -655,20 +741,29 @@ function CreateSalePage() {
 
                         {/* Remise globale */}
                         <div className="space-y-3 pt-4 border-t">
-                            <p className="text-sm font-semibold">Remise globale sur la vente</p>
+                            <p className="text-sm font-semibold">
+                                Remise globale
+                            </p>
                             <div className="grid gap-3 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label>Type</Label>
                                     <select
                                         value={discountType}
                                         onChange={(e) =>
-                                            setDiscountType(e.target.value as SaleDiscountType)
+                                            setDiscountType(
+                                                e.target
+                                                    .value as QuoteDiscountType
+                                            )
                                         }
                                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                     >
                                         <option value="none">Aucune</option>
-                                        <option value="percentage">Pourcentage (%)</option>
-                                        <option value="fixed">Montant fixe</option>
+                                        <option value="percentage">
+                                            Pourcentage (%)
+                                        </option>
+                                        <option value="fixed">
+                                            Montant fixe
+                                        </option>
                                     </select>
                                 </div>
                                 {discountType !== "none" && (
@@ -684,104 +779,49 @@ function CreateSalePage() {
                                             min="0"
                                             step="0.01"
                                             value={discountValue}
-                                            onChange={(e) => setDiscountValue(e.target.value)}
+                                            onChange={(e) =>
+                                                setDiscountValue(e.target.value)
+                                            }
                                         />
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Échéances (credit only) */}
-                        {saleType === "credit" && (
-                            <div className="space-y-3 pt-4 border-t">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-semibold">
-                                            Échéancier
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Les paiements échelonnés planifiés
-                                        </p>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={addInstallment}
-                                        className="gap-2"
-                                    >
-                                        <FaPlus className="h-3 w-3" />
-                                        Échéance
-                                    </Button>
+                        {/* Notes + Conditions */}
+                        <div className="space-y-4 pt-4 border-t">
+                            <div className="space-y-2">
+                                <Label htmlFor="notes">Notes internes</Label>
+                                <div className="relative">
+                                    <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <textarea
+                                        id="notes"
+                                        rows={2}
+                                        value={notes}
+                                        onChange={(e) =>
+                                            setNotes(e.target.value)
+                                        }
+                                        className="flex w-full border border-input bg-transparent px-3 py-2 text-sm pl-10 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    />
                                 </div>
-                                {installments.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground italic">
-                                        Sans échéance définie, le total est dû à la date d'échéance finale.
-                                    </p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {installments.map((inst, idx) => (
-                                            <div
-                                                key={inst._key}
-                                                className="flex items-end gap-2 p-2 border rounded"
-                                            >
-                                                <div className="flex-shrink-0 w-10 h-10 bg-primary/10 text-primary rounded flex items-center justify-center text-xs font-semibold">
-                                                    #{idx + 1}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <Label className="text-xs">Date</Label>
-                                                    <Input
-                                                        type="date"
-                                                        value={inst.due_date}
-                                                        onChange={(e) =>
-                                                            updateInstallment(inst._key, {
-                                                                due_date: e.target.value,
-                                                            })
-                                                        }
-                                                    />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <Label className="text-xs">Montant</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={String(inst.amount)}
-                                                        onChange={(e) =>
-                                                            updateInstallment(inst._key, {
-                                                                amount: e.target.value,
-                                                            })
-                                                        }
-                                                    />
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removeInstallment(inst._key)}
-                                                    className="text-destructive hover:text-destructive"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
-                        )}
-
-                        {/* Notes */}
-                        <div className="space-y-2 pt-4 border-t">
-                            <Label htmlFor="notes">Notes</Label>
-                            <div className="relative">
-                                <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                <textarea
-                                    id="notes"
-                                    rows={2}
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    className="flex w-full border border-input bg-transparent px-3 py-2 text-sm pl-10 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                />
+                            <div className="space-y-2">
+                                <Label htmlFor="terms">
+                                    Conditions / mentions légales
+                                </Label>
+                                <div className="relative">
+                                    <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <textarea
+                                        id="terms"
+                                        rows={3}
+                                        value={terms}
+                                        onChange={(e) =>
+                                            setTerms(e.target.value)
+                                        }
+                                        placeholder="Ex : Devis valable 30 jours. Paiement à 30 jours fin de mois…"
+                                        className="flex w-full border border-input bg-transparent px-3 py-2 text-sm pl-10 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -795,10 +835,10 @@ function CreateSalePage() {
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={createSale.isPending}
+                                disabled={createQuote.isPending}
                                 className="gap-2"
                             >
-                                {createSale.isPending ? (
+                                {createQuote.isPending ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     <Save className="h-4 w-4" />

@@ -1,5 +1,6 @@
 "use client";
 
+import { BadgeStatus } from "@/components/BadgeStatus";
 import {
     ListPageLayout,
     ListPagination,
@@ -141,12 +142,7 @@ function LeaveRow({
                     </p>
                 )}
             </div>
-            <Badge variant={statusVariant(leave.status)} className="shrink-0">
-                {leave.status === "pending" && <FaClock className="mr-1 h-3 w-3" />}
-                {leave.status === "approved" && <FaCheck className="mr-1 h-3 w-3" />}
-                {leave.status === "rejected" && <FaX className="mr-1 h-3 w-3" />}
-                {leave.status_display}
-            </Badge>
+            <BadgeStatus status={leave.status} />
             {showActions && leave.status === "pending" && (
                 <div className="flex gap-1 shrink-0">
                     <Button

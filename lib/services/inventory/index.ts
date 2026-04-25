@@ -8,6 +8,7 @@ export * from "./customers.service";
 export * from "./physical_inventories.service";
 export * from "./products.service";
 export * from "./purchase_orders.service";
+export * from "./quotes.service";
 export * from "./sales.service";
 export * from "./stock.service";
 export * from "./suppliers.service";

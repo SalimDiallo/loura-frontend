@@ -10,6 +10,7 @@
  * Les règles sont purement front : le backend n'est pas impacté.
  */
 
+// Ajoutez ici les autres dépendances dès que de nouvelles permissions apparaissent.
 export const PERMISSION_DEPENDENCIES: Record<string, readonly string[]> = {
   // Core — Organisation
   "core.manage_organization": ["core.view_organization"],
@@ -39,11 +40,29 @@ export const PERMISSION_DEPENDENCIES: Record<string, readonly string[]> = {
   // Inventaire — Produits
   "inventory.manage_products": ["inventory.view_products"],
 
+  // Inventaire — Catégories
+  "inventory.manage_categories": ["inventory.view_categories"],
+
+  // Inventaire — Entrepôts
+  "inventory.manage_warehouses": ["inventory.view_warehouses"],
+
   // Inventaire — Stock
   "inventory.manage_stock": ["inventory.view_stock"],
 
+  // Inventaire — Fournisseurs
+  "inventory.manage_suppliers": ["inventory.view_suppliers"],
+
+  // Inventaire — Approvisionnements
+  "inventory.manage_purchase_orders": ["inventory.view_purchase_orders"],
+
+  // Inventaire — Clients
+  "inventory.manage_customers": ["inventory.view_customers"],
+
   // Inventaire — Ventes
   "inventory.manage_sales": ["inventory.view_sales"],
+
+  // Inventaire — Rapports (si besoin de dépendances à l'avenir)
+  // "inventory.manage_reports": ["inventory.view_reports"], // décommentez/corrigez si applicable
 };
 
 interface PermissionLite {

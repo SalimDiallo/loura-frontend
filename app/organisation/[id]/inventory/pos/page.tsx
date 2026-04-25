@@ -2,6 +2,7 @@
 
 import { GenerateDocumentButton } from "@/components/documents";
 import { PermissionGuard } from "@/components/permissions";
+import { QuickSelect } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -713,28 +714,34 @@ function POSPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <select
-                                        value={customerId}
-                                        onChange={(e) => setCustomerId(e.target.value)}
-                                        className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs"
-                                    >
-                                        <option value="">
-                                            {saleType === "credit"
-                                                ? "— Client requis —"
-                                                : "Client (optionnel)"}
-                                        </option>
-                                        {customers
+                                    <QuickSelect
+                                        label="Client"
+                                        items={customers
                                             .filter((c) =>
                                                 saleType === "credit"
                                                     ? Number(c.credit_limit) > 0
                                                     : true
                                             )
-                                            .map((c) => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.name}
-                                                </option>
-                                            ))}
-                                    </select>
+                                            .map((c) => ({
+                                                id: c.id,
+                                                name: c.name,
+                                                subtitle:
+                                                    c.phone ||
+                                                    (c.email ?? undefined),
+                                            }))}
+                                        selectedId={customerId}
+                                        onSelect={setCustomerId}
+                                        placeholder={
+                                            saleType === "credit"
+                                                ? "— Client requis —"
+                                                : "Client (optionnel)"
+                                        }
+                                        icon={User}
+                                        accentColor="blue"
+                                        canCreate={false}
+                                        disabled={customers.length === 0}
+                                    />
+                              
                                 </div>
                             </div>
 

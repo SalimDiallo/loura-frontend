@@ -1,5 +1,6 @@
 "use client";
 
+import { BadgeStatus } from "@/components/BadgeStatus";
 import { GenerateDocumentButton } from "@/components/documents";
 import {
     ListPageLayout,
@@ -10,7 +11,6 @@ import {
     ListTableColumn,
 } from "@/components/layout/ListPageLayout";
 import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,14 +21,11 @@ import type { Customer, SalePaymentStatus, SaleStatus, SaleType } from "@/lib/ty
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
-    FaCheckCircle,
     FaCreditCard,
-    FaEdit,
     FaEye,
     FaMoneyBillWave,
     FaPlus,
-    FaReceipt,
-    FaTimes,
+    FaReceipt
 } from "react-icons/fa";
 
 interface SalesPageProps {
@@ -51,29 +48,6 @@ export function CreditSalesPageWrapper() {
     );
 }
 
-const STATUS_STYLES: Record<
-    SaleStatus,
-    { color: string; icon: React.ComponentType<{ className?: string }> }
-> = {
-    draft: { color: "bg-gray-100 text-gray-700 border-gray-200", icon: FaEdit },
-    completed: {
-        color: "bg-green-100 text-green-700 border-green-200",
-        icon: FaCheckCircle,
-    },
-    cancelled: {
-        color: "bg-red-100 text-red-700 border-red-200",
-        icon: FaTimes,
-    },
-};
-
-const PAYMENT_STYLES: Record<SalePaymentStatus, { color: string; label: string }> = {
-    unpaid: { color: "bg-red-50 text-red-700 border-red-200", label: "Non payée" },
-    partial: {
-        color: "bg-amber-50 text-amber-700 border-amber-200",
-        label: "Partielle",
-    },
-    paid: { color: "bg-green-50 text-green-700 border-green-200", label: "Payée" },
-};
 
 function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
     const params = useParams();
@@ -299,15 +273,9 @@ function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                     <ListTableColumn key="status" header="Statut">
                                         {({ value: s }) => {
                                             const st = s.status as SaleStatus;
-                                            const Icon = STATUS_STYLES[st].icon;
                                             return (
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`gap-1.5 ${STATUS_STYLES[st].color}`}
-                                                >
-                                                    <Icon className="h-3 w-3" />
-                                                    {s.status_display}
-                                                </Badge>
+                                                <BadgeStatus
+                                                  status={st} />
                                             );
                                         }}
                                     </ListTableColumn>,
@@ -315,12 +283,7 @@ function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                         {({ value: s }) => {
                                             const st = s.payment_status as SalePaymentStatus;
                                             return (
-                                                <Badge
-                                                    variant="outline"
-                                                    className={PAYMENT_STYLES[st].color}
-                                                >
-                                                    {PAYMENT_STYLES[st].label}
-                                                </Badge>
+                                                <BadgeStatus status={st} />
                                             );
                                         }}
                                     </ListTableColumn>,

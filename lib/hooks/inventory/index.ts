@@ -9,97 +9,105 @@
 export * from "./analytics";
 
 import {
-    usePaginatedQuery,
-    type UsePaginatedQueryReturn,
+  usePaginatedQuery,
+  type UsePaginatedQueryReturn,
 } from "@/lib/hooks/usePagination";
 import {
-    categoriesService,
-    customersService,
-    physicalInventoriesService,
-    productsService,
-    purchaseOrdersService,
-    salesService,
-    stockMovementsService,
-    stockService,
-    stockTransfersService,
-    suppliersService,
-    warehousesService
+  categoriesService,
+  customersService,
+  physicalInventoriesService,
+  productsService,
+  purchaseOrdersService,
+  quotesService,
+  salesService,
+  stockMovementsService,
+  stockService,
+  stockTransfersService,
+  suppliersService,
+  warehousesService
 } from "@/lib/services/inventory";
 import type {
-    Category,
-    CategoryTreeNode,
-    CreateCategoryData,
-    CreateCategoryResponse,
-    CreateCustomerData,
-    CreateCustomerResponse,
-    CreatePhysicalInventoryData,
-    CreateProductData,
-    CreateProductResponse,
-    CreatePurchaseOrderData,
-    CreatePurchaseOrderPaymentData,
-    CreatePurchaseOrderPaymentResponse,
-    CreateSaleData,
-    CreateSalePaymentData,
-    CreateSalePaymentResponse,
-    CreateStockMovementData,
-    CreateStockMovementResponse,
-    CreateSupplierData,
-    CreateSupplierResponse,
-    CreateWarehouseData,
-    CreateWarehouseResponse,
-    Customer,
-    DeleteCategoryResponse,
-    DeleteCustomerResponse,
-    DeleteProductResponse,
-    DeleteSupplierResponse,
-    DeleteWarehouseResponse,
-    ListCategoriesParams,
-    ListCustomersParams,
-    ListPhysicalInventoriesParams,
-    ListProductsParams,
-    ListPurchaseOrdersParams,
-    ListSalesParams,
-    ListStockMovementsParams,
-    ListStocksParams,
-    ListSuppliersParams,
-    ListWarehousesParams,
-    PhysicalInventory,
-    PhysicalInventoryResponse,
-    PopulatePhysicalInventoryData,
-    Product,
-    PurchaseOrder,
-    PurchaseOrderResponse,
-    ReceivePurchaseOrderData,
-    Sale,
-    SaleResponse,
-    Stock,
-    StockAlertsResponse,
-    StockMovement,
-    StockTransferData,
-    StockTransferResponse,
-    Supplier,
-    UpdateCategoryData,
-    UpdateCategoryResponse,
-    UpdateCustomerData,
-    UpdateCustomerResponse,
-    UpdatePhysicalInventoryData,
-    UpdatePhysicalInventoryItemsData,
-    UpdateProductData,
-    UpdateProductResponse,
-    UpdatePurchaseOrderData,
-    UpdateSaleData,
-    UpdateSupplierData,
-    UpdateSupplierResponse,
-    UpdateWarehouseData,
-    UpdateWarehouseResponse,
-    Warehouse,
+  Category,
+  CategoryTreeNode,
+  ConvertQuoteData,
+  CreateCategoryData,
+  CreateCategoryResponse,
+  CreateCustomerData,
+  CreateCustomerResponse,
+  CreatePhysicalInventoryData,
+  CreateProductData,
+  CreateProductResponse,
+  CreatePurchaseOrderData,
+  CreatePurchaseOrderPaymentData,
+  CreatePurchaseOrderPaymentResponse,
+  CreateQuoteData,
+  CreateSaleData,
+  CreateSalePaymentData,
+  CreateSalePaymentResponse,
+  CreateStockMovementData,
+  CreateStockMovementResponse,
+  CreateSupplierData,
+  CreateSupplierResponse,
+  CreateWarehouseData,
+  CreateWarehouseResponse,
+  Customer,
+  DeleteCategoryResponse,
+  DeleteCustomerResponse,
+  DeleteProductResponse,
+  DeleteSupplierResponse,
+  DeleteWarehouseResponse,
+  ListCategoriesParams,
+  ListCustomersParams,
+  ListPhysicalInventoriesParams,
+  ListProductsParams,
+  ListPurchaseOrdersParams,
+  ListQuotesParams,
+  ListSalesParams,
+  ListStockMovementsParams,
+  ListStocksParams,
+  ListSuppliersParams,
+  ListWarehousesParams,
+  PhysicalInventory,
+  PhysicalInventoryResponse,
+  PopulatePhysicalInventoryData,
+  Product,
+  PurchaseOrder,
+  PurchaseOrderResponse,
+  Quote,
+  QuoteResponse,
+  ReceivePurchaseOrderData,
+  RejectQuoteData,
+  Sale,
+  SaleResponse,
+  Stock,
+  StockAlertsResponse,
+  StockMovement,
+  StockTransferData,
+  StockTransferResponse,
+  Supplier,
+  UpdateCategoryData,
+  UpdateCategoryResponse,
+  UpdateCustomerData,
+  UpdateCustomerResponse,
+  UpdatePhysicalInventoryData,
+  UpdatePhysicalInventoryItemsData,
+  UpdateProductData,
+  UpdateProductResponse,
+  UpdatePurchaseOrderData,
+  UpdateQuoteData,
+  UpdateSaleData,
+  UpdateSupplierData,
+  UpdateSupplierResponse,
+  UpdateWarehouseData,
+  UpdateWarehouseResponse,
+  Warehouse,
 } from "@/lib/types";
 import {
-    useMutation,
-    useQuery,
-    useQueryClient,
-    type UseMutationResult,
-    type UseQueryResult,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
 } from "@tanstack/react-query";
 
 // ─── Query Keys ──────────────────────────────────────────────────────────────
@@ -1193,6 +1201,177 @@ export function useCancelPhysicalInventory(): UseMutationResult<
       qc.invalidateQueries({
         queryKey: ["inventory", "physical-inventories", orgId],
       });
+    },
+  });
+}
+
+// ─── Devis / Pro forma (Quotes) ──────────────────────────────────────────────
+
+export function useQuotes(
+  orgId: string,
+  params?: ListQuotesParams
+): UseQueryResult<Quote[], Error> {
+  return useQuery({
+    queryKey: ["inventory", "quotes", orgId, params ?? {}],
+    queryFn: () => quotesService.getAll(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function usePaginatedQuotes(
+  orgId: string,
+  filters?: Omit<ListQuotesParams, "page" | "page_size">,
+  options?: { pageSize?: number; initialPage?: number; enabled?: boolean }
+): UsePaginatedQueryReturn<Quote> {
+  return usePaginatedQuery<Quote, any>({
+    queryKey: ["inventory", "quotes", orgId],
+    fetchFn: (params) => quotesService.getAll(orgId, params) as any,
+    filters,
+    pageSize: options?.pageSize ?? 15,
+    initialPage: options?.initialPage ?? 1,
+    enabled: options?.enabled !== false && !!orgId,
+  });
+}
+
+export function useQuote(
+  orgId: string,
+  id: string
+): UseQueryResult<Quote, Error> {
+  return useQuery({
+    queryKey: ["inventory", "quotes", orgId, id],
+    queryFn: () => quotesService.getById(orgId, id),
+    enabled: !!orgId && !!id,
+  });
+}
+
+export function useCreateQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; data: CreateQuoteData }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, data }) => quotesService.create(orgId, data),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId] });
+    },
+  });
+}
+
+export function useUpdateQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string; data: UpdateQuoteData }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id, data }) => quotesService.update(orgId, id, data),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId, id] });
+      qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId] });
+    },
+  });
+}
+
+export function useDeleteQuote(): UseMutationResult<
+  { message: string },
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => quotesService.delete(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId] });
+    },
+  });
+}
+
+function _invalidateQuote(
+  qc: ReturnType<typeof useQueryClient>,
+  orgId: string,
+  id: string
+) {
+  qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId, id] });
+  qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId] });
+}
+
+export function useSendQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => quotesService.send(orgId, id),
+    onSuccess: (_, { orgId, id }) => _invalidateQuote(qc, orgId, id),
+  });
+}
+
+export function useAcceptQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => quotesService.accept(orgId, id),
+    onSuccess: (_, { orgId, id }) => _invalidateQuote(qc, orgId, id),
+  });
+}
+
+export function useRejectQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string; data?: RejectQuoteData }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id, data }) =>
+      quotesService.reject(orgId, id, data ?? {}),
+    onSuccess: (_, { orgId, id }) => _invalidateQuote(qc, orgId, id),
+  });
+}
+
+export function useExpireQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => quotesService.expire(orgId, id),
+    onSuccess: (_, { orgId, id }) => _invalidateQuote(qc, orgId, id),
+  });
+}
+
+export function useConvertQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string; data?: ConvertQuoteData }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id, data }) =>
+      quotesService.convert(orgId, id, data ?? {}),
+    onSuccess: (_, { orgId, id }) => {
+      _invalidateQuote(qc, orgId, id);
+      // La conversion crée une Sale en draft → invalider les ventes.
+      qc.invalidateQueries({ queryKey: ["inventory", "sales", orgId] });
+    },
+  });
+}
+
+export function useDuplicateQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => quotesService.duplicate(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId] });
     },
   });
 }

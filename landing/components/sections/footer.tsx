@@ -2,6 +2,7 @@
 
 import Logo from "@/components/ui/Logo";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import Link from "next/link";
 import { FlickeringGrid } from "../ui/flickering-grid";
 
 export function FooterSection() {
@@ -53,11 +54,11 @@ export function FooterSection() {
         <p className="text-xs text-muted-foreground">
           © {new Date().getFullYear()} LouraTech. Tous droits réservés.
         </p>
-        {/* <div className="flex items-center gap-6 text-xs text-muted-foreground">
-          <Link href="#" className="hover:text-foreground transition-colors">Confidentialité</Link>
-          <Link href="#" className="hover:text-foreground transition-colors">Conditions</Link>
-          <Link href="#" className="hover:text-foreground transition-colors">Cookies</Link>
-        </div> */}
+        <div className="flex items-center gap-6 text-xs text-muted-foreground">
+          <Link href="/docs/legals/privacy" className="hover:text-foreground transition-colors">Confidentialité</Link>
+          <Link href="/docs/legals/terms" className="hover:text-foreground transition-colors">Conditions</Link>
+          {/* <Link href="#" className="hover:text-foreground transition-colors">Cookies</Link> */}
+        </div>
       </div>
 
       <div className="w-full h-32 md:h-40 relative mt-8 z-0">
