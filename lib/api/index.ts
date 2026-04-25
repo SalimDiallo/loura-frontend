@@ -12,3 +12,6 @@ export { API_CONFIG, API_ENDPOINTS, STORAGE_KEYS } from './config';
 export {
   ActivatableService, BaseService, type Activatable, type ActivatableEndpoints, type CrudEndpoints, type ListOptions
 } from './base-service';
+
+// Helpers d'erreur
+export { getApiErrorMessage } from './error-message';

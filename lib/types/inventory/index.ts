@@ -1071,10 +1071,16 @@ export interface Quote {
   notes: string;
   terms: string;
   sent_at: string | null;
+  sent_by_info?: UserMiniInfo | null;
   accepted_at: string | null;
+  accepted_by_info?: UserMiniInfo | null;
   rejected_at: string | null;
+  rejected_by_info?: UserMiniInfo | null;
   rejection_reason: string;
+  expired_at: string | null;
+  expired_by_info?: UserMiniInfo | null;
   converted_at: string | null;
+  converted_by_info?: UserMiniInfo | null;
   converted_to_sale: QuoteSaleMini | null;
   items: QuoteItem[];
   is_editable: boolean;

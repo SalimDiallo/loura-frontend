@@ -27,6 +27,7 @@ import {
     FaCheckCircle,
     FaClock,
     FaEdit,
+    FaEye,
     FaFileAlt,
     FaFileInvoice,
     FaHourglassEnd,
@@ -395,7 +396,7 @@ function QuotesPage() {
                                                         )
                                                     }
                                                 >
-                                                    <FaEdit className="h-3.5 w-3.5" />
+                                                    <FaEye className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
                                         )}
