@@ -213,6 +213,10 @@ export const API_ENDPOINTS = {
       LIST: (orgId: string) => `/inventory/organizations/${orgId}/stock-movements/`,
       CREATE: (orgId: string) => `/inventory/organizations/${orgId}/stock-movements/`,
       DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/stock-movements/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/stock-movements/${id}/`,
+      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/stock-movements/${id}/`,
+      VALIDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/stock-movements/${id}/validate/`,
+      CANCEL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/stock-movements/${id}/cancel/`,
     },
     // Transferts
     STOCK_TRANSFERS: {

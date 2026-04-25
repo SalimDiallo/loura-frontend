@@ -2,7 +2,6 @@
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { PermissionGuard } from "@/components/permissions";
-import { getApiErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -13,17 +12,22 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import {
-    useCreateStockMovement,
+    SmartSelector,
+    type SmartSelectorItem,
+} from "@/components/ui/smart-selector";
+import { getApiErrorMessage } from "@/lib/api";
+import {
     useProducts,
+    useStockMovement,
+    useUpdateStockMovement,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
-    CreateStockMovementData,
     Product,
     StockMovementReason,
+    UpdateStockMovementData,
     Warehouse,
 } from "@/lib/types";
 import {
@@ -38,14 +42,14 @@ import {
     Scale,
     Warehouse as WarehouseIcon,
 } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-export default function CreateMovementPageWrapper() {
+export default function EditMovementPageWrapper() {
     return (
         <PermissionGuard permission={PERMISSIONS.STOCK.MANAGE}>
-            <CreateMovementPage />
+            <EditMovementPage />
         </PermissionGuard>
     );
 }
@@ -62,7 +66,7 @@ const TYPE_OPTIONS: {
     {
         value: "in",
         label: "Entrée",
-        description: "Réception, retour client, correction positive",
+        description: "Réception, retour client",
         icon: ArrowUp,
         color: "text-green-600 bg-green-50/70 border-green-200 dark:text-green-400 dark:bg-green-900/50 dark:border-green-800",
     },
@@ -105,30 +109,14 @@ const REASON_OPTIONS_BY_TYPE: Record<
     ],
 };
 
-function CreateMovementPage() {
+function EditMovementPage() {
     const params = useParams();
-    const searchParams = useSearchParams();
     const router = useRouter();
     const orgId = params.id as string;
+    const movementId = params.movementId as string;
 
-    const prefilledProduct = searchParams.get("product") || "";
-    const prefilledWarehouse = searchParams.get("warehouse") || "";
-    const prefilledType =
-        (searchParams.get("type") as SimpleMovementType | null) || "in";
-
-    const [movementType, setMovementType] =
-        useState<SimpleMovementType>(prefilledType);
-    const [saveAsDraft, setSaveAsDraft] = useState(false);
-    const [formData, setFormData] = useState<CreateStockMovementData>({
-        product_id: prefilledProduct,
-        warehouse_id: prefilledWarehouse,
-        movement_type: prefilledType,
-        reason: prefilledType === "out" ? "sale" : "purchase",
-        quantity: "",
-        unit_cost: "0.00",
-        reference: "",
-        notes: "",
-    });
+    const { data: movement, isLoading, error } = useStockMovement(orgId, movementId);
+    const updateMutation = useUpdateStockMovement();
 
     const { data: productsList = [] } = useProducts(orgId, {
         page_size: "all",
@@ -141,16 +129,28 @@ function CreateMovementPage() {
     const products = productsList as unknown as Product[];
     const warehouses = warehousesList as unknown as Warehouse[];
 
-    const createMovement = useCreateStockMovement();
+    const [movementType, setMovementType] = useState<SimpleMovementType>("in");
+    const [formData, setFormData] = useState<UpdateStockMovementData>({});
+    const [hydrated, setHydrated] = useState(false);
 
-    // Quand on change le type, reset la raison par défaut
+    // Hydratation
     useEffect(() => {
-        setFormData((prev) => ({
-            ...prev,
-            movement_type: movementType,
-            reason: REASON_OPTIONS_BY_TYPE[movementType][0]?.value || "other",
-        }));
-    }, [movementType]);
+        if (!movement || hydrated) return;
+        const type = movement.movement_type;
+        if (type === "transfer") return;
+        setMovementType(type as SimpleMovementType);
+        setFormData({
+            product_id: movement.product.id,
+            warehouse_id: movement.warehouse.id,
+            movement_type: type as SimpleMovementType,
+            reason: movement.reason,
+            quantity: Math.abs(Number(movement.quantity)).toString(),
+            unit_cost: movement.unit_cost,
+            reference: movement.reference,
+            notes: movement.notes,
+        });
+        setHydrated(true);
+    }, [movement, hydrated]);
 
     const productItems: SmartSelectorItem[] = useMemo(
         () =>
@@ -174,6 +174,76 @@ function CreateMovementPage() {
         [warehouses]
     );
 
+    if (isLoading || !movement) {
+        return (
+            <div className="container mx-auto p-6">
+                {error ? (
+                    <Card>
+                        <CardContent className="pt-6">
+                            <p className="text-destructive">Erreur : {error.message}</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <p className="text-muted-foreground">Chargement…</p>
+                )}
+            </div>
+        );
+    }
+
+    if (movement.status !== "draft") {
+        return (
+            <div className="container mx-auto p-6">
+                <Card>
+                    <CardContent className="pt-6 space-y-4">
+                        <p className="font-medium">
+                            Ce mouvement n'est plus modifiable.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Seuls les mouvements en brouillon peuvent être édités. Pour
+                            corriger un mouvement validé, créez un mouvement
+                            d'ajustement inverse.
+                        </p>
+                        <Button
+                            onClick={() =>
+                                router.push(
+                                    `/organisation/${orgId}/inventory/movements/${movementId}`
+                                )
+                            }
+                        >
+                            Retour au détail
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (movement.movement_type === "transfer") {
+        return (
+            <div className="container mx-auto p-6">
+                <Card>
+                    <CardContent className="pt-6 space-y-4">
+                        <p className="font-medium">
+                            Les transferts ne sont pas éditables.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Pour corriger, créez un nouveau transfert dans l'autre sens.
+                        </p>
+                        <Button
+                            onClick={() =>
+                                router.push(
+                                    `/organisation/${orgId}/inventory/movements/${movementId}`
+                                )
+                            }
+                        >
+                            Retour au détail
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -184,51 +254,51 @@ function CreateMovementPage() {
             return;
         }
 
-        // Pour les sorties, on force la quantité négative ; pour les entrées positive
         let signedQuantity = Number(formData.quantity);
-        if (movementType === "out" && signedQuantity > 0) signedQuantity = -signedQuantity;
-        if (movementType === "in" && signedQuantity < 0) signedQuantity = -signedQuantity;
+        if (movementType === "out" && signedQuantity > 0)
+            signedQuantity = -signedQuantity;
+        if (movementType === "in" && signedQuantity < 0)
+            signedQuantity = -signedQuantity;
 
         if (signedQuantity === 0) {
-            toast("Quantité invalide", { description: "Doit être différente de 0." });
+            toast("Quantité invalide", {
+                description: "Doit être différente de 0.",
+            });
             return;
         }
 
         try {
-            const result = await createMovement.mutateAsync({
+            await updateMutation.mutateAsync({
                 orgId,
+                id: movementId,
                 data: {
                     ...formData,
+                    movement_type: movementType,
                     quantity: signedQuantity.toString(),
-                    status: saveAsDraft ? "draft" : "validated",
                 },
             });
-            toast.success(
-                saveAsDraft
-                    ? "Mouvement enregistré en brouillon."
-                    : "Mouvement validé. Le stock a été mis à jour."
-            );
+            toast.success("Brouillon mis à jour.");
             router.push(
-                `/organisation/${orgId}/inventory/movements/${result.data.id}`
+                `/organisation/${orgId}/inventory/movements/${movementId}`
             );
-        } catch (error: any) {
-            toast.error("Erreur", {
-                description: getApiErrorMessage(error),
-            });
+        } catch (err) {
+            toast.error("Erreur", { description: getApiErrorMessage(err) });
         }
     };
 
     const reasonOptions = REASON_OPTIONS_BY_TYPE[movementType];
-    const selectedProduct = products.find((p) => p.id === formData.product_id);
+    const selectedProduct = products.find(
+        (p) => p.id === formData.product_id
+    );
     const selectedWarehouse = warehouses.find(
         (w) => w.id === formData.warehouse_id
     );
 
     return (
         <FormPageLayout
-            title="Nouveau mouvement de stock"
-            subtitle="Enregistrez une entrée, sortie ou ajustement"
-            backLink={`/organisation/${orgId}/inventory/inventories`}
+            title="Modifier le brouillon"
+            subtitle="Édition libre tant que le mouvement n'est pas validé"
+            backLink={`/organisation/${orgId}/inventory/movements/${movementId}`}
             sidebar={
                 <Card>
                     <CardHeader>
@@ -240,7 +310,8 @@ function CreateMovementPage() {
                                 <p className="text-xs text-muted-foreground">Produit</p>
                                 <p className="font-medium">{selectedProduct.name}</p>
                                 <p className="text-xs text-muted-foreground">
-                                    SKU: {selectedProduct.sku} · {selectedProduct.unit_display}
+                                    SKU: {selectedProduct.sku} ·{" "}
+                                    {selectedProduct.unit_display}
                                 </p>
                             </div>
                         ) : (
@@ -250,14 +321,16 @@ function CreateMovementPage() {
                         )}
                         {selectedWarehouse && (
                             <div className="pt-3 border-t">
-                                <p className="text-xs text-muted-foreground">Entrepôt</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Entrepôt
+                                </p>
                                 <p className="font-medium">{selectedWarehouse.name}</p>
                             </div>
                         )}
-                        {formData.quantity && (
+                        {formData.quantity ? (
                             <div className="pt-3 border-t">
                                 <p className="text-xs text-muted-foreground">
-                                    Impact sur le stock
+                                    Impact prévu
                                 </p>
                                 <p
                                     className={`text-lg font-bold ${
@@ -270,7 +343,7 @@ function CreateMovementPage() {
                                     {Number(formData.quantity).toLocaleString("fr-FR")}
                                 </p>
                             </div>
-                        )}
+                        ) : null}
                     </CardContent>
                 </Card>
             }
@@ -279,12 +352,11 @@ function CreateMovementPage() {
                 <CardHeader>
                     <CardTitle>Détails du mouvement</CardTitle>
                     <CardDescription>
-                        Chaque mouvement est auditable et immutable.
+                        Le stock ne sera impacté qu'à la validation.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Type de mouvement */}
                         <div className="space-y-2">
                             <Label>Type de mouvement *</Label>
                             <div className="grid gap-3 md:grid-cols-3">
@@ -295,7 +367,9 @@ function CreateMovementPage() {
                                         <button
                                             key={opt.value}
                                             type="button"
-                                            onClick={() => setMovementType(opt.value)}
+                                            onClick={() =>
+                                                setMovementType(opt.value)
+                                            }
                                             className={`p-4 border-2 rounded-md text-left transition-all ${
                                                 selected
                                                     ? opt.color
@@ -315,14 +389,15 @@ function CreateMovementPage() {
                             </div>
                         </div>
 
-                        {/* Produit + Entrepôt */}
                         <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
                             <div className="space-y-2">
                                 <Label>Produit *</Label>
                                 <SmartSelector
                                     items={productItems}
                                     selectedIds={
-                                        formData.product_id ? [formData.product_id] : []
+                                        formData.product_id
+                                            ? [formData.product_id]
+                                            : []
                                     }
                                     onChange={(ids) =>
                                         setFormData({
@@ -339,7 +414,9 @@ function CreateMovementPage() {
                                 <SmartSelector
                                     items={warehouseItems}
                                     selectedIds={
-                                        formData.warehouse_id ? [formData.warehouse_id] : []
+                                        formData.warehouse_id
+                                            ? [formData.warehouse_id]
+                                            : []
                                     }
                                     onChange={(ids) =>
                                         setFormData({
@@ -353,17 +430,17 @@ function CreateMovementPage() {
                             </div>
                         </div>
 
-                        {/* Motif + quantité */}
                         <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
                             <div className="space-y-2">
                                 <Label htmlFor="reason">Motif *</Label>
                                 <select
                                     id="reason"
-                                    value={formData.reason}
+                                    value={formData.reason || ""}
                                     onChange={(e) =>
                                         setFormData({
                                             ...formData,
-                                            reason: e.target.value as StockMovementReason,
+                                            reason: e.target
+                                                .value as StockMovementReason,
                                         })
                                     }
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -389,33 +466,35 @@ function CreateMovementPage() {
                                     id="quantity"
                                     type="number"
                                     step="0.001"
-                                    value={formData.quantity as string}
+                                    value={(formData.quantity as string) || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, quantity: e.target.value })
+                                        setFormData({
+                                            ...formData,
+                                            quantity: e.target.value,
+                                        })
                                     }
                                     required
                                 />
                             </div>
                         </div>
 
-                        {/* Coût + référence */}
                         <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
                             <div className="space-y-2">
                                 <Label htmlFor="unit_cost">
                                     <DollarSign className="inline h-3.5 w-3.5 mr-1" />
                                     Coût unitaire
-                                    <span className="text-muted-foreground font-normal text-xs ml-2">
-                                        (valorisation)
-                                    </span>
                                 </Label>
                                 <Input
                                     id="unit_cost"
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    value={formData.unit_cost as string}
+                                    value={(formData.unit_cost as string) || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, unit_cost: e.target.value })
+                                        setFormData({
+                                            ...formData,
+                                            unit_cost: e.target.value,
+                                        })
                                     }
                                 />
                             </div>
@@ -445,7 +524,10 @@ function CreateMovementPage() {
                                     rows={3}
                                     value={formData.notes || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, notes: e.target.value })
+                                        setFormData({
+                                            ...formData,
+                                            notes: e.target.value,
+                                        })
                                     }
                                     className="flex w-full border border-input bg-transparent px-3 py-2 text-sm pl-10 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                 />
@@ -462,30 +544,15 @@ function CreateMovementPage() {
                             </Button>
                             <Button
                                 type="submit"
-                                variant="outline"
-                                disabled={createMovement.isPending}
-                                onClick={() => setSaveAsDraft(true)}
+                                disabled={updateMutation.isPending}
                                 className="gap-2"
                             >
-                                {createMovement.isPending && saveAsDraft ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <FileText className="h-4 w-4" />
-                                )}
-                                Enregistrer en brouillon
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={createMovement.isPending}
-                                onClick={() => setSaveAsDraft(false)}
-                                className="gap-2"
-                            >
-                                {createMovement.isPending && !saveAsDraft ? (
+                                {updateMutation.isPending ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     <Save className="h-4 w-4" />
                                 )}
-                                Valider le mouvement
+                                Enregistrer les modifications
                             </Button>
                         </div>
                     </form>

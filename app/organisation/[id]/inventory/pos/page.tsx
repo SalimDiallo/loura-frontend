@@ -1,6 +1,7 @@
 "use client";
 
 import { GenerateDocumentButton } from "@/components/documents";
+import { ListPagination } from "@/components/layout/ListPageLayout";
 import { PermissionGuard } from "@/components/permissions";
 import { QuickSelect } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,8 @@ import {
     useCreateSale,
     useCreateSalePayment,
     useCustomers,
-    useProducts,
+    usePaginatedProducts,
+    useStocks,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -43,6 +45,7 @@ import {
     type SaleDiscountType,
     type SalePaymentMethod,
     type SaleType,
+    type Stock,
     type Warehouse,
 } from "@/lib/types";
 import {
@@ -101,10 +104,6 @@ function POSPage() {
     const today = new Date().toISOString().split("T")[0];
 
     // Datasets
-    const { data: productsList = [], isLoading: loadingProducts } = useProducts(
-        orgId,
-        { page_size: "all", is_active: true }
-    );
     const { data: categoriesList = [] } = useCategories(orgId, {
         page_size: "all",
     });
@@ -117,10 +116,31 @@ function POSPage() {
         is_active: "true",
     });
 
-    const products = productsList as unknown as Product[];
     const categories = categoriesList as unknown as Category[];
     const warehouses = warehousesList as unknown as Warehouse[];
     const customers = customersList as unknown as Customer[];
+
+    // Filtres grille (déclarés avant le hook produits car utilisés par les filtres serveur)
+    const [search, setSearch] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState<string>("");
+
+    // Produits paginés côté serveur (search + category appliqués au backend)
+    const productsFilters = useMemo(
+        () => ({
+            is_active: true,
+            search: search.trim() || undefined,
+            category: categoryFilter || undefined,
+        }),
+        [search, categoryFilter]
+    );
+    const {
+        data: products,
+        meta: productsMeta,
+        setPage: setProductsPage,
+        nextPage: nextProductsPage,
+        prevPage: prevProductsPage,
+        isLoading: loadingProducts,
+    } = usePaginatedProducts(orgId, productsFilters, { pageSize: 10 });
 
     // Sélection warehouse par défaut
     const [warehouseId, setWarehouseId] = useState<string>("");
@@ -131,30 +151,43 @@ function POSPage() {
         }
     }, [warehouses, warehouseId]);
 
-    // Filtres grille
-    const [search, setSearch] = useState("");
-    const [categoryFilter, setCategoryFilter] = useState<string>("");
-
-    const filteredProducts = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return products.filter((p) => {
-            if (categoryFilter && p.category?.id !== categoryFilter) return false;
-            if (!q) return true;
-            return (
-                p.name.toLowerCase().includes(q) ||
-                p.sku.toLowerCase().includes(q) ||
-                (p.barcode ?? "").toLowerCase().includes(q)
-            );
-        });
-    }, [products, search, categoryFilter]);
+    // Stock disponible par produit pour l'entrepôt sélectionné
+    const { data: stocksList = [] } = useStocks(orgId, {
+        warehouse: warehouseId || undefined,
+        page_size: "all",
+    });
+    const stockByProductId = useMemo(() => {
+        const map: Record<string, number> = {};
+        for (const s of stocksList as unknown as Stock[]) {
+            map[s.product.id] = Number(s.quantity);
+        }
+        return map;
+    }, [stocksList]);
+    const stockOf = (product: Product) => {
+        if (!product.track_stock) return Infinity;
+        return stockByProductId[product.id] ?? 0;
+    };
 
     // Panier
     const [cart, setCart] = useState<CartLine[]>([]);
 
     const addToCart = (product: Product) => {
+        const max = stockOf(product);
+        if (max <= 0) {
+            toast.error("Stock épuisé", {
+                description: `${product.name} n'est pas disponible dans cet entrepôt.`,
+            });
+            return;
+        }
         setCart((prev) => {
             const existing = prev.find((l) => l.product.id === product.id);
             if (existing) {
+                if (existing.quantity >= max) {
+                    toast.warning("Stock atteint", {
+                        description: `Stock disponible : ${max}.`,
+                    });
+                    return prev;
+                }
                 return prev.map((l) =>
                     l.product.id === product.id
                         ? { ...l, quantity: l.quantity + 1 }
@@ -177,18 +210,38 @@ function POSPage() {
 
     const updateLine = (productId: string, patch: Partial<CartLine>) => {
         setCart((prev) =>
-            prev.map((l) => (l.product.id === productId ? { ...l, ...patch } : l))
+            prev.map((l) => {
+                if (l.product.id !== productId) return l;
+                const next = { ...l, ...patch };
+                if (patch.quantity !== undefined) {
+                    const max = stockOf(l.product);
+                    if (next.quantity > max) {
+                        toast.warning("Stock atteint", {
+                            description: `Stock disponible : ${max}.`,
+                        });
+                        next.quantity = max;
+                    }
+                }
+                return next;
+            })
         );
     };
 
     const changeQty = (productId: string, delta: number) => {
         setCart((prev) =>
             prev
-                .map((l) =>
-                    l.product.id === productId
-                        ? { ...l, quantity: l.quantity + delta }
-                        : l
-                )
+                .map((l) => {
+                    if (l.product.id !== productId) return l;
+                    const max = stockOf(l.product);
+                    const target = l.quantity + delta;
+                    if (delta > 0 && target > max) {
+                        toast.warning("Stock atteint", {
+                            description: `Stock disponible : ${max}.`,
+                        });
+                        return { ...l, quantity: max };
+                    }
+                    return { ...l, quantity: target };
+                })
                 .filter((l) => l.quantity > 0)
         );
     };
@@ -216,6 +269,7 @@ function POSPage() {
     const [showPayment, setShowPayment] = useState(false);
     const [showInstallments, setShowInstallments] = useState(false);
     const [showNotes, setShowNotes] = useState(false);
+    const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
 
     // Dernière vente encaissée : déclenche la modale de succès (aperçu facture).
     const [lastSale, setLastSale] = useState<
@@ -278,7 +332,7 @@ function POSPage() {
         createSale.isPending || completeSale.isPending || createPayment.isPending;
 
     // Actions
-    const handleCheckout = async () => {
+    const handleCheckout = () => {
         if (cart.length === 0) {
             toast("Panier vide", { description: "Ajoutez au moins un produit." });
             return;
@@ -295,7 +349,20 @@ function POSPage() {
             });
             return;
         }
+        // Vérification stock côté front avant ouverture
+        const insufficient = cart.find(
+            (l) => l.product.track_stock && l.quantity > stockOf(l.product)
+        );
+        if (insufficient) {
+            toast.error("Stock insuffisant", {
+                description: `${insufficient.product.name} : ${stockOf(insufficient.product)} dispo.`,
+            });
+            return;
+        }
+        setShowCheckoutConfirm(true);
+    };
 
+    const handleConfirmCheckout = async () => {
         const payload: CreateSaleData = {
             customer_id: customerId || null,
             warehouse_id: warehouseId,
@@ -359,6 +426,7 @@ function POSPage() {
             setNotes("");
             setDueDate("");
             setInstallments([]);
+            setShowCheckoutConfirm(false);
         } catch (error: any) {
             toast.error("Erreur lors de l'encaissement", {
                 description:
@@ -467,20 +535,46 @@ function POSPage() {
                                 <Skeleton key={i} className="h-32 w-full rounded-md" />
                             ))}
                         </div>
-                    ) : filteredProducts.length === 0 ? (
+                    ) : products.length === 0 ? (
                         <div className="text-center py-20 text-muted-foreground">
                             <Box className="h-12 w-12 mx-auto mb-3 opacity-50" />
                             <p className="text-sm">Aucun produit trouvé</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                            {filteredProducts.map((p) => (
+                            {products.map((p) => {
+                                const stock = stockOf(p);
+                                const tracked = p.track_stock;
+                                const outOfStock = tracked && stock <= 0;
+                                const lowStock =
+                                    tracked && stock > 0 && stock <= 5;
+                                const stockBadgeClass = outOfStock
+                                    ? "bg-red-100 text-red-700 border-red-200"
+                                    : lowStock
+                                        ? "bg-amber-100 text-amber-700 border-amber-200"
+                                        : "bg-emerald-100 text-emerald-700 border-emerald-200";
+                                return (
                                 <button
                                     key={p.id}
                                     type="button"
                                     onClick={() => addToCart(p)}
-                                    className="group relative text-left border rounded-md p-3 hover:border-primary hover:shadow-sm active:scale-[0.98] transition-all bg-card"
+                                    disabled={outOfStock}
+                                    className={`group relative text-left border rounded-md p-3 transition-all bg-card ${
+                                        outOfStock
+                                            ? "opacity-60 cursor-not-allowed"
+                                            : "hover:border-primary hover:shadow-sm active:scale-[0.98]"
+                                    }`}
                                 >
+                                    {tracked && (
+                                        <Badge
+                                            variant="outline"
+                                            className={`absolute top-1.5 right-1.5 text-[9px] px-1.5 py-0 h-5 ${stockBadgeClass}`}
+                                        >
+                                            {outOfStock
+                                                ? "Rupture"
+                                                : `${stock} ${p.unit_display ?? ""}`.trim()}
+                                        </Badge>
+                                    )}
                                     <div className="aspect-square w-full bg-muted rounded flex items-center justify-center overflow-hidden mb-2">
                                         {p.image_url ? (
                                             <img
@@ -504,7 +598,18 @@ function POSPage() {
                                         </p>
                                     </div>
                                 </button>
-                            ))}
+                                );
+                            })}
+                        </div>
+                    )}
+                    {!loadingProducts && products.length > 0 && (
+                        <div className="mt-4 pb-2">
+                            <ListPagination
+                                meta={productsMeta}
+                                onPageChange={setProductsPage}
+                                onNext={nextProductsPage}
+                                onPrev={prevProductsPage}
+                            />
                         </div>
                     )}
                 </div>
@@ -586,6 +691,13 @@ function POSPage() {
                                                     type="number"
                                                     min="1"
                                                     step="1"
+                                                    max={
+                                                        Number.isFinite(
+                                                            stockOf(line.product)
+                                                        )
+                                                            ? stockOf(line.product)
+                                                            : undefined
+                                                    }
                                                     value={line.quantity}
                                                     onChange={(e) =>
                                                         updateLine(line.product.id, {
@@ -601,6 +713,10 @@ function POSPage() {
                                                     variant="outline"
                                                     size="sm"
                                                     className="h-7 w-7 p-0"
+                                                    disabled={
+                                                        line.quantity >=
+                                                        stockOf(line.product)
+                                                    }
                                                     onClick={() => changeQty(line.product.id, 1)}
                                                 >
                                                     <Plus className="h-3 w-3" />
@@ -1045,6 +1161,97 @@ function POSPage() {
                 </CardContent>
             </Card>
         </div>
+
+        {/* Modale confirmation d'encaissement */}
+        <Dialog
+            open={showCheckoutConfirm}
+            onOpenChange={setShowCheckoutConfirm}
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                        Confirmer l'encaissement
+                    </DialogTitle>
+                    <DialogDescription>
+                        Vérifiez les informations avant de finaliser la vente.
+                        Le stock sera décompté immédiatement.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 rounded-md border bg-muted/30 p-4 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Articles</span>
+                        <span className="font-medium">
+                            {cart.length} ligne{cart.length > 1 ? "s" : ""} ·{" "}
+                            {cart.reduce((s, l) => s + l.quantity, 0)} unités
+                        </span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type</span>
+                        <span className="font-medium">
+                            {saleType === "cash" ? "Comptant" : "Crédit"}
+                        </span>
+                    </div>
+                    {saleType === "cash" && (
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                                Méthode
+                            </span>
+                            <span className="font-medium">
+                                {SALE_PAYMENT_METHODS.find(
+                                    (m) => m.value === paymentMethod
+                                )?.label ?? paymentMethod}
+                            </span>
+                        </div>
+                    )}
+                    {customerId && (
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                                Client
+                            </span>
+                            <span className="font-medium">
+                                {customers.find((c) => c.id === customerId)
+                                    ?.name ?? "—"}
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Entrepôt</span>
+                        <span className="font-medium">
+                            {warehouses.find((w) => w.id === warehouseId)
+                                ?.name ?? "—"}
+                        </span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                        <span className="text-muted-foreground">Total</span>
+                        <span className="font-bold text-base text-primary">
+                            {formatCurrency(totals.total)}
+                        </span>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => setShowCheckoutConfirm(false)}
+                        disabled={isCheckingOut}
+                    >
+                        Retour
+                    </Button>
+                    <Button
+                        onClick={handleConfirmCheckout}
+                        disabled={isCheckingOut}
+                        className="gap-2"
+                    >
+                        {isCheckingOut ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <CreditCard className="h-4 w-4" />
+                        )}
+                        Confirmer l'encaissement
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         {/* Modale succès + aperçu facture */}
         <Dialog

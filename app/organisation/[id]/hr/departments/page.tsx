@@ -13,7 +13,7 @@ import { DepartmentTree } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { FaBriefcase, FaBuilding, FaChevronDown, FaChevronRight, FaEdit, FaNetworkWired, FaPlus, FaUsers } from "react-icons/fa";
+import { FaBriefcase, FaBuilding, FaChevronDown, FaChevronRight, FaEdit, FaNetworkWired, FaPlus, FaSitemap, FaTree, FaUsers } from "react-icons/fa";
 
 /**
  * Composant de rendu récursif de l'arbre des départements
@@ -168,13 +168,27 @@ function DepartmentsPage() {
       headerActions={
         canManage
           ? [
+            {
+              label: "Voir l'organigramme",
+              icon: FaTree,
+              variant: "outline",
+              onClick: () => router.push(`/organisation/${orgId}/hr/departments/organigrams`),
+            },
               {
                 label: "Nouveau département",
                 icon: FaPlus,
                 onClick: () => router.push(`/organisation/${orgId}/hr/departments/create`),
-              },
+              }
+            
             ]
-          : []
+          : [
+            {
+              label: "Voir l'organigramme",
+              icon: FaSitemap,
+              variant: "outline",
+              onClick: () => router.push(`/organisation/${orgId}/hr/departments/organigrams`),
+            },
+          ]
       }
       stats={[
         <ListStat

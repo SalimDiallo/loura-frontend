@@ -2,23 +2,23 @@
 
 import { useOrgPermissions } from "@/components/permissions";
 import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarProvider,
-    useSidebar,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useOrganization } from "@/lib/hooks/core";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -26,40 +26,40 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import {
-    type CSSProperties,
-    type ReactNode,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    FaAngleDoubleLeft,
-    FaAngleDoubleRight,
-    FaArrowLeft,
-    FaBox,
-    FaBoxOpen,
-    FaBriefcase,
-    FaChartBar,
-    FaChevronDown,
-    FaClipboardCheck,
-    FaClipboardList,
-    FaCog,
-    FaCreditCard,
-    FaDochub,
-    FaExclamationTriangle,
-    FaReceipt,
-    FaSearch,
-    FaShoppingCart,
-    FaTachometerAlt,
-    FaTags,
-    FaTimes,
-    FaTruck,
-    FaUmbrellaBeach,
-    FaUserCheck,
-    FaUsers,
-    FaWarehouse
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaArrowLeft,
+  FaBox,
+  FaBoxOpen,
+  FaBriefcase,
+  FaChartBar,
+  FaChevronDown,
+  FaClipboardCheck,
+  FaClipboardList,
+  FaCog,
+  FaCreditCard,
+  FaDochub,
+  FaExclamationTriangle,
+  FaReceipt,
+  FaSearch,
+  FaShoppingCart,
+  FaTachometerAlt,
+  FaTags,
+  FaTimes,
+  FaTruck,
+  FaUmbrellaBeach,
+  FaUserCheck,
+  FaUsers,
+  FaWarehouse
 } from "react-icons/fa";
 
 // ============================================================================
@@ -82,11 +82,6 @@ interface MenuItem {
   title: string;
   url: string;
   icon: React.ElementType;
-  /**
-   * Permission(s) requise(s) pour voir l'item.
-   * Si absent, l'item est visible pour tout membre.
-   * Si array, tout match (mode "any").
-   */
   requiredPermission?: string | string[];
 }
 
@@ -211,7 +206,7 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           requiredPermission: PERMISSIONS.WAREHOUSES.VIEW 
         },
         { 
-          title: "Inventaires", 
+          title: "Inventaires (Stock)", 
           url: `${b}/inventory/inventories`, 
           icon: FaBoxOpen,
           requiredPermission: PERMISSIONS.STOCK.VIEW 
@@ -250,8 +245,6 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
   ];
 }
 
-// Add missing FaClock import for the "Pointage" menu entry
-
 // ============================================================================
 // ROUTE MATCHING
 // ============================================================================
@@ -274,11 +267,13 @@ function NavGroup({
   orgId,
   pathname,
   query,
+  onMenuLinkClick
 }: {
   group: MenuGroup;
   orgId: string;
   pathname: string;
   query: string;
+  onMenuLinkClick?: () => void;
 }) {
   const base = `/organisation/${orgId}`;
 
@@ -341,7 +336,11 @@ function NavGroup({
                         active && "text-sidebar-foreground font-medium"
                       )}
                     >
-                      <Link href={item.url}>
+                      <Link
+                        href={item.url}
+                        onClick={onMenuLinkClick}
+                        passHref
+                      >
                         <ItemIcon className={cn(
                           "opacity-50",
                           active && "opacity-80"
@@ -364,7 +363,7 @@ function NavGroup({
 // TOGGLE BUTTON
 // ============================================================================
 
-function SidebarToggle() {
+export function SidebarToggle() {
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -388,8 +387,7 @@ function SidebarToggle() {
 }
 
 // ============================================================================
-// RESIZE HANDLE — remplace SidebarRail
-// Drag = redimensionner, Click = toggle (en mode collapsed), Double-click = reset
+// RESIZE HANDLE
 // ============================================================================
 
 function ResizeHandle({
@@ -407,10 +405,7 @@ function ResizeHandle({
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Toujours reset le flag de drag — sinon un drag précédent bloque le
-      // click-to-toggle quand on re-clique sur le rail en mode collapsed.
       movedRef.current = false;
-      // En mode collapsed, on ne drag pas : on laisse le click toggler.
       if (isCollapsed) return;
       e.preventDefault();
       draggingRef.current = true;
@@ -441,7 +436,6 @@ function ResizeHandle({
   );
 
   const handleClick = useCallback(() => {
-    // Click sans drag → toggle (utile surtout en mode collapsed)
     if (!movedRef.current) toggleSidebar();
   }, [toggleSidebar]);
 
@@ -501,9 +495,33 @@ function OrgSideBarInner({
 
   const [query, setQuery] = useState("");
 
+  const {
+    state,
+    open,
+    setOpen,
+    openMobile,
+    setOpenMobile,
+    isMobile,
+    toggleSidebar,
+  } = useSidebar() as {
+    state: "expanded" | "collapsed";
+    open: boolean;
+    setOpen: (open: boolean) => void;
+    openMobile: boolean;
+    setOpenMobile: (open: boolean) => void;
+    isMobile: boolean;
+    toggleSidebar: () => void;
+  };
+
+  // Handler to automatically collapse sidebar on mobile after link click
+  const handleMenuLinkClick = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+
   const menuGroups = useMemo(() => {
     const allGroups = buildMenuGroups(orgId);
-    // Ne pas filtrer tant que les permissions ne sont pas chargées (éviter un flash vide)
     if (permsLoading) return allGroups;
 
     return allGroups
@@ -549,8 +567,8 @@ function OrgSideBarInner({
             )}
           </div>
 
-          {/* Org info — hidden in icon mode */}
-          <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+          {/* Org info */}
+          <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold text-sidebar-foreground truncate leading-tight">
               {orgName}
             </p>
@@ -561,8 +579,8 @@ function OrgSideBarInner({
             )}
           </div>
 
-          {/* Collapse toggle — hidden in icon mode */}
-          <div className="group-data-[collapsible=icon]:hidden">
+          {/* Collapse toggle — always visible now */}
+          <div>
             <SidebarToggle />
           </div>
         </div>
@@ -610,6 +628,7 @@ function OrgSideBarInner({
             orgId={orgId}
             pathname={pathname}
             query={query}
+            onMenuLinkClick={handleMenuLinkClick}
           />
         ))}
         {query.trim() &&
@@ -638,7 +657,11 @@ function OrgSideBarInner({
               size="sm"
               className="text-sidebar-foreground/40 hover:text-sidebar-foreground/70"
             >
-              <Link href="/core/dashboard">
+              <Link
+                href="/core/dashboard"
+                onClick={handleMenuLinkClick}
+                passHref
+              >
                 <FaArrowLeft className="opacity-60" />
                 <span>Mes organisations</span>
               </Link>
@@ -660,7 +683,6 @@ export default function OrgSideBar({ children }: { children?: ReactNode }) {
   const [width, setWidth] = useState<number>(SIDEBAR_DEFAULT_WIDTH);
   const [hydrated, setHydrated] = useState(false);
 
-  // Charger la largeur persistée après mount (évite tout mismatch SSR)
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
@@ -683,7 +705,6 @@ export default function OrgSideBar({ children }: { children?: ReactNode }) {
     setWidth(SIDEBAR_DEFAULT_WIDTH);
   }, []);
 
-  // Persister (débouncé naturellement par React batching)
   useEffect(() => {
     if (!hydrated) return;
     try {

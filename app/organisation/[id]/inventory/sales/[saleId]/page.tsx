@@ -123,6 +123,7 @@ function SaleDetailPage() {
     const [payInstallmentId, setPayInstallmentId] = useState<string>("");
     const [payReference, setPayReference] = useState("");
     const [payNotes, setPayNotes] = useState("");
+    const [showPayConfirm, setShowPayConfirm] = useState(false);
 
     if (isLoading || error || !sale) {
         return (
@@ -173,12 +174,24 @@ function SaleDetailPage() {
         }
     };
 
-    const handleRecordPayment = async (e: React.FormEvent) => {
+    const handleOpenPayConfirm = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!payAmount || parseFloat(payAmount) <= 0) {
+        const amount = parseFloat(payAmount);
+        const outstanding = Number(sale.outstanding_amount);
+        if (!payAmount || isNaN(amount) || amount <= 0) {
             toast("Montant invalide", { description: "Saisissez un montant > 0." });
             return;
         }
+        if (amount > outstanding + 0.001) {
+            toast("Montant trop élevé", {
+                description: `Le montant ne peut excéder le restant dû (${formatCurrency(outstanding)}).`,
+            });
+            return;
+        }
+        setShowPayConfirm(true);
+    };
+
+    const handleConfirmPayment = async () => {
         try {
             await paymentMutation.mutateAsync({
                 orgId,
@@ -197,11 +210,26 @@ function SaleDetailPage() {
             setPayReference("");
             setPayNotes("");
             setPayInstallmentId("");
+            setShowPayConfirm(false);
         } catch (err) {
             toast.error("Impossible d'enregistrer le paiement", {
                 description: getApiErrorMessage(err),
             });
         }
+    };
+
+    const fillPaymentAmount = (ratio: number) => {
+        const outstanding = Number(sale.outstanding_amount);
+        const value = (outstanding * ratio).toFixed(2);
+        setPayAmount(value);
+    };
+
+    const fillFromInstallment = () => {
+        if (!payInstallmentId) return;
+        const inst = sale.installments.find((i) => i.id === payInstallmentId);
+        if (!inst) return;
+        const remaining = Number(inst.outstanding_amount);
+        if (remaining > 0) setPayAmount(remaining.toFixed(2));
     };
 
     const handleDeletePayment = async (paymentId: string) => {
@@ -535,7 +563,7 @@ function SaleDetailPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <form
-                                            onSubmit={handleRecordPayment}
+                                            onSubmit={handleOpenPayConfirm}
                                             className="space-y-3"
                                         >
                                             <div className="space-y-2">
@@ -558,6 +586,64 @@ function SaleDetailPage() {
                                                     }
                                                     required
                                                 />
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            fillPaymentAmount(1)
+                                                        }
+                                                        className="h-7 text-xs"
+                                                    >
+                                                        Tout (
+                                                        {formatCurrency(
+                                                            Number(
+                                                                sale.outstanding_amount
+                                                            )
+                                                        )}
+                                                        )
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            fillPaymentAmount(
+                                                                0.5
+                                                            )
+                                                        }
+                                                        className="h-7 text-xs"
+                                                    >
+                                                        50 %
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            fillPaymentAmount(
+                                                                0.25
+                                                            )
+                                                        }
+                                                        className="h-7 text-xs"
+                                                    >
+                                                        25 %
+                                                    </Button>
+                                                    {payInstallmentId && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={
+                                                                fillFromInstallment
+                                                            }
+                                                            className="h-7 text-xs"
+                                                        >
+                                                            Échéance ciblée
+                                                        </Button>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs text-muted-foreground">
                                                     Restant dû :{" "}
                                                     {formatCurrency(
@@ -1018,6 +1104,122 @@ function SaleDetailPage() {
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                     )}
                                     Confirmer
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog
+                        open={showPayConfirm}
+                        onOpenChange={setShowPayConfirm}
+                    >
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    Enregistrer ce paiement ?
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Vérifiez les informations avant validation.
+                                    Un paiement enregistré peut être supprimé
+                                    depuis l'historique tant que la vente n'est
+                                    pas archivée.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-2 rounded-md border bg-muted/30 p-4 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                        Montant
+                                    </span>
+                                    <span className="font-bold text-base">
+                                        {formatCurrency(
+                                            Number(payAmount || 0)
+                                        )}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                        Méthode
+                                    </span>
+                                    <span className="font-medium">
+                                        {SALE_PAYMENT_METHODS.find(
+                                            (m) => m.value === payMethod
+                                        )?.label ?? payMethod}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                        Date
+                                    </span>
+                                    <span className="font-medium">
+                                        {new Date(payDate).toLocaleDateString(
+                                            "fr-FR"
+                                        )}
+                                    </span>
+                                </div>
+                                {payInstallmentId && (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">
+                                            Échéance
+                                        </span>
+                                        <span className="font-medium">
+                                            {(() => {
+                                                const idx =
+                                                    sale.installments.findIndex(
+                                                        (i) =>
+                                                            i.id ===
+                                                            payInstallmentId
+                                                    );
+                                                return idx >= 0
+                                                    ? `#${idx + 1}`
+                                                    : "—";
+                                            })()}
+                                        </span>
+                                    </div>
+                                )}
+                                {payReference && (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">
+                                            Référence
+                                        </span>
+                                        <span className="font-mono text-xs">
+                                            {payReference}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between border-t pt-2">
+                                    <span className="text-muted-foreground">
+                                        Restant après paiement
+                                    </span>
+                                    <span className="font-semibold">
+                                        {formatCurrency(
+                                            Math.max(
+                                                0,
+                                                Number(
+                                                    sale.outstanding_amount
+                                                ) - Number(payAmount || 0)
+                                            )
+                                        )}
+                                    </span>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowPayConfirm(false)}
+                                >
+                                    Retour
+                                </Button>
+                                <Button
+                                    onClick={handleConfirmPayment}
+                                    disabled={paymentMutation.isPending}
+                                    className="gap-2"
+                                >
+                                    {paymentMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <FaCheckCircle className="h-3.5 w-3.5" />
+                                    )}
+                                    Confirmer le paiement
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

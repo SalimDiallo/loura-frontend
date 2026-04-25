@@ -48,6 +48,11 @@ const registerSchema = z
     password_confirm: z
       .string()
       .min(1, 'Veuillez confirmer votre mot de passe'),
+    accept_terms: z
+      // Fix from `errorMap` to 'message' prop.
+      .literal(true, {
+        message: "Vous devez accepter les conditions d'utilisation et la politique de confidentialité.",
+      }),
   })
   .refine((data) => data.password === data.password_confirm, {
     message: 'Les mots de passe ne correspondent pas',
@@ -56,13 +61,14 @@ const registerSchema = z
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-// Features list (sobre, icon + texte simple)
+// Features list revisited for a true, inviting sidebar look
 const features = [
   { icon: Building2, text: "Multi-entreprises" },
   { icon: Users, text: "Équipes illimitées" },
   { icon: BarChart3, text: "Dashboards en temps réel" },
   { icon: Shield, text: "Sécurité renforcée" },
 ];
+
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -81,6 +87,7 @@ export default function RegisterPage() {
       last_name: '',
       password: '',
       password_confirm: '',
+      accept_terms: false,
     },
   });
 
@@ -224,19 +231,58 @@ export default function RegisterPage() {
                 <input
                   type="checkbox"
                   id="terms"
-                  className="mt-1 w-4 h-4 border-border text-primary focus:ring-primary"
+                  className={
+                    "mt-1 w-4 h-4 border-border focus:ring-primary" +
+                    (form.formState.errors.accept_terms
+                      ? " border-destructive text-destructive"
+                      : " text-primary")
+                  }
+                  {...form.register("accept_terms")}
                 />
-                <label htmlFor="terms" className="text-sm text-neutral-600 dark:text-neutral-300">
-                  J'accepte les{' '}
-                  <Link href="/docs/legals/terms" className="text-black dark:text-white hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
-                    Conditions d'utilisation
-                  </Link>{' '}
-                  et la{' '}
-                  <Link href="/docs/legals/privacy" className="text-black dark:text-white hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
+                <label
+                  htmlFor="terms"
+                  className={
+                    "text-sm " +
+                    (form.formState.errors.accept_terms
+                      ? "text-destructive"
+                      : "text-neutral-600 dark:text-neutral-300")
+                  }
+                >
+                  J'accepte les{" "}
+                  <Link
+                    href="/docs/legals/terms"
+                    className={
+                      (form.formState.errors.accept_terms
+                        ? "text-destructive dark:text-destructive"
+                        : "text-black dark:text-white") +
+                      " hover:underline transition-colors"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Conditions d&apos;utilisation
+                  </Link>{" "}
+                  et la{" "}
+                  <Link
+                    href="/docs/legals/privacy"
+                    className={
+                      (form.formState.errors.accept_terms
+                        ? "text-destructive dark:text-destructive"
+                        : "text-black dark:text-white") +
+                      " hover:underline transition-colors"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     Politique de confidentialité
                   </Link>
                 </label>
               </div>
+        
+              {/* Affichage de l'erreur pour accept_terms si nécessaire */}
+              {form.formState.errors.accept_terms && (
+                <p className="text-xs text-destructive mb-4">{form.formState.errors.accept_terms.message as string}</p>
+              )}
 
               <Button
                 type="submit"

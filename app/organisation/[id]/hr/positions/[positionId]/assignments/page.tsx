@@ -6,6 +6,14 @@ import { ListTable, ListTableColumn } from "@/components/layout/ListPageLayout";
 import { PermissionGuard } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,6 +53,8 @@ function PositionAssignmentsPage() {
     start_date: new Date().toISOString().split("T")[0], // Today
     end_date: "",
   });
+  const [showAssignConfirm, setShowAssignConfirm] = useState(false);
+  const [unassignTarget, setUnassignTarget] = useState<any | null>(null);
 
   // Fetch Position
   const { data: position, isLoading: isPosLoading } = usePosition(orgId, positionId);
@@ -76,7 +86,7 @@ function PositionAssignmentsPage() {
     }));
   }, [allMembers, assignmentsList]);
 
-  const handleAssign = async (e: React.FormEvent) => {
+  const handleAssign = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.membership_id) {
@@ -87,11 +97,19 @@ function PositionAssignmentsPage() {
       toast("Date de début requise", { description: "La date de début est obligatoire." });
       return;
     }
+    setShowAssignConfirm(true);
+  };
 
+  const handleConfirmAssign = async () => {
     try {
+      const payload: CreatePositionAssignmentData = {
+        ...formData,
+        end_date: formData.end_date?.trim() ? formData.end_date : null,
+      } as CreatePositionAssignmentData;
+
       await createAssignment.mutateAsync({
         orgId,
-        data: formData as CreatePositionAssignmentData,
+        data: payload,
       });
 
       toast.success("Membre assigné", { description: "Le membre occupe désormais ce poste." });
@@ -101,6 +119,7 @@ function PositionAssignmentsPage() {
         membership_id: "",
         end_date: "",
       }));
+      setShowAssignConfirm(false);
     } catch (error: any) {
       toast.error("Erreur", {
         description: error.message || "Impossible d'assigner le membre",
@@ -108,15 +127,15 @@ function PositionAssignmentsPage() {
     }
   };
 
-  const handleUnassign = async (assignId: string) => {
-    if (!confirm("Voulez-vous vraiment retirer ce membre de ce poste ?")) return;
-
+  const handleConfirmUnassign = async () => {
+    if (!unassignTarget) return;
     try {
       await deleteAssignment.mutateAsync({
         orgId,
-        assignId,
+        assignId: unassignTarget.id,
       });
       toast.success("Assignation retirée");
+      setUnassignTarget(null);
     } catch (error: any) {
       toast.error("Erreur", {
         description: error.message || "Impossible de retirer l'assignation",
@@ -264,7 +283,7 @@ function PositionAssignmentsPage() {
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => handleUnassign(assignment.id)}
+                        onClick={() => setUnassignTarget(assignment)}
                         disabled={deleteAssignment.isPending}
                         title="Retirer l'assignation"
                       >
@@ -279,6 +298,147 @@ function PositionAssignmentsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={showAssignConfirm} onOpenChange={setShowAssignConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-4 w-4 text-primary" />
+              Confirmer l'assignation
+            </DialogTitle>
+            <DialogDescription>
+              Le membre sera officiellement affecté à ce poste à la date
+              indiquée.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 rounded-md border bg-muted/30 p-4 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Poste</span>
+              <span className="font-medium text-right">
+                {position?.name ?? "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Membre</span>
+              <span className="font-medium text-right">
+                {(() => {
+                  const m: any = (allMembers as any[]).find(
+                    (x) => x.id === formData.membership_id
+                  );
+                  if (!m) return "—";
+                  return `${m.employee.user.first_name} ${m.employee.user.last_name}`;
+                })()}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Prise de poste</span>
+              <span className="font-medium text-right">
+                {formData.start_date
+                  ? new Date(formData.start_date).toLocaleDateString("fr-FR")
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Date de fin</span>
+              <span className="font-medium text-right">
+                {formData.end_date?.trim()
+                  ? new Date(formData.end_date).toLocaleDateString("fr-FR")
+                  : "Indéterminée"}
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAssignConfirm(false)}
+              disabled={createAssignment.isPending}
+            >
+              Retour
+            </Button>
+            <Button
+              onClick={handleConfirmAssign}
+              disabled={createAssignment.isPending}
+              className="gap-2"
+            >
+              {createAssignment.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Confirmer l'assignation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!unassignTarget}
+        onOpenChange={(open) => {
+          if (!open) setUnassignTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FaUserAltSlash className="h-4 w-4 text-destructive" />
+              Retirer cette assignation ?
+            </DialogTitle>
+            <DialogDescription>
+              Le membre ne sera plus rattaché à ce poste. L'historique de
+              l'assignation sera conservé.
+            </DialogDescription>
+          </DialogHeader>
+          {unassignTarget && (
+            <div className="space-y-2 rounded-md border bg-muted/30 p-4 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Poste</span>
+                <span className="font-medium text-right">
+                  {position?.name ?? "—"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Membre</span>
+                <span className="font-medium text-right">
+                  {unassignTarget.membership?.employee?.user?.first_name}{" "}
+                  {unassignTarget.membership?.employee?.user?.last_name}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Prise de poste</span>
+                <span className="font-medium text-right">
+                  {unassignTarget.start_date
+                    ? new Date(
+                        unassignTarget.start_date
+                      ).toLocaleDateString("fr-FR")
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setUnassignTarget(null)}
+              disabled={deleteAssignment.isPending}
+            >
+              Retour
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmUnassign}
+              disabled={deleteAssignment.isPending}
+              className="gap-2"
+            >
+              {deleteAssignment.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Retirer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FormPageLayout>
   );
 }

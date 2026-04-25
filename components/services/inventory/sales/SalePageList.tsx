@@ -11,13 +11,27 @@ import {
     ListTableColumn,
 } from "@/components/layout/ListPageLayout";
 import { Can, useOrgPermissions } from "@/components/permissions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
-import { useCustomers, usePaginatedSales } from "@/lib/hooks/inventory";
+import {
+    useCustomers,
+    usePaginatedSales,
+    useWarehouses,
+} from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
-import type { Customer, SalePaymentStatus, SaleStatus, SaleType } from "@/lib/types";
+import type {
+    Customer,
+    SaleOrdering,
+    SalePaymentStatus,
+    SaleStatus,
+    SaleType,
+    Warehouse,
+} from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
@@ -25,12 +39,96 @@ import {
     FaEye,
     FaMoneyBillWave,
     FaPlus,
-    FaReceipt
+    FaReceipt,
+    FaTimes,
 } from "react-icons/fa";
 
 interface SalesPageProps {
     creditOnly?: boolean;
 }
+
+// ─── Presets de période ───────────────────────────────────────────────────
+type PeriodPreset =
+    | ""
+    | "today"
+    | "7d"
+    | "30d"
+    | "this_month"
+    | "last_month"
+    | "this_quarter"
+    | "this_year"
+    | "custom";
+
+const PERIOD_LABELS: Record<Exclude<PeriodPreset, "">, string> = {
+    today: "Aujourd'hui",
+    "7d": "7 jours",
+    "30d": "30 jours",
+    this_month: "Ce mois-ci",
+    last_month: "Mois dernier",
+    this_quarter: "Ce trimestre",
+    this_year: "Cette année",
+    custom: "Personnalisée",
+};
+
+function toISO(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+}
+
+function rangeForPreset(
+    preset: PeriodPreset
+): { from?: string; to?: string } {
+    if (!preset || preset === "custom") return {};
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    switch (preset) {
+        case "today":
+            return { from: toISO(today), to: toISO(today) };
+        case "7d": {
+            const from = new Date(today);
+            from.setDate(from.getDate() - 6);
+            return { from: toISO(from), to: toISO(today) };
+        }
+        case "30d": {
+            const from = new Date(today);
+            from.setDate(from.getDate() - 29);
+            return { from: toISO(from), to: toISO(today) };
+        }
+        case "this_month": {
+            const from = new Date(today.getFullYear(), today.getMonth(), 1);
+            return { from: toISO(from), to: toISO(today) };
+        }
+        case "last_month": {
+            const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const to = new Date(today.getFullYear(), today.getMonth(), 0);
+            return { from: toISO(from), to: toISO(to) };
+        }
+        case "this_quarter": {
+            const q = Math.floor(today.getMonth() / 3);
+            const from = new Date(today.getFullYear(), q * 3, 1);
+            return { from: toISO(from), to: toISO(today) };
+        }
+        case "this_year": {
+            const from = new Date(today.getFullYear(), 0, 1);
+            return { from: toISO(from), to: toISO(today) };
+        }
+        default:
+            return {};
+    }
+}
+
+const ORDERING_LABELS: Record<SaleOrdering, string> = {
+    "-sale_date": "Date (récent)",
+    sale_date: "Date (ancien)",
+    "-total": "Total (élevé)",
+    total: "Total (faible)",
+    "-outstanding_amount": "Restant dû (élevé)",
+    outstanding_amount: "Restant dû (faible)",
+    "-created_at": "Création (récent)",
+    created_at: "Création (ancien)",
+};
 
 export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
     const params = useParams();
@@ -42,9 +140,19 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
 
     const [search, setSearch] = useState("");
     const [filterOpen, setFilterOpen] = useState(false);
+
+    // Filtres
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [paymentFilter, setPaymentFilter] = useState<string>("");
+    const [typeFilter, setTypeFilter] = useState<string>("");
     const [customerFilter, setCustomerFilter] = useState<string>("");
+    const [warehouseFilter, setWarehouseFilter] = useState<string>("");
+    const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("");
+    const [customFrom, setCustomFrom] = useState<string>("");
+    const [customTo, setCustomTo] = useState<string>("");
+    const [minTotal, setMinTotal] = useState<string>("");
+    const [maxTotal, setMaxTotal] = useState<string>("");
+    const [ordering, setOrdering] = useState<SaleOrdering>("-sale_date");
 
     const { data: customersList = [] } = useCustomers(orgId, {
         page_size: "all",
@@ -52,15 +160,54 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
     });
     const customers = (customersList as unknown as Customer[]) ?? [];
 
+    const { data: warehousesList = [] } = useWarehouses(orgId, {
+        page_size: "all",
+        is_active: true,
+    });
+    const warehouses = (warehousesList as unknown as Warehouse[]) ?? [];
+
+    // Période effective : preset ou personnalisée
+    const period = useMemo(() => {
+        if (periodPreset === "custom") {
+            return {
+                from: customFrom || undefined,
+                to: customTo || undefined,
+            };
+        }
+        return rangeForPreset(periodPreset);
+    }, [periodPreset, customFrom, customTo]);
+
+    const effectiveTypeFilter: SaleType | undefined = creditOnly
+        ? "credit"
+        : (typeFilter as SaleType) || undefined;
+
     const stableFilters = useMemo(
         () => ({
             search: search || undefined,
             status: (statusFilter as SaleStatus) || undefined,
             payment_status: (paymentFilter as SalePaymentStatus) || undefined,
             customer: customerFilter || undefined,
-            sale_type: creditOnly ? ("credit" as SaleType) : undefined,
+            warehouse: warehouseFilter || undefined,
+            sale_type: effectiveTypeFilter,
+            from: period.from,
+            to: period.to,
+            min_total: minTotal || undefined,
+            max_total: maxTotal || undefined,
+            ordering,
         }),
-        [search, statusFilter, paymentFilter, customerFilter, creditOnly]
+        [
+            search,
+            statusFilter,
+            paymentFilter,
+            customerFilter,
+            warehouseFilter,
+            effectiveTypeFilter,
+            period.from,
+            period.to,
+            minTotal,
+            maxTotal,
+            ordering,
+        ]
     );
 
     const {
@@ -73,6 +220,113 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         error,
     } = usePaginatedSales(orgId, stableFilters, { pageSize: 15 });
 
+    const customerName = (id: string) =>
+        customers.find((c) => c.id === id)?.name ?? id;
+    const warehouseName = (id: string) =>
+        warehouses.find((w) => w.id === id)?.name ?? id;
+
+    const activeFilterChips = useMemo(() => {
+        const chips: { key: string; label: string; clear: () => void }[] = [];
+        if (statusFilter)
+            chips.push({
+                key: "status",
+                label: `Statut : ${statusFilter}`,
+                clear: () => setStatusFilter(""),
+            });
+        if (paymentFilter)
+            chips.push({
+                key: "payment",
+                label: `Paiement : ${paymentFilter}`,
+                clear: () => setPaymentFilter(""),
+            });
+        if (!creditOnly && typeFilter)
+            chips.push({
+                key: "type",
+                label: `Type : ${typeFilter === "credit" ? "Crédit" : "Comptant"}`,
+                clear: () => setTypeFilter(""),
+            });
+        if (customerFilter)
+            chips.push({
+                key: "customer",
+                label: `Client : ${customerName(customerFilter)}`,
+                clear: () => setCustomerFilter(""),
+            });
+        if (warehouseFilter)
+            chips.push({
+                key: "warehouse",
+                label: `Entrepôt : ${warehouseName(warehouseFilter)}`,
+                clear: () => setWarehouseFilter(""),
+            });
+        if (periodPreset && periodPreset !== "custom")
+            chips.push({
+                key: "period",
+                label: `Période : ${PERIOD_LABELS[periodPreset]}`,
+                clear: () => setPeriodPreset(""),
+            });
+        if (periodPreset === "custom" && (customFrom || customTo))
+            chips.push({
+                key: "period",
+                label: `Période : ${customFrom || "…"} → ${customTo || "…"}`,
+                clear: () => {
+                    setPeriodPreset("");
+                    setCustomFrom("");
+                    setCustomTo("");
+                },
+            });
+        if (minTotal)
+            chips.push({
+                key: "min",
+                label: `Total ≥ ${formatCurrency(Number(minTotal))}`,
+                clear: () => setMinTotal(""),
+            });
+        if (maxTotal)
+            chips.push({
+                key: "max",
+                label: `Total ≤ ${formatCurrency(Number(maxTotal))}`,
+                clear: () => setMaxTotal(""),
+            });
+        if (ordering !== "-sale_date")
+            chips.push({
+                key: "ordering",
+                label: `Tri : ${ORDERING_LABELS[ordering]}`,
+                clear: () => setOrdering("-sale_date"),
+            });
+        return chips;
+    }, [
+        statusFilter,
+        paymentFilter,
+        typeFilter,
+        customerFilter,
+        warehouseFilter,
+        periodPreset,
+        customFrom,
+        customTo,
+        minTotal,
+        maxTotal,
+        ordering,
+        creditOnly,
+        customers,
+        warehouses,
+        formatCurrency,
+    ]);
+
+    const filtersActive = activeFilterChips.length > 0;
+
+    const resetAll = () => {
+        setSearch("");
+        setStatusFilter("");
+        setPaymentFilter("");
+        setTypeFilter("");
+        setCustomerFilter("");
+        setWarehouseFilter("");
+        setPeriodPreset("");
+        setCustomFrom("");
+        setCustomTo("");
+        setMinTotal("");
+        setMaxTotal("");
+        setOrdering("-sale_date");
+    };
+
     if (error) {
         return (
             <div className="container mx-auto p-6">
@@ -84,8 +338,6 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
             </div>
         );
     }
-
-    const filtersActive = !!statusFilter || !!paymentFilter || !!customerFilter;
 
     return (
         <ListPageLayout
@@ -119,65 +371,355 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                 />,
             ]}
             searchFilters={
-                <ListSearchFilters
-                    searchValue={search}
-                    onSearchChange={setSearch}
-                    searchPlaceholder="N° de vente, client, notes..."
-                    filtersOpen={filterOpen}
-                    onFiltersOpenChange={setFilterOpen}
-                    filtersAreActive={filtersActive}
-                    filters={
-                        <div className="space-y-4 mt-4">
-                            <div>
-                                <label className="text-sm font-medium block mb-2">
-                                    Statut
-                                </label>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                                >
-                                    <option value="">Tous</option>
-                                    <option value="draft">Brouillon</option>
-                                    <option value="completed">Finalisée</option>
-                                    <option value="cancelled">Annulée</option>
-                                </select>
+                <div className="space-y-3">
+                    <ListSearchFilters
+                        searchValue={search}
+                        onSearchChange={setSearch}
+                        searchPlaceholder="N° de vente, client, notes..."
+                        filtersOpen={filterOpen}
+                        onFiltersOpenChange={setFilterOpen}
+                        filtersAreActive={filtersActive}
+                        filters={
+                            <div className="space-y-2 mt-2">
+                                {/* Période — presets */}
+                                <div>
+                                    <Label className="text-xs font-medium mb-1 block">
+                                        Période
+                                    </Label>
+                                    <div className="flex flex-wrap gap-1">
+                                        {(
+                                            [
+                                                "today",
+                                                "7d",
+                                                "30d",
+                                                "this_month",
+                                                "last_month",
+                                                "this_quarter",
+                                                "this_year",
+                                                "custom",
+                                            ] as Exclude<PeriodPreset, "">[]
+                                        ).map((p) => {
+                                            const active = periodPreset === p;
+                                            return (
+                                                <button
+                                                    key={p}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setPeriodPreset(
+                                                            active ? "" : p
+                                                        )
+                                                    }
+                                                    className={`text-[10px] px-1.5 py-0.5 border transition-colors ${
+                                                        active
+                                                            ? "bg-primary text-primary-foreground border-primary"
+                                                            : "bg-background hover:bg-muted border-border"
+                                                    }`}
+                                                    style={{ borderRadius: 0 }}
+                                                >
+                                                    {PERIOD_LABELS[p]}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {periodPreset === "custom" && (
+                                        <div className="grid grid-cols-2 gap-1 mt-2">
+                                            <div>
+                                                <Label
+                                                    htmlFor="custom_from"
+                                                    className="text-[11px] text-muted-foreground"
+                                                >
+                                                    Du
+                                                </Label>
+                                                <Input
+                                                    id="custom_from"
+                                                    type="date"
+                                                    value={customFrom}
+                                                    onChange={(e) =>
+                                                        setCustomFrom(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    className="text-xs px-2 py-1 border"
+                                                    style={{ borderRadius: 0 }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label
+                                                    htmlFor="custom_to"
+                                                    className="text-[11px] text-muted-foreground"
+                                                >
+                                                    Au
+                                                </Label>
+                                                <Input
+                                                    id="custom_to"
+                                                    type="date"
+                                                    value={customTo}
+                                                    onChange={(e) =>
+                                                        setCustomTo(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    className="text-xs px-2 py-1 border"
+                                                    style={{ borderRadius: 0 }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Type / Statut / Paiement */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {!creditOnly && (
+                                        <div>
+                                            <Label className="text-xs font-medium mb-1 block">
+                                                Type
+                                            </Label>
+                                            <select
+                                                value={typeFilter}
+                                                onChange={(e) =>
+                                                    setTypeFilter(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                className="flex h-8 w-full border border-input bg-background px-2 text-xs"
+                                                style={{ borderRadius: 0 }}
+                                            >
+                                                <option value="">Tous</option>
+                                                <option value="cash">
+                                                    Comptant
+                                                </option>
+                                                <option value="credit">
+                                                    Crédit
+                                                </option>
+                                            </select>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <Label className="text-xs font-medium mb-1 block">
+                                            Statut
+                                        </Label>
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) =>
+                                                setStatusFilter(e.target.value)
+                                            }
+                                            className="flex h-8 w-full border border-input bg-background px-2 text-xs"
+                                            style={{ borderRadius: 0 }}
+                                        >
+                                            <option value="">Tous</option>
+                                            <option value="draft">
+                                                Brouillon
+                                            </option>
+                                            <option value="completed">
+                                                Finalisée
+                                            </option>
+                                            <option value="cancelled">
+                                                Annulée
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-medium mb-1 block">
+                                            Paiement
+                                        </Label>
+                                        <select
+                                            value={paymentFilter}
+                                            onChange={(e) =>
+                                                setPaymentFilter(e.target.value)
+                                            }
+                                            className="flex h-8 w-full border border-input bg-background px-2 text-xs"
+                                            style={{ borderRadius: 0 }}
+                                        >
+                                            <option value="">Tous</option>
+                                            <option value="unpaid">
+                                                Non payée
+                                            </option>
+                                            <option value="partial">
+                                                Partielle
+                                            </option>
+                                            <option value="paid">Payée</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Client / Entrepôt */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div>
+                                        <Label className="text-xs font-medium mb-1 block">
+                                            Client
+                                        </Label>
+                                        <select
+                                            value={customerFilter}
+                                            onChange={(e) =>
+                                                setCustomerFilter(
+                                                    e.target.value
+                                                )
+                                            }
+                                            className="flex h-8 w-full border border-input bg-background px-2 text-xs"
+                                            style={{ borderRadius: 0 }}
+                                        >
+                                            <option value="">Tous</option>
+                                            {customers.map((c) => (
+                                                <option
+                                                    key={c.id}
+                                                    value={c.id}
+                                                >
+                                                    {c.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-medium mb-1 block">
+                                            Entrepôt
+                                        </Label>
+                                        <select
+                                            value={warehouseFilter}
+                                            onChange={(e) =>
+                                                setWarehouseFilter(
+                                                    e.target.value
+                                                )
+                                            }
+                                            className="flex h-8 w-full border border-input bg-background px-2 text-xs"
+                                            style={{ borderRadius: 0 }}
+                                        >
+                                            <option value="">Tous</option>
+                                            {warehouses.map((w) => (
+                                                <option
+                                                    key={w.id}
+                                                    value={w.id}
+                                                >
+                                                    {w.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Montants */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div>
+                                        <Label
+                                            htmlFor="min_total"
+                                            className="text-xs font-medium mb-1 block"
+                                        >
+                                            Total min.
+                                        </Label>
+                                        <Input
+                                            id="min_total"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="0"
+                                            value={minTotal}
+                                            onChange={(e) =>
+                                                setMinTotal(e.target.value)
+                                            }
+                                            className="text-xs px-2 py-1 border"
+                                            style={{ borderRadius: 0 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label
+                                            htmlFor="max_total"
+                                            className="text-xs font-medium mb-1 block"
+                                        >
+                                            Total max.
+                                        </Label>
+                                        <Input
+                                            id="max_total"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="—"
+                                            value={maxTotal}
+                                            onChange={(e) =>
+                                                setMaxTotal(e.target.value)
+                                            }
+                                            className="text-xs px-2 py-1 border"
+                                            style={{ borderRadius: 0 }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Tri */}
+                                <div>
+                                    <Label className="text-xs font-medium mb-1 block">
+                                        Tri
+                                    </Label>
+                                    <select
+                                        value={ordering}
+                                        onChange={(e) =>
+                                            setOrdering(
+                                                e.target.value as SaleOrdering
+                                            )
+                                        }
+                                        className="flex h-8 w-full border border-input bg-background px-2 text-xs"
+                                        style={{ borderRadius: 0 }}
+                                    >
+                                        {(
+                                            Object.keys(
+                                                ORDERING_LABELS
+                                            ) as SaleOrdering[]
+                                        ).map((o) => (
+                                            <option key={o} value={o}>
+                                                {ORDERING_LABELS[o]}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Reset */}
+                                {filtersActive && (
+                                    <div className="pt-1 border-t">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={resetAll}
+                                            className="w-full gap-2"
+                                            style={{ borderRadius: 0, fontSize: 12, paddingTop: 4, paddingBottom: 4 }}
+                                        >
+                                            <FaTimes className="h-3 w-3" />
+                                            Réinitialiser tous les filtres
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
-                            <div>
-                                <label className="text-sm font-medium block mb-2">
-                                    Paiement
-                                </label>
-                                <select
-                                    value={paymentFilter}
-                                    onChange={(e) => setPaymentFilter(e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                   
+                        }
+                    />
+
+                    {/* Chips de filtres actifs */}
+                    {activeFilterChips.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            {activeFilterChips.map((c) => (
+                                <Badge
+                                    key={c.key}
+                                    variant="secondary"
+                                    className="gap-1.5 pr-1"
                                 >
-                                    <option value="">Tous</option>
-                                    <option value="unpaid">Non payée</option>
-                                    <option value="partial">Partielle</option>
-                                    <option value="paid">Payée</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium block mb-2">
-                                    Client
-                                </label>
-                                <select
-                                    value={customerFilter}
-                                    onChange={(e) => setCustomerFilter(e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                                >
-                                    <option value="">Tous</option>
-                                    {customers.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                                    <span>{c.label}</span>
+                                    <button
+                                        type="button"
+                                        onClick={c.clear}
+                                        className="hover:bg-muted-foreground/10 rounded-full p-0.5"
+                                        aria-label="Retirer ce filtre"
+                                    >
+                                        <FaTimes className="h-2.5 w-2.5" />
+                                    </button>
+                                </Badge>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={resetAll}
+                                className="text-xs text-muted-foreground hover:text-foreground underline"
+                            >
+                                tout effacer
+                            </button>
                         </div>
-                    }
-                />
+                    )}
+                </div>
             }
             content={
                 <>
@@ -194,20 +736,33 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                 Aucune {creditOnly ? "créance" : "vente"}
                             </p>
                             <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Enregistrez votre première vente pour démarrer.
+                                {filtersActive
+                                    ? "Aucun résultat avec ces filtres. Essayez d'élargir la recherche."
+                                    : "Enregistrez votre première vente pour démarrer."}
                             </p>
-                            <Can permission={PERMISSIONS.SALES.MANAGE}>
+                            {filtersActive ? (
                                 <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/sales/create`
-                                        )
-                                    }
+                                    variant="outline"
+                                    onClick={resetAll}
+                                    className="gap-2"
                                 >
-                                    <FaPlus className="mr-2" />
-                                    Nouvelle vente
+                                    <FaTimes className="h-3 w-3" />
+                                    Réinitialiser les filtres
                                 </Button>
-                            </Can>
+                            ) : (
+                                <Can permission={PERMISSIONS.SALES.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/sales/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Nouvelle vente
+                                    </Button>
+                                </Can>
+                            )}
                         </div>
                     ) : (
                         <>

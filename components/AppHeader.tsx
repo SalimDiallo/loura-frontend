@@ -1,12 +1,18 @@
 'use client'
 import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { AvatarProfileDropDown } from "./services/auth/AvatarProfileDropDown";
+import { SidebarToggle } from "./services/organisation/OrgSideBar";
 import { Button, ThemeToggle } from "./ui";
 import Logo from "./ui/Logo";
-// import { SidebarTrigger } from "./ui/sidebar"; // Removed to prevent SidebarContext error
 
 export default function AppHeader() {
+  const pathname = usePathname();
+
+  // Check if we are on /organisation page or its children
+  const isOrganisationPage = pathname?.startsWith("/organisation");
+
   return (
     <header
       className={cn(
@@ -19,8 +25,15 @@ export default function AppHeader() {
     >
       {/* Left section */}
       <div className="flex items-center gap-3">
-        {/* <SidebarTrigger className="size-9" /> */}
-        {/* Temporarily replaced SidebarTrigger with a placeholder icon/button to avoid context error */}
+        {/* Affiche SidebarToggle si mobile (sm:hidden) OU si on est sur une page organisation */}
+        {(isOrganisationPage || (
+          // always true on mobile because below is always rendered on mobile
+          false
+        )) && (
+          <span className={cn(isOrganisationPage ? "" : "sm:hidden")}>
+            <SidebarToggle />
+          </span>
+        )}
         <Logo className="w-40" />
         {/* Separator */}
         <div className="hidden sm:block h-6 w-px bg-border/60" />

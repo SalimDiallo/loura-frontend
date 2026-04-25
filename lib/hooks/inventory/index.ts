@@ -96,6 +96,8 @@ import type {
   UpdatePurchaseOrderData,
   UpdateQuoteData,
   UpdateSaleData,
+  UpdateStockMovementData,
+  UpdateStockMovementResponse,
   UpdateSupplierData,
   UpdateSupplierResponse,
   UpdateWarehouseData,
@@ -535,6 +537,73 @@ export function useCreateStockMovement(): UseMutationResult<
     onSuccess: (_, { orgId }) => {
       qc.invalidateQueries({ queryKey: ["inventory", "stock-movements", orgId] });
       qc.invalidateQueries({ queryKey: ["inventory", "stocks", orgId] });
+    },
+  });
+}
+
+export function useUpdateStockMovement(): UseMutationResult<
+  UpdateStockMovementResponse,
+  Error,
+  { orgId: string; id: string; data: UpdateStockMovementData }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id, data }) =>
+      stockMovementsService.update(orgId, id, data),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "stock-movements", orgId] });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "stock-movements", orgId, id],
+      });
+    },
+  });
+}
+
+export function useDeleteStockMovement(): UseMutationResult<
+  void,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => stockMovementsService.remove(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "stock-movements", orgId] });
+    },
+  });
+}
+
+export function useValidateStockMovement(): UseMutationResult<
+  UpdateStockMovementResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => stockMovementsService.validate(orgId, id),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "stock-movements", orgId] });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "stock-movements", orgId, id],
+      });
+      qc.invalidateQueries({ queryKey: ["inventory", "stocks", orgId] });
+    },
+  });
+}
+
+export function useCancelStockMovement(): UseMutationResult<
+  UpdateStockMovementResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => stockMovementsService.cancel(orgId, id),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "stock-movements", orgId] });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "stock-movements", orgId, id],
+      });
     },
   });
 }

@@ -278,6 +278,8 @@ export type StockMovementReason =
   | "transfer_out"
   | "other";
 
+export type StockMovementStatus = "draft" | "validated" | "cancelled";
+
 export interface StockMovement {
   id: string;
   organization: string;
@@ -287,15 +289,19 @@ export interface StockMovement {
   movement_type_display: string;
   reason: StockMovementReason;
   reason_display: string;
+  status: StockMovementStatus;
+  status_display: string;
   quantity: string;
   unit_cost: string;
   related_movement: string | null;
   reference: string;
   notes: string;
+  validated_at: string | null;
   created_at: string;
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  validated_by_info?: UserMiniInfo | null;
 }
 
 export interface CreateStockMovementData {
@@ -303,13 +309,30 @@ export interface CreateStockMovementData {
   warehouse_id: string;
   movement_type: "in" | "out" | "adjust";
   reason?: StockMovementReason;
+  status?: StockMovementStatus;
   quantity: string | number;
   unit_cost?: string | number;
   reference?: string;
   notes?: string;
 }
 
+export interface UpdateStockMovementData {
+  movement_type?: "in" | "out" | "adjust";
+  reason?: StockMovementReason;
+  quantity?: string | number;
+  unit_cost?: string | number;
+  reference?: string;
+  notes?: string;
+  product_id?: string;
+  warehouse_id?: string;
+}
+
 export interface CreateStockMovementResponse {
+  message: string;
+  data: StockMovement;
+}
+
+export interface UpdateStockMovementResponse {
   message: string;
   data: StockMovement;
 }
@@ -375,6 +398,7 @@ export interface ListStockMovementsParams {
   product?: string;
   movement_type?: StockMovementType;
   reason?: StockMovementReason;
+  status?: StockMovementStatus;
   from?: string;
   to?: string;
   page?: number;
@@ -866,14 +890,28 @@ export interface CreateSalePaymentResponse {
   sale: Sale;
 }
 
+export type SaleOrdering =
+  | "sale_date"
+  | "-sale_date"
+  | "total"
+  | "-total"
+  | "created_at"
+  | "-created_at"
+  | "outstanding_amount"
+  | "-outstanding_amount";
+
 export interface ListSalesParams {
   search?: string;
   status?: SaleStatus;
   sale_type?: SaleType;
   payment_status?: SalePaymentStatus;
   customer?: string;
+  warehouse?: string;
   from?: string;
   to?: string;
+  min_total?: string | number;
+  max_total?: string | number;
+  ordering?: SaleOrdering;
   page?: number;
   page_size?: number | string;
 }

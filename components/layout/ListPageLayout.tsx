@@ -145,9 +145,11 @@ export function ListSearchFilters({
 export function ListTable({
   columns,
   data,
+  onRowClick,
 }: {
   columns: React.ReactNode[];
   data: any[];
+  onRowClick?: (row: any) => void;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -161,7 +163,11 @@ export function ListTable({
         </TableHeader>
         <TableBody>
           {data.map((row, rowIdx) => (
-            <TableRow key={row.id || rowIdx}>
+            <TableRow
+              key={row.id || rowIdx}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              className={onRowClick ? "cursor-pointer hover:bg-muted/50" : undefined}
+            >
               {columns.map((col: any, colIdx) =>
                 React.cloneElement(col, {
                   value: row,

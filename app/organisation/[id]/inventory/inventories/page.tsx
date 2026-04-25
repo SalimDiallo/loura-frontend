@@ -1,12 +1,12 @@
 "use client";
 
 import {
-    ListPageLayout,
-    ListPagination,
-    ListSearchFilters,
-    ListStat,
-    ListTable,
-    ListTableColumn,
+  ListPageLayout,
+  ListPagination,
+  ListSearchFilters,
+  ListStat,
+  ListTable,
+  ListTableColumn,
 } from "@/components/layout/ListPageLayout";
 import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
@@ -15,23 +15,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
-    usePaginatedStocks,
-    useStockAlerts,
-    useWarehouses,
+  usePaginatedStocks,
+  useStockAlerts,
+  useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { Warehouse } from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
-    FaArrowDown,
-    FaArrowUp,
-    FaBox,
-    FaBoxes,
-    FaExchangeAlt,
-    FaExclamationTriangle,
-    FaPlus,
-    FaWarehouse,
+  FaArrowDown,
+  FaArrowUp,
+  FaBox,
+  FaBoxes,
+  FaExclamationTriangle,
+  FaEye,
+  FaPlus,
+  FaWarehouse
 } from "react-icons/fa";
 
 export default function InventoriesPageWrapper() {
@@ -104,21 +104,12 @@ function InventoriesPage() {
         canManage
           ? [
               {
-                label: "Mouvement",
-                icon: FaPlus,
+                label: "Voir Mouvements Stocks",
+                icon: FaEye,
                 onClick: () =>
                   router.push(
-                    `/organisation/${orgId}/inventory/movements/create`
+                    `/organisation/${orgId}/inventory/movements`
                   ),
-              },
-              {
-                label: "Transfert",
-                icon: FaExchangeAlt,
-                onClick: () =>
-                  router.push(
-                    `/organisation/${orgId}/inventory/movements/transfer`
-                  ),
-                variant: "outline",
               },
             ]
           : []

@@ -17,16 +17,23 @@ import {
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
-import type { StockMovementType, Warehouse } from "@/lib/types";
+import type {
+    StockMovementStatus,
+    StockMovementType,
+    Warehouse,
+} from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
     FaArrowDown,
     FaArrowUp,
     FaBalanceScale,
+    FaCheckCircle,
+    FaEdit,
     FaExchangeAlt,
     FaHistory,
     FaPlus,
+    FaTimes,
 } from "react-icons/fa";
 
 export default function MovementsPageWrapper() {
@@ -54,6 +61,24 @@ const MOVEMENT_TYPE_ICONS: Record<
   transfer: FaExchangeAlt,
 };
 
+const STATUS_STYLES: Record<
+  StockMovementStatus,
+  { color: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  draft: {
+    color: "bg-gray-100 text-gray-700 border-gray-200",
+    icon: FaEdit,
+  },
+  validated: {
+    color: "bg-green-100 text-green-700 border-green-200",
+    icon: FaCheckCircle,
+  },
+  cancelled: {
+    color: "bg-red-100 text-red-700 border-red-200",
+    icon: FaTimes,
+  },
+};
+
 function MovementsPage() {
   const params = useParams();
   const router = useRouter();
@@ -65,6 +90,7 @@ function MovementsPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const { data: warehousesList = [] } = useWarehouses(orgId, {
     page_size: "all",
@@ -76,8 +102,9 @@ function MovementsPage() {
       search: search || undefined,
       warehouse: warehouseFilter || undefined,
       movement_type: (typeFilter as StockMovementType) || undefined,
+      status: (statusFilter as StockMovementStatus) || undefined,
     }),
-    [search, warehouseFilter, typeFilter]
+    [search, warehouseFilter, typeFilter, statusFilter]
   );
 
   const {
@@ -102,7 +129,8 @@ function MovementsPage() {
     );
   }
 
-  const filtersActive = !!search || !!warehouseFilter || !!typeFilter;
+  const filtersActive =
+    !!search || !!warehouseFilter || !!typeFilter || !!statusFilter;
 
   return (
     <ListPageLayout
@@ -166,6 +194,21 @@ function MovementsPage() {
               </div>
               <div>
                 <label className="text-sm font-medium block mb-2">
+                  Statut
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Tous</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="validated">Validé</option>
+                  <option value="cancelled">Annulé</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-2">
                   Entrepôt
                 </label>
                 <select
@@ -204,6 +247,11 @@ function MovementsPage() {
           ) : (
             <>
               <ListTable
+                onRowClick={(m) =>
+                  router.push(
+                    `/organisation/${orgId}/inventory/movements/${m.id}`
+                  )
+                }
                 columns={[
                   <ListTableColumn key="type" header="Type">
                     {({ value: m }) => {
@@ -216,6 +264,22 @@ function MovementsPage() {
                         >
                           <Icon className="h-3 w-3" />
                           {m.movement_type_display}
+                        </Badge>
+                      );
+                    }}
+                  </ListTableColumn>,
+                  <ListTableColumn key="status" header="Statut">
+                    {({ value: m }) => {
+                      const st = m.status as StockMovementStatus;
+                      const style = STATUS_STYLES[st];
+                      const Icon = style.icon;
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`gap-1.5 ${style.color}`}
+                        >
+                          <Icon className="h-3 w-3" />
+                          {m.status_display}
                         </Badge>
                       );
                     }}

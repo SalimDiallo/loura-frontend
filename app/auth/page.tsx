@@ -96,7 +96,7 @@ function LoginForm() {
       {/* Bouton Retour */}
       <Link
         href="/"
-        className="absolute top-6 left-6 z-50 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full border border-border bg-background/80 backdrop-blur-sm hover:bg-secondary transition-colors"
+        className="absolute top-6 left-6 z-50 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border bg-background/80 backdrop-blur-sm hover:bg-secondary transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Accueil

@@ -14,6 +14,8 @@ import type {
   StockMovement,
   StockTransferData,
   StockTransferResponse,
+  UpdateStockMovementData,
+  UpdateStockMovementResponse,
 } from "@/lib/types/inventory";
 
 export const stockService = {
@@ -49,6 +51,33 @@ export const stockMovementsService = {
     return apiClient.post<CreateStockMovementResponse>(
       API_ENDPOINTS.INVENTORY.STOCK_MOVEMENTS.CREATE(orgId),
       data
+    );
+  },
+
+  async update(orgId: string, id: string, data: UpdateStockMovementData) {
+    return apiClient.patch<UpdateStockMovementResponse>(
+      API_ENDPOINTS.INVENTORY.STOCK_MOVEMENTS.UPDATE(orgId, id),
+      data
+    );
+  },
+
+  async remove(orgId: string, id: string) {
+    return apiClient.delete<void>(
+      API_ENDPOINTS.INVENTORY.STOCK_MOVEMENTS.DELETE(orgId, id)
+    );
+  },
+
+  async validate(orgId: string, id: string) {
+    return apiClient.post<UpdateStockMovementResponse>(
+      API_ENDPOINTS.INVENTORY.STOCK_MOVEMENTS.VALIDATE(orgId, id),
+      {}
+    );
+  },
+
+  async cancel(orgId: string, id: string) {
+    return apiClient.post<UpdateStockMovementResponse>(
+      API_ENDPOINTS.INVENTORY.STOCK_MOVEMENTS.CANCEL(orgId, id),
+      {}
     );
   },
 };
