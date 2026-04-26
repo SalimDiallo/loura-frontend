@@ -1,5 +1,6 @@
 'use client';
 
+import { tokenManager } from '@/lib/api/client';
 import { authService } from '@/lib/services/auth/auth.service';
 import type { LoginCredentials } from '@/lib/types';
 import { AuthResponse } from '@/lib/types/auth/auth';
@@ -32,12 +33,9 @@ export function useLogin() {
 
     onError: (error) => {
       console.error('Login failed:', error);
-      // Nettoyer le localStorage en cas d'erreur
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('loura_access_token');
-        localStorage.removeItem('loura_refresh_token');
-        localStorage.removeItem('loura_user');
-      }
+      // Nettoyer tous les storages (local + session) via le tokenManager
+      // afin de respecter le mode "se souvenir de moi".
+      tokenManager.clearTokens();
     },
   });
 }

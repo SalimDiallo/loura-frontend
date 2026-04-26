@@ -99,7 +99,9 @@ export const siteConfig = {
     login: "/auth",              // Page de connexion unifiée
     register: "/auth/register",  // Inscription
     logout: "/auth/logout",      // Logout
-    forgotPassword: "/auth/forgot-password"
+    forgotPassword: "/auth/forgot-password",
+    verifyEmail: "/auth/verify-email",   // Page qui consomme le token reçu par email
+    verifyPending: "/auth/verify-pending" // Page d'attente après inscription
   },
 
   // Routes du module Core

@@ -3,6 +3,7 @@
 import { GenerateDocumentButton } from "@/components/documents";
 import { ListPagination } from "@/components/layout/ListPageLayout";
 import { PermissionGuard } from "@/components/permissions";
+import PageHelper from "@/components/services/organisation/PageHelper";
 import { QuickSelect } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -473,18 +474,21 @@ function POSPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <WarehouseIcon className="h-4 w-4 text-muted-foreground" />
-                        <select
-                            value={warehouseId}
-                            onChange={(e) => setWarehouseId(e.target.value)}
-                            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        >
-                            {warehouses.map((w) => (
-                                <option key={w.id} value={w.id}>
-                                    {w.name} {w.is_default ? "★" : ""}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="flex items-center gap-2" data-tour="pos-warehouse">
+                            <WarehouseIcon className="h-4 w-4 text-muted-foreground" />
+                            <select
+                                value={warehouseId}
+                                onChange={(e) => setWarehouseId(e.target.value)}
+                                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                            >
+                                {warehouses.map((w) => (
+                                    <option key={w.id} value={w.id}>
+                                        {w.name} {w.is_default ? "★" : ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <PageHelper />
                     </div>
                 </div>
 
@@ -528,7 +532,7 @@ function POSPage() {
                 </div>
 
                 {/* Grille cartes */}
-                <div className="flex-1 overflow-y-auto pr-1">
+                <div className="flex-1 overflow-y-auto pr-1" data-tour="pos-products">
                     {loadingProducts ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
                             {Array.from({ length: 10 }).map((_, i) => (
@@ -616,7 +620,7 @@ function POSPage() {
             </div>
 
             {/* ──── Panier ──── */}
-            <Card className="lg:w-[420px] flex flex-col h-full overflow-hidden">
+            <Card className="lg:w-[420px] flex flex-col h-full overflow-hidden" data-tour="pos-cart">
                 <div className="p-3 border-b flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <ShoppingCart className="h-4 w-4" />

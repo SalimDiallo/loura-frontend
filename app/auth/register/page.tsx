@@ -22,16 +22,15 @@ import {
     Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
 import { z } from 'zod';
 
-// Schéma de validation Zod
+// ─── Validation schema ─────────────────────────────────────────────────────
+
 const registerSchema = z
   .object({
-    email: z
-      .string()
-      .min(1, 'Email requis')
-      .email('Adresse email invalide'),
+    email: z.string().min(1, 'Email requis').email('Adresse email invalide'),
     first_name: z
       .string()
       .min(2, 'Le prénom doit contenir au moins 2 caractères')
@@ -48,41 +47,63 @@ const registerSchema = z
     password_confirm: z
       .string()
       .min(1, 'Veuillez confirmer votre mot de passe'),
-    accept_terms: z
-      // Fix from `errorMap` to 'message' prop.
-      .literal(true, {
-        message: "Vous devez accepter les conditions d'utilisation et la politique de confidentialité.",
-      }),
+    accept_terms: z.literal(true, {
+      message:
+        "Vous devez accepter les conditions d'utilisation et la politique de confidentialité.",
+    }),
   })
   .refine((data) => data.password === data.password_confirm, {
     message: 'Les mots de passe ne correspondent pas',
     path: ['password_confirm'],
   });
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+// ─── Sidebar content ───────────────────────────────────────────────────────
 
-// Features list revisited for a true, inviting sidebar look
 const features = [
-  { icon: Building2, text: "Multi-entreprises" },
-  { icon: Users, text: "Équipes illimitées" },
-  { icon: BarChart3, text: "Dashboards en temps réel" },
-  { icon: Shield, text: "Sécurité renforcée" },
+  { icon: Building2, text: 'Multi-entreprises, multi-équipes' },
+  { icon: Users, text: 'Gestion RH, ventes & inventaire' },
+  { icon: BarChart3, text: 'Tableaux de bord en temps réel' },
+  { icon: Shield, text: 'Sécurité et conformité RGPD' },
 ];
 
+// ─── Password strength helper ──────────────────────────────────────────────
 
-export default function RegisterPage() {
+function getPasswordStrength(pwd: string): { score: number; label: string } {
+  let score = 0;
+  if (pwd.length >= 8) score += 1;
+  if (pwd.length >= 12) score += 1;
+  if (/[A-Z]/.test(pwd)) score += 1;
+  if (/[0-9]/.test(pwd)) score += 1;
+  if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
+  if (!pwd) return { score: 0, label: '' };
+  if (score <= 2) return { score, label: 'Faible' };
+  if (score <= 3) return { score, label: 'Moyen' };
+  if (score <= 4) return { score, label: 'Bon' };
+  return { score, label: 'Excellent' };
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────
+
+function RegisterContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
+  const [justRegistered, setJustRegistered] = useState(false);
   const {
     mutateAsync: register,
     isPending: isRegisterPending,
     error: registerError,
   } = useRegister();
 
+  // Pré-remplissage depuis ?email=... (typiquement page d'invitation).
+  const prefilledEmail = searchParams.get('email') ?? '';
+  // Et URL de redirection éventuelle à passer après vérification d'email.
+  const redirectAfterVerify = searchParams.get('redirect') ?? '';
+
   const form = useZodForm({
     schema: registerSchema,
     defaultValues: {
-      email: '',
+      email: prefilledEmail,
       first_name: '',
       last_name: '',
       password: '',
@@ -91,13 +112,20 @@ export default function RegisterPage() {
     },
   });
 
-  if (user?.id) {
+  const passwordValue = form.watch('password') || '';
+  const strength = useMemo(() => getPasswordStrength(passwordValue), [passwordValue]);
+
+  // Si l'utilisateur est déjà connecté en arrivant ici (pas via register), on le redirige.
+  // En revanche après un register fraîchement réussi, on laisse la nav vers /auth/welcome se faire.
+  if (user?.id && !justRegistered) {
     router.push('/core/dashboard');
     return null;
   }
 
-  const onSubmit = form.handleSubmit(async (data: RegisterFormData) => {
+  const onSubmit = form.handleSubmit(async (data) => {
     try {
+      // Marque AVANT l'await pour neutraliser le guard dès le re-render qui suit la mise à jour du cache
+      setJustRegistered(true);
       await register({
         email: data.email,
         first_name: data.first_name,
@@ -105,9 +133,18 @@ export default function RegisterPage() {
         password: data.password,
         password_confirm: data.password_confirm,
       });
-      router.push(siteConfig.core.dashboard.home);
+      // Le backend ne délivre PAS de tokens : on redirige vers la page d'attente
+      // de vérification avec l'email en query pour que l'utilisateur puisse
+      // demander un renvoi sans avoir à le retaper. Si un ``redirect`` était
+      // présent (ex. invitation), on le propage afin que l'utilisateur soit
+      // ramené sur la page d'origine après confirmation de son email.
+      const params = new URLSearchParams({ email: data.email });
+      if (redirectAfterVerify) {
+        params.set('redirect', redirectAfterVerify);
+      }
+      router.replace(`${siteConfig.auth.verifyPending}?${params.toString()}`);
     } catch (err) {
-      // Les erreurs sont gérées par le hook useRegister
+      setJustRegistered(false);
       console.error('Registration error:', err);
     }
   });
@@ -117,63 +154,72 @@ export default function RegisterPage() {
       {/* Bouton Retour */}
       <Link
         href="/"
-        className="absolute top-6 left-6 z-50 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-900 transition"
+        className="absolute top-6 left-6 z-50 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white transition"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-3.5 h-3.5" />
         Accueil
       </Link>
 
-      {/* Panneau gauche sobre */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[50%] bg-white dark:bg-black border-r border-border relative items-center justify-center transition-colors">
-        <div className="w-full px-12 xl:px-16 flex flex-col justify-center">
-          <div className="mb-10">
+      {/* ─── Panneau gauche ─── */}
+      <aside className="hidden lg:flex lg:w-1/2 xl:w-[48%] bg-neutral-50 dark:bg-neutral-950 relative items-center justify-center transition-colors">
+        <div className="w-full max-w-lg px-12 xl:px-16 flex flex-col justify-center py-16">
+          <div className="mb-12">
             <Logo showTitle className="[&_h1]:text-black dark:[&_h1]:text-white" />
           </div>
-          <h1 className="text-3xl xl:text-4xl font-bold text-black dark:text-white mb-4">
-            Simplifiez la gestion de votre entreprise
+
+          <h1 className="text-3xl xl:text-[34px] font-bold text-black dark:text-white leading-tight tracking-tight mb-5">
+            Pilotez votre entreprise<br />avec sérénité.
           </h1>
-          <p className="text-base text-neutral-600 dark:text-neutral-300 mb-8 max-w-md">
-            Unifiez vos opérations d'équipe et gérez vos organisations en toute sérénité.
+          <p className="text-base text-neutral-600 dark:text-neutral-400 mb-12 leading-relaxed">
+            Une plateforme unifiée pour vos opérations RH, vos ventes et votre
+            stock — en quelques minutes seulement.
           </p>
-          <ul className="space-y-3 mb-12">
+
+          <ul className="space-y-4 mb-16">
             {features.map((feature, idx) => (
-              <li key={idx} className="flex items-center gap-3">
-                <span className="inline-flex items-center justify-center w-8 h-8 bg-primary/10 dark:bg-primary/20 text-primary">
-                  <feature.icon className="w-4 h-4" />
+              <li key={idx} className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-primary">
+                  <Check className="w-4 h-4" strokeWidth={2.5} />
                 </span>
-                <span className="text-black dark:text-white text-base">{feature.text}</span>
+                <span className="text-[15px] text-neutral-800 dark:text-neutral-200">
+                  {feature.text}
+                </span>
               </li>
             ))}
           </ul>
-          <div className="flex items-center gap-7 pt-6 border-t border-border mt-auto">
-            <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-              <Shield className="w-4 h-4" />
-              <span>SSL sécurisé</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-              <Check className="w-4 h-4" />
-              <span>Respect RGPD</span>
-            </div>
+
+          <div className="mt-auto pt-6 flex items-center gap-6 text-xs text-neutral-500 dark:text-neutral-500">
+            <span className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5" />
+              SSL · Chiffrement bout-en-bout
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5" />
+              Conformité RGPD
+            </span>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Panneau droit - Formulaire */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 lg:px-12 bg-white dark:bg-black transition-colors">
+      {/* ─── Panneau droit — Formulaire ─── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-16 lg:px-12 bg-white dark:bg-black transition-colors">
         <div className="w-full max-w-md">
           {/* Header mobile */}
-          <div className="lg:hidden mb-8 text-center">
-            <Logo showTitle className="flex items-center justify-center gap-2 mb-6 [&_h1]:text-black dark:[&_h1]:text-white" />
+          <div className="lg:hidden mb-10 text-center">
+            <Logo
+              showTitle
+              className="flex items-center justify-center gap-2 mb-6 [&_h1]:text-black dark:[&_h1]:text-white"
+            />
           </div>
 
-          {/* Titre du formulaire */}
-          <div className="mb-7">
-            <h2 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2 text-black dark:text-white">
-              Créer un compte
+          {/* Titre */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold tracking-tight text-black dark:text-white mb-2">
+              Créer votre compte
             </h2>
-            {/* <p className="text-neutral-500 dark:text-neutral-400">
-              Essai gratuit 14 jours
-            </p> */}
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Quelques secondes suffisent. Aucune carte requise.
+            </p>
           </div>
 
           {/* Formulaire */}
@@ -187,110 +233,161 @@ export default function RegisterPage() {
                 </Alert>
               )}
 
-              <FormEmailField
-                name="email"
-                label="Adresse email professionnelle"
-                placeholder="vous@entreprise.com"
-                required
-              />
+              {/* ─── Identité ─── */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
+                  Identité
+                </p>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormInputField
-                  name="first_name"
-                  label="Prénom"
-                  placeholder="John"
-                  required
-                />
-                <FormInputField
-                  name="last_name"
-                  label="Nom"
-                  placeholder="Doe"
+                <div className="grid grid-cols-2 gap-3">
+                  <FormInputField
+                    name="first_name"
+                    label="Prénom"
+                    placeholder="Mohamed"
+                    required
+                  />
+                  <FormInputField
+                    name="last_name"
+                    label="Nom"
+                    placeholder="Diallo"
+                    required
+                  />
+                </div>
+
+                <FormEmailField
+                  name="email"
+                  label="Email"
+                  placeholder="mohamed@gmail.com"
                   required
                 />
               </div>
 
-              <PasswordFieldWithToggle
-                name="password"
-                label="Mot de passe"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                description="Min. 8 caractères, 1 majuscule et 1 chiffre"
-                required
-              />
+              {/* ─── Sécurité ─── */}
+              <div className="space-y-4 pt-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
+                  Sécurité
+                </p>
 
-              <PasswordFieldWithToggle
-                name="password_confirm"
-                label="Confirmer le mot de passe"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                required
-              />
+                <PasswordFieldWithToggle
+                  name="password"
+                  label="Mot de passe"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
+                />
+
+                {/* Indicateur de force */}
+                {passwordValue && (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <div
+                          key={i}
+                          className={
+                            'h-1 flex-1 rounded-sm transition-colors ' +
+                            (i <= strength.score
+                              ? strength.score <= 2
+                                ? 'bg-red-500'
+                                : strength.score <= 3
+                                  ? 'bg-amber-500'
+                                  : strength.score <= 4
+                                    ? 'bg-emerald-500'
+                                    : 'bg-emerald-600'
+                              : 'bg-neutral-200 dark:bg-neutral-800')
+                          }
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 flex justify-between">
+                      <span>Min. 8 caractères, 1 majuscule, 1 chiffre</span>
+                      {strength.label && (
+                        <span
+                          className={
+                            'font-semibold ' +
+                            (strength.score <= 2
+                              ? 'text-red-600'
+                              : strength.score <= 3
+                                ? 'text-amber-600'
+                                : 'text-emerald-600')
+                          }
+                        >
+                          {strength.label}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <PasswordFieldWithToggle
+                  name="password_confirm"
+                  label="Confirmer"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
 
               {/* Conditions */}
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  className={
-                    "mt-1 w-4 h-4 border-border focus:ring-primary" +
-                    (form.formState.errors.accept_terms
-                      ? " border-destructive text-destructive"
-                      : " text-primary")
-                  }
-                  {...form.register("accept_terms")}
-                />
+              <div className="pt-2 space-y-2">
                 <label
                   htmlFor="terms"
-                  className={
-                    "text-sm " +
-                    (form.formState.errors.accept_terms
-                      ? "text-destructive"
-                      : "text-neutral-600 dark:text-neutral-300")
-                  }
+                  className="flex items-start gap-3 cursor-pointer group"
                 >
-                  J'accepte les{" "}
-                  <Link
-                    href="/docs/legals/terms"
+                  <input
+                    type="checkbox"
+                    id="terms"
                     className={
+                      'mt-0.5 w-4 h-4 border-border focus:ring-primary cursor-pointer' +
                       (form.formState.errors.accept_terms
-                        ? "text-destructive dark:text-destructive"
-                        : "text-black dark:text-white") +
-                      " hover:underline transition-colors"
+                        ? ' border-destructive text-destructive'
+                        : ' text-primary')
                     }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Conditions d&apos;utilisation
-                  </Link>{" "}
-                  et la{" "}
-                  <Link
-                    href="/docs/legals/privacy"
+                    {...form.register('accept_terms')}
+                  />
+                  <span
                     className={
+                      'text-xs leading-relaxed ' +
                       (form.formState.errors.accept_terms
-                        ? "text-destructive dark:text-destructive"
-                        : "text-black dark:text-white") +
-                      " hover:underline transition-colors"
+                        ? 'text-destructive'
+                        : 'text-neutral-600 dark:text-neutral-300')
                     }
-                    target="_blank"
-                    rel="noopener noreferrer"
                   >
-                    Politique de confidentialité
-                  </Link>
+                    J'accepte les{' '}
+                    <Link
+                      href="/docs/legals/terms"
+                      className="font-medium text-black dark:text-white underline-offset-2 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      conditions d'utilisation
+                    </Link>{' '}
+                    et la{' '}
+                    <Link
+                      href="/docs/legals/privacy"
+                      className="font-medium text-black dark:text-white underline-offset-2 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      politique de confidentialité
+                    </Link>
+                    .
+                  </span>
                 </label>
+
+                {form.formState.errors.accept_terms && (
+                  <p className="text-[11px] text-destructive ml-7">
+                    {form.formState.errors.accept_terms.message as string}
+                  </p>
+                )}
               </div>
-        
-              {/* Affichage de l'erreur pour accept_terms si nécessaire */}
-              {form.formState.errors.accept_terms && (
-                <p className="text-xs text-destructive mb-4">{form.formState.errors.accept_terms.message as string}</p>
-              )}
 
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-medium"
+                className="w-full h-11 text-sm font-semibold"
                 disabled={isRegisterPending}
               >
                 {isRegisterPending ? (
-                  'Création en cours...'
+                  'Création en cours…'
                 ) : (
                   <>
                     Créer mon compte
@@ -302,11 +399,11 @@ export default function RegisterPage() {
           </Form>
 
           {/* Lien connexion */}
-          <p className="mt-8 text-center text-sm text-neutral-600 dark:text-neutral-300">
+          <p className="mt-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
             Déjà un compte ?{' '}
             <Link
               href={siteConfig.core.auth.login}
-              className="font-medium text-black dark:text-white hover:text-primary transition-colors"
+              className="font-semibold text-black dark:text-white hover:underline underline-offset-2"
             >
               Se connecter
             </Link>
@@ -314,5 +411,19 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RegisterContent />
+    </Suspense>
   );
 }

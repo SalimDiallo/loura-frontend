@@ -17,40 +17,102 @@ export class ApiError extends Error {
 
 /**
  * Gestionnaire de tokens
+ *
+ * "Se souvenir de moi" :
+ * - Si remember_me est vrai au login, les tokens et l'utilisateur sont
+ *   persistés dans `localStorage` (survit à la fermeture du navigateur).
+ * - Sinon, ils sont stockés dans `sessionStorage` (effacés à la fermeture).
+ *
+ * Le choix est mémorisé dans `localStorage` via `STORAGE_KEYS.REMEMBER_ME`
+ * pour que les opérations ultérieures (refresh, saveUser, etc.) ciblent
+ * automatiquement le bon storage.
  */
+const isBrowser = (): boolean => typeof window !== 'undefined';
+
+/**
+ * Retourne le storage actif selon le drapeau "remember_me".
+ * Par défaut (drapeau absent) : localStorage, pour préserver le comportement
+ * historique avec les sessions déjà ouvertes.
+ */
+const getActiveStorage = (): Storage | null => {
+  if (!isBrowser()) return null;
+  const remember = localStorage.getItem(STORAGE_KEYS.REMEMBER_ME);
+  return remember === 'false' ? sessionStorage : localStorage;
+};
+
+/**
+ * Lecture tolérante : tente d'abord le storage actif puis l'autre,
+ * pour éviter de perdre une session lors d'une transition.
+ */
+const readFromAnyStorage = (key: string): string | null => {
+  if (!isBrowser()) return null;
+  const active = getActiveStorage();
+  return (
+    active?.getItem(key) ??
+    localStorage.getItem(key) ??
+    sessionStorage.getItem(key)
+  );
+};
+
+const removeFromAllStorages = (key: string): void => {
+  if (!isBrowser()) return;
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+};
+
 export const tokenManager = {
-  getAccessToken: (): string | null => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-  },
+  getAccessToken: (): string | null => readFromAnyStorage(STORAGE_KEYS.ACCESS_TOKEN),
 
-  getRefreshToken: (): string | null => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-  },
+  getRefreshToken: (): string | null => readFromAnyStorage(STORAGE_KEYS.REFRESH_TOKEN),
 
-  setTokens: (access: string, refresh: string): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
-    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh);
+  /**
+   * @param rememberMe Si fourni, met à jour le drapeau de persistance.
+   *                   Sinon, conserve le drapeau courant (utile lors d'un
+   *                   refresh automatique du token).
+   */
+  setTokens: (access: string, refresh: string, rememberMe?: boolean): void => {
+    if (!isBrowser()) return;
+
+    if (typeof rememberMe === 'boolean') {
+      localStorage.setItem(
+        STORAGE_KEYS.REMEMBER_ME,
+        rememberMe ? 'true' : 'false'
+      );
+    }
+
+    // Évite de laisser des tokens orphelins dans l'autre storage.
+    removeFromAllStorages(STORAGE_KEYS.ACCESS_TOKEN);
+    removeFromAllStorages(STORAGE_KEYS.REFRESH_TOKEN);
+
+    const storage = getActiveStorage();
+    if (!storage) return;
+    storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
+    storage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh);
   },
 
   clearTokens: (): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.USER);
+    if (!isBrowser()) return;
+    removeFromAllStorages(STORAGE_KEYS.ACCESS_TOKEN);
+    removeFromAllStorages(STORAGE_KEYS.REFRESH_TOKEN);
+    removeFromAllStorages(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME);
   },
 
   saveUser: (user: any): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    if (!isBrowser()) return;
+    removeFromAllStorages(STORAGE_KEYS.USER);
+    const storage = getActiveStorage();
+    storage?.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
   },
 
   getUser: (): any => {
-    if (typeof window === 'undefined') return null;
-    const user = localStorage.getItem(STORAGE_KEYS.USER);
-    return user ? JSON.parse(user) : null;
+    const raw = readFromAnyStorage(STORAGE_KEYS.USER);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   },
 };
 

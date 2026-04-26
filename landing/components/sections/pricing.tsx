@@ -12,31 +12,31 @@ const pricingConfig = {
     "Des tarifs fixes et transparents, adaptés à toutes les tailles d'entreprise. Aucun engagement, aucune mauvaise surprise.",
   pricingItems: [
     {
-      name: "Gratuit",
-      price: 0,
-      yearlyPrice: 0,
-      description: "Les essentiels pour démarrer sans risque.",
-      buttonText: "Commencer gratuitement",
+      name: "Essentiel",
+      price: 49000,
+      yearlyPrice: 40833,
+      description: "Les fonctionnalités essentielles pour commencer sereinement.",
+      buttonText: "Choisir Essentiel",
       isPopular: false,
       features: [
         "Gestion de base RH",
         "1 organisation",
         "Support par e-mail",
-        "Accès limité aux modules",
+        "Accès aux modules de base",
       ],
-      buttonLink: "/auth/register",
+      buttonLink: "/auth/register?plan=essentiel",
       buttonType: "internal",
     },
     {
       name: "Pro",
-      price: 29,
-      yearlyPrice: 23,
-      description: "Pour les équipes en croissance.",
-      buttonText: "Démarrer Pro",
+      price: 99000,
+      yearlyPrice: 82500,
+      description: "Pour les équipes ambitieuses souhaitant aller plus loin.",
+      buttonText: "Choisir Pro",
       isPopular: true,
       features: [
-        "Tout le plan Gratuit",
-        "Modules illimités",
+        "Toutes les fonctionnalités d’Essentiel",
+        "Modules avancés illimités",
         "Gestion de paie automatisée",
         "Rapports avancés",
         "Support prioritaire",
@@ -46,17 +46,18 @@ const pricingConfig = {
     },
     {
       name: "Entreprise",
-      price: 59,
-      yearlyPrice: 47,
-      description: "Pour les organisations à besoins complexes.",
+      price: 259000,
+      yearlyPrice: 215833,
+      description: "Pour les organisations avec des besoins sur-mesure et souhaitant profiter de l'intelligence artificielle.",
       buttonText: "Nous contacter",
       isPopular: false,
       features: [
-        "Tout le plan Pro",
+        "Toutes les fonctionnalités de Pro",
         "Intégrations personnalisées",
         "Gestion fine des accès",
         "SLA garanti",
         "Accompagnement dédié",
+        "IA avancée pour entreprise",
       ],
       buttonLink: "mailto:hello@loura.app?subject=Contact%20%5BEntreprise%5D",
       buttonType: "external",
@@ -96,6 +97,12 @@ function BillingToggle({
   );
 }
 
+function formatFng(price: number) {
+  return price
+    ? price.toLocaleString("fr-GN", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).replace(/,/g, " ") + " FNG"
+    : "Gratuit";
+}
+
 function AnimatedPrice({
   price,
   cycle,
@@ -112,7 +119,7 @@ function AnimatedPrice({
       className="flex items-baseline gap-1"
     >
       <span className="text-4xl font-bold tracking-tight">
-        {price === 0 ? "Gratuit" : `${price}€`}
+        {formatFng(price)}
       </span>
       {price > 0 && (
         <span className="text-sm text-muted-foreground">
@@ -178,6 +185,7 @@ export function PricingSection() {
                 >
                   {tier.description}
                 </p>
+               
               </div>
 
               {/* CTA */}
@@ -221,14 +229,15 @@ export function PricingSection() {
 
               {/* Features */}
               <ul className="flex flex-col gap-3">
-                {tier.name !== "Gratuit" && (
+                {i > 0 && (
                   <li
                     className={cn(
                       "text-xs font-mono mb-1",
                       tier.isPopular ? "text-background/50" : "text-muted-foreground/60"
                     )}
                   >
-                    Tout de {tier.name === "Pro" ? "Gratuit" : "Pro"}, plus&nbsp;:
+                    Toutes les fonctionnalités de&nbsp;
+                    {i === 1 ? "Essentiel" : "Pro"}, plus&nbsp;:
                   </li>
                 )}
                 {tier.features.map((f) => (

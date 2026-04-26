@@ -10,6 +10,7 @@ import type {
   CreateInvitationResponse,
   DeclineInvitationResponse,
   Invitation,
+  InvitationByToken,
 } from '@/lib/types';
 
 class InvitationService {
@@ -57,6 +58,31 @@ class InvitationService {
   async decline(invitationId: string): Promise<DeclineInvitationResponse> {
     return apiClient.post<DeclineInvitationResponse>(
       API_ENDPOINTS.HR.INVITATIONS.DECLINE(invitationId)
+    );
+  }
+
+  /**
+   * Récupère une invitation à partir du token reçu par email.
+   *
+   * Endpoint **public** (pas d'authentification requise) : la page de landing
+   * `/auth/invitation` l'utilise pour afficher l'invitation avant que
+   * l'utilisateur ne se connecte.
+   */
+  async getByToken(token: string): Promise<InvitationByToken> {
+    return apiClient.get<InvitationByToken>(
+      API_ENDPOINTS.HR.INVITATIONS.BY_TOKEN(token),
+      { requiresAuth: false }
+    );
+  }
+
+  /**
+   * Accepte une invitation à partir du token reçu par email.
+   * L'utilisateur doit être authentifié avec une adresse correspondant
+   * au destinataire de l'invitation (sinon HTTP 403 + code email_mismatch).
+   */
+  async acceptByToken(token: string): Promise<AcceptInvitationResponse> {
+    return apiClient.post<AcceptInvitationResponse>(
+      API_ENDPOINTS.HR.INVITATIONS.ACCEPT_BY_TOKEN(token)
     );
   }
 }

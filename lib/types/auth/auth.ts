@@ -43,6 +43,47 @@ export interface LoginResponse {
 
 export type RegisterResponse = LoginResponse;
 
+/**
+ * Réponse de l'endpoint /auth/register/.
+ *
+ * Aucun token JWT n'est délivré au moment de l'inscription : l'utilisateur
+ * doit d'abord confirmer son email. Le payload contient uniquement les
+ * informations nécessaires pour rediriger vers /auth/verify-pending.
+ */
+export interface RegisterPendingResponse {
+  message: string;
+  data: {
+    user: BaseUser;
+    requires_email_verification: true;
+  };
+}
+
+/**
+ * Réponse de /auth/email/verify/ (POST { token }).
+ */
+export interface VerifyEmailResponse {
+  message: string;
+  data: {
+    user: BaseUser;
+  };
+}
+
+/**
+ * Réponse neutre du renvoi de mail (200 même si l'email n'existe pas).
+ */
+export interface ResendVerificationResponse {
+  message: string;
+}
+
+/**
+ * Données d'un échec de login pour cause d'email non vérifié (403).
+ */
+export interface EmailNotVerifiedError {
+  message: string;
+  code: 'email_not_verified';
+  email: string;
+}
+
 export interface AuthResponse {
   message: string;
   access: string;
@@ -53,6 +94,7 @@ export interface AuthResponse {
 export interface LoginCredentials {
   email: string;
   password: string;
+  remember_me?: boolean;
 }
 
 export interface RegisterData {

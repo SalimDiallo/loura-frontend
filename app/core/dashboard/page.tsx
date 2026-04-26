@@ -1,9 +1,11 @@
 "use client";
 
+import GuidedTour from "@/components/GuidedTour";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { siteConfig } from "@/lib/config";
 import { useCurrentUser } from "@/lib/hooks/auth/useCurrentUser";
 import { useOrganizations } from "@/lib/hooks/core";
 import { useAcceptInvitation, useDeclineInvitation, useMyMemberships, usePendingInvitations } from "@/lib/hooks/hr";
@@ -13,15 +15,18 @@ import { cn } from "@/lib/utils";
 import {
     Building2,
     Check,
+    Compass,
     Crown,
     Mail,
+    Palette,
     Plus,
     Shield,
+    UserPlus,
     Users,
     X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 // ============================================================================
@@ -370,6 +375,7 @@ function EmptyState({
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: user, isLoading: isUserLoading, isError } = useCurrentUser();
   const {
     data: organizations,
@@ -386,6 +392,41 @@ export default function DashboardPage() {
   const { data: myMemberships = [], isLoading: isMembershipsLoading } = useMyMemberships();
 
   const isLoading = isUserLoading || isOrgsLoading;
+
+  // Onboarding: actif si ?onboarding=1, si bouton manuel, ou aucune donnée utilisateur
+  const onboardingFlag = searchParams.get("onboarding") === "1";
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [onboardingManual, setOnboardingManual] = useState(false);
+  const hasNoData =
+    !isLoading &&
+    !isInvitationsLoading &&
+    !isMembershipsLoading &&
+    (organizations?.length ?? 0) === 0 &&
+    myMemberships.length === 0 &&
+    invitations.length === 0;
+  const showOnboarding =
+    onboardingManual ||
+    (!onboardingDismissed && (onboardingFlag || hasNoData));
+
+  const handleDismissOnboarding = () => {
+    setOnboardingDismissed(true);
+    setOnboardingManual(false);
+    if (onboardingFlag) {
+      router.replace(siteConfig.core.dashboard.home);
+    }
+  };
+
+  const handleStartOnboarding = () => {
+    setOnboardingDismissed(false);
+    setOnboardingManual(true);
+  };
+
+  // Auto-clean URL si flag présent mais utilisateur a déjà des données
+  useEffect(() => {
+    if (onboardingFlag && !hasNoData && !isLoading && !showOnboarding) {
+      router.replace(siteConfig.core.dashboard.home);
+    }
+  }, [onboardingFlag, hasNoData, isLoading, showOnboarding, router]);
 
   // Handlers pour les invitations
   const handleAcceptInvitation = async (invitationId: string) => {
@@ -507,19 +548,71 @@ export default function DashboardPage() {
   return (
     <div className="px-4 py-8 max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div className="pb-5">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Bonjour, {userName}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {totalAll} organisation{totalAll !== 1 ? "s" : ""} au total
-          {totalOrgs > 0 && myMemberships.length > 0 && (
-            <span className="text-muted-foreground/60">
-              {" "}— {totalOrgs} créée{totalOrgs !== 1 ? "s" : ""}, {myMemberships.length} en tant que membre
-            </span>
-          )}
-        </p>
+      <div className="pb-5 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            Bonjour, {userName}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {totalAll} organisation{totalAll !== 1 ? "s" : ""} au total
+            {totalOrgs > 0 && myMemberships.length > 0 && (
+              <span className="text-muted-foreground/60">
+                {" "}— {totalOrgs} créée{totalOrgs !== 1 ? "s" : ""}, {myMemberships.length} en tant que membre
+              </span>
+            )}
+          </p>
+        </div>
+        <Button
+          onClick={handleStartOnboarding}
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs font-semibold shrink-0"
+        >
+          <Compass className="h-3.5 w-3.5 mr-1.5" />
+          Onboarding
+        </Button>
       </div>
+
+      {/* Onboarding — visite guidée (spotlight + blur) */}
+      {showOnboarding && (
+        <GuidedTour
+          firstName={user?.first_name ?? ""}
+          onFinish={handleDismissOnboarding}
+          steps={[
+            {
+              target: "create-org",
+              icon: Building2,
+              title: "Créez votre première organisation",
+              description:
+                "Cliquez sur le bouton mis en évidence pour démarrer. C'est l'espace de travail principal de votre équipe.",
+              cta: {
+                label: "Créer maintenant",
+                onClick: () =>
+                  router.push(
+                    `${siteConfig.core.dashboard.organizations.create}?onboarding=1`
+                  ),
+              },
+              placement: "bottom",
+            },
+            {
+              target: "manage-orgs",
+              icon: UserPlus,
+              title: "Gérez vos espaces et membres",
+              description:
+                "Depuis cette section, gérez vos organisations, invitez des collaborateurs et attribuez-leur des rôles.",
+              placement: "bottom",
+            },
+            {
+              target: "memberships-section",
+              icon: Palette,
+              title: "Suivez vos collaborations",
+              description:
+                "Vous retrouverez ici les organisations qui vous invitent à collaborer. Personnalisez ensuite votre branding depuis chaque espace.",
+              placement: "top",
+            },
+          ]}
+        />
+      )}
 
       {/* Section 1: Mes organisations (owned) */}
       <div className="space-y-3">
@@ -530,14 +623,16 @@ export default function DashboardPage() {
           action={
             <div className="flex gap-2">
               <Button
+                data-tour="manage-orgs"
                 onClick={() => router.push("/core/dashboard/organizations")}
-                variant="outline"
                 size="sm"
                 className="h-7 px-2 text-xs font-semibold hover:text-primary hover:bg-primary/10 transition-colors"
               >
-                Gérer
+                Gérer vos organisations
+                
               </Button>
               <Button
+                data-tour="create-org"
                 onClick={() => router.push("/core/dashboard/organizations/create")}
                 variant="ghost"
                 size="sm"
@@ -621,7 +716,7 @@ export default function DashboardPage() {
       )}
 
       {/* Section 3: Organisations membre */}
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="memberships-section">
         <SectionHeader
           icon={Users}
           label="Organisations membre"

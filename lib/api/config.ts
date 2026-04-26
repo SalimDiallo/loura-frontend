@@ -18,6 +18,9 @@ export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'loura_access_token',
   REFRESH_TOKEN: 'loura_refresh_token',
   USER: 'loura_user',
+  // Drapeau persistant choisissant le storage des tokens (localStorage vs sessionStorage)
+  // Stocké dans localStorage uniquement.
+  REMEMBER_ME: 'loura_remember_me',
 } as const;
 
 /**
@@ -38,6 +41,8 @@ export const API_ENDPOINTS = {
     CHANGE_PASSWORD: '/auth/profile/change-password/',  // Changement de mot de passe
     UPLOAD_AVATAR: '/auth/profile/upload-avatar/', // Upload d'avatar
     DELETE_AVATAR: '/auth/profile/upload-avatar/', // Suppression d'avatar (même endpoint, méthode DELETE)
+    VERIFY_EMAIL: '/auth/email/verify/',           // Vérification d'email via token signé
+    RESEND_VERIFICATION: '/auth/email/resend/',    // Renvoi du lien de vérification
   },
 
   CORE: {
@@ -92,6 +97,10 @@ export const API_ENDPOINTS = {
       PENDING: '/hr/invitations/pending/',
       ACCEPT: (id: string) => `/hr/invitations/${id}/accept/`,
       DECLINE: (id: string) => `/hr/invitations/${id}/decline/`,
+      // Routes empruntables depuis le lien reçu par email (token signé).
+      BY_TOKEN: (token: string) => `/hr/invitations/by-token/${token}/`,
+      ACCEPT_BY_TOKEN: (token: string) =>
+        `/hr/invitations/by-token/${token}/accept/`,
     },
     // Départements
     DEPARTMENTS: {

@@ -10,7 +10,12 @@ import type {
     RegisterData,
 } from '@/lib/types';
 import { isLoginResponse } from '@/lib/types';
-import { AuthResponse } from '@/lib/types/auth/auth';
+import {
+    AuthResponse,
+    RegisterPendingResponse,
+    ResendVerificationResponse,
+    VerifyEmailResponse,
+} from '@/lib/types/auth/auth';
 
 // AuthService n'est pas strictement CRUD, mais expose getCurrentUser, updateProfile, etc.
 // On hérite de BaseService pour factoriser ce qui peut l'être et garder l’API homogène.
@@ -25,32 +30,42 @@ class AuthService extends BaseService<BaseUser, RegisterData, Partial<BaseUser>>
   };
 
   /**
-   * Inscription d'un utilisateur
+   * Inscription d'un utilisateur.
+   *
+   * Le backend ne délivre PAS de tokens JWT : l'utilisateur doit confirmer
+   * son email via le lien reçu avant de pouvoir se connecter. La réponse
+   * contient simplement le user créé (`email_verified=false`) et un drapeau
+   * `requires_email_verification`.
    */
-  async register(data: RegisterData): Promise<AuthResponse> {
-    const rawResponse = await apiClient.post<LoginResponse>(
+  async register(data: RegisterData): Promise<RegisterPendingResponse> {
+    return apiClient.post<RegisterPendingResponse>(
       API_ENDPOINTS.AUTH.REGISTER,
       data,
       { requiresAuth: false }
     );
+  }
 
-    if (!isLoginResponse(rawResponse)) {
-      throw new Error('Invalid response format from backend');
-    }
+  /**
+   * Vérifie l'email à partir du token signé reçu par mail.
+   */
+  async verifyEmail(token: string): Promise<VerifyEmailResponse> {
+    return apiClient.post<VerifyEmailResponse>(
+      API_ENDPOINTS.AUTH.VERIFY_EMAIL,
+      { token },
+      { requiresAuth: false }
+    );
+  }
 
-    const response: AuthResponse = {
-      message: rawResponse.message,
-      access: rawResponse.data.access,
-      refresh: rawResponse.data.refresh,
-      user: rawResponse.data.user,
-    };
-
-    if (response.access && response.refresh && response.user) {
-      tokenManager.setTokens(response.access, response.refresh);
-      tokenManager.saveUser(response.user);
-    }
-
-    return response;
+  /**
+   * Renvoie un lien de vérification. La réponse est neutre côté backend
+   * (200 même si l'email est inconnu) pour éviter l'énumération de comptes.
+   */
+  async resendVerification(email: string): Promise<ResendVerificationResponse> {
+    return apiClient.post<ResendVerificationResponse>(
+      API_ENDPOINTS.AUTH.RESEND_VERIFICATION,
+      { email },
+      { requiresAuth: false }
+    );
   }
 
   /**
@@ -76,7 +91,11 @@ class AuthService extends BaseService<BaseUser, RegisterData, Partial<BaseUser>>
     };
 
     if (response.access && response.refresh && response.user) {
-      tokenManager.setTokens(response.access, response.refresh);
+      // Choix du storage (localStorage/sessionStorage) selon "remember_me".
+      // Par défaut, on persiste durablement (true) pour préserver le
+      // comportement historique si la case n'est pas explicitement décochée.
+      const rememberMe = credentials.remember_me ?? true;
+      tokenManager.setTokens(response.access, response.refresh, rememberMe);
       tokenManager.saveUser(response.user);
 
       if (typeof window !== 'undefined') {

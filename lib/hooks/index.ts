@@ -5,7 +5,8 @@
 
 // Auth hooks
 export {
-    useCurrentUser, useIsAuthenticated, useLogin, useLogout, useRefreshToken, useRegister
+    useCurrentUser, useIsAuthenticated, useLogin, useLogout, useRefreshToken,
+    useRegister, useResendVerification, useVerifyEmail
 } from './auth';
 
 export { useAuth, useRequireAuth } from './useAuth';

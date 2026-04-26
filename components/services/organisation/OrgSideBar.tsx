@@ -2,23 +2,23 @@
 
 import { useOrgPermissions } from "@/components/permissions";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  useSidebar,
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+    useSidebar,
 } from "@/components/ui/sidebar";
 import { useOrganization } from "@/lib/hooks/core";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -26,40 +26,40 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import {
-  type CSSProperties,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    type CSSProperties,
+    type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  FaAngleDoubleLeft,
-  FaAngleDoubleRight,
-  FaArrowLeft,
-  FaBox,
-  FaBoxOpen,
-  FaBriefcase,
-  FaChartBar,
-  FaChevronDown,
-  FaClipboardCheck,
-  FaClipboardList,
-  FaCog,
-  FaCreditCard,
-  FaDochub,
-  FaExclamationTriangle,
-  FaReceipt,
-  FaSearch,
-  FaShoppingCart,
-  FaTachometerAlt,
-  FaTags,
-  FaTimes,
-  FaTruck,
-  FaUmbrellaBeach,
-  FaUserCheck,
-  FaUsers,
-  FaWarehouse
+    FaAngleDoubleLeft,
+    FaAngleDoubleRight,
+    FaArrowLeft,
+    FaBox,
+    FaBoxOpen,
+    FaBriefcase,
+    FaChartBar,
+    FaChevronDown,
+    FaClipboardCheck,
+    FaClipboardList,
+    FaCog,
+    FaCreditCard,
+    FaDochub,
+    FaExclamationTriangle,
+    FaReceipt,
+    FaSearch,
+    FaShoppingCart,
+    FaTachometerAlt,
+    FaTags,
+    FaTimes,
+    FaTruck,
+    FaUmbrellaBeach,
+    FaUserCheck,
+    FaUsers,
+    FaWarehouse
 } from "react-icons/fa";
 
 // ============================================================================
@@ -191,7 +191,7 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           title: "Devis & Pro Forma", 
           url: `${b}/inventory/quotes`, 
           icon: FaDochub,
-          // requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW 
+          requiredPermission: PERMISSIONS.SALES.VIEW 
         },
         { 
           title: "Clients", 
@@ -298,7 +298,7 @@ function NavGroup({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setOpen}>
-      <SidebarGroup className="py-0.5">
+      <SidebarGroup className="py-0.5" data-tour={`sidebar-group-${group.id}`}>
         <CollapsibleTrigger asChild>
           <SidebarGroupLabel
             className={cn(
@@ -550,7 +550,7 @@ function OrgSideBarInner({
   return (
     <Sidebar collapsible="icon">
       {/* ── Header ──────────────────────────────────────── */}
-      <SidebarHeader className="p-3 pb-2">
+      <SidebarHeader className="p-3 pb-2" data-tour="sidebar-header">
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Org avatar */}
           <div className="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center overflow-hidden">
@@ -590,7 +590,7 @@ function OrgSideBarInner({
       <div className="mx-3 h-px bg-sidebar-border/50 group-data-[collapsible=icon]:mx-1" />
 
       {/* ── Search filter — masqué en mode icon ─────────── */}
-      <div className="px-3 pt-2 pb-1 group-data-[collapsible=icon]:hidden">
+      <div className="px-3 pt-2 pb-1 group-data-[collapsible=icon]:hidden" data-tour="sidebar-search">
         <div className="relative">
           <FaSearch className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-sidebar-foreground/30" />
           <input

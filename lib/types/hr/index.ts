@@ -155,6 +155,28 @@ export interface Invitation {
   updated_by_info?: UserMiniInfo | null;
 }
 
+/**
+ * Vue publique d'une invitation depuis son token (lien email).
+ *
+ * Renvoyé par `GET /api/hr/invitations/by-token/<token>/`. Contient
+ * uniquement les informations nécessaires à l'affichage de la landing
+ * page d'invitation, jamais le token lui-même ni les permissions
+ * effectives.
+ */
+export interface InvitationByToken {
+  id: string;
+  email: string;
+  organization: InvitationOrganization;
+  invited_by: InvitationInvitedBy;
+  role: { id: string; name: string } | null;
+  department: InvitationDepartment | null;
+  position: InvitationPosition | null;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  expires_at: string;
+  is_expired: boolean;
+  created_at: string;
+}
+
 export interface CreateInvitationData {
   email: string;
   role_id?: string | null;

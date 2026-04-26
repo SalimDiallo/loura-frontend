@@ -2,42 +2,24 @@
 
 import { authService } from '@/lib/services/auth/auth.service';
 import type { RegisterData } from '@/lib/types';
-import { AuthResponse } from '@/lib/types/auth/auth';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { RegisterPendingResponse } from '@/lib/types/auth/auth';
+import { useMutation } from '@tanstack/react-query';
 
 /**
- * Hook pour l'inscription utilisateur
- * Crée un compte et authentifie automatiquement
+ * Hook pour l'inscription utilisateur.
+ *
+ * Le backend ne délivre PAS de tokens JWT à l'inscription : l'utilisateur
+ * doit confirmer son email via le lien envoyé par mail. Ce hook se contente
+ * de créer le compte et de retourner la réponse `RegisterPendingResponse`
+ * (le composant est responsable de la redirection vers /auth/verify-pending).
  */
 export function useRegister() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (data: RegisterData): Promise<AuthResponse> => {
+    mutationFn: async (data: RegisterData): Promise<RegisterPendingResponse> => {
       return authService.register(data);
     },
-
-    onSuccess: (data) => {
-      // Mettre à jour le cache de l'utilisateur courant
-      queryClient.setQueryData(['currentUser'], data.user);
-
-      // Invalider les queries liées à l'auth
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
-
-      // Dispatcher l'événement de login
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('loura:login', { detail: data }));
-      }
-    },
-
     onError: (error) => {
       console.error('Registration failed:', error);
-      // Nettoyer le localStorage en cas d'erreur
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('loura_access_token');
-        localStorage.removeItem('loura_refresh_token');
-        localStorage.removeItem('loura_user');
-      }
     },
   });
 }

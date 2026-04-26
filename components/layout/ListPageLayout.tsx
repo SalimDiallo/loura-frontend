@@ -281,12 +281,14 @@ export function ListPageLayout({
 }) {
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <PageHeader
-        title={title}
-        subtitle={description}
-        icon={icon}
-        actions={headerActions}
-      />
+      <div data-tour="page-header">
+        <PageHeader
+          title={title}
+          subtitle={description}
+          icon={icon}
+          actions={headerActions}
+        />
+      </div>
 
       {stats && stats.length > 0 && (
         <div className="grid gap-4 md:grid-cols-3">
@@ -297,7 +299,7 @@ export function ListPageLayout({
       )}
 
       {searchFilters ? (
-        <Card>
+        <Card data-tour="list-table">
           <CardHeader>
             <CardTitle>Liste</CardTitle>
             <CardDescription>Recherchez et gérez vos éléments</CardDescription>

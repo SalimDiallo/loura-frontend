@@ -43,16 +43,22 @@ export default function Logos() {
           <style>
             {`
               .logo-img {
-                filter: grayscale(1) brightness(0.8) opacity(0.3);
-                transition: filter 0.3s, opacity 0.3s;
+                /* En mode clair (white), logos s'affichent couleur = aucun filtre appliqué */
+                opacity: 0.9; /* plus visible */
+                filter: none;
+                filter: invert(0) brightness(1);
+                transition: 
+                  opacity 0.3s,
+                  filter 0.3s;
               }
               .logo-hover:hover .logo-img {
-                filter: none;
                 opacity: 1;
               }
               @media (prefers-color-scheme: dark) {
                 .logo-img {
                   filter: grayscale(1) invert(1) brightness(0.7) opacity(0.3);
+                  /* En mode dark : logos désaturés, effet inversé, faible opacité */
+                  opacity: 1;
                 }
                 .logo-hover:hover .logo-img {
                   filter: invert(0) brightness(1);
@@ -78,8 +84,6 @@ export default function Logos() {
               </div>
             ))}
           </Marquee>
-          <div className="pointer-events-none absolute inset-y-0 left-0 h-full w-1/3 bg-gradient-to-r from-background"></div>
-          <div className="pointer-events-none absolute inset-y-0 right-0 h-full w-1/3 bg-gradient-to-l from-background"></div>
         </div>
       </div>
     </section>

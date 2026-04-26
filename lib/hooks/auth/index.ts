@@ -13,3 +13,6 @@ export { useLogin } from './useLogin';
 export { useLogout } from './useLogout';
 export { useRefreshToken } from './useRefreshToken';
 export { useRegister } from './useRegister';
+export { useResendVerification } from './useResendVerification';
+export { useVerifyEmail } from './useVerifyEmail';
+

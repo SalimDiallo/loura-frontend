@@ -60,6 +60,7 @@ import type {
     Department,
     DepartmentTree,
     Invitation,
+    InvitationByToken,
     LeaveBalance,
     LeaveRequest,
     Membership,
@@ -458,6 +459,8 @@ export function useAcceptInvitation(): UseMutationResult<
       });
       // Invalider les organizations (car l'utilisateur rejoint une nouvelle org)
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      // Invalider les memberships (la nouvelle org doit apparaître dans la liste)
+      queryClient.invalidateQueries({ queryKey: hrQueryKeys.myMemberships });
       // Rafraîchir l'utilisateur courant
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
     },
@@ -482,6 +485,50 @@ export function useDeclineInvitation(): UseMutationResult<
       queryClient.invalidateQueries({
         queryKey: hrQueryKeys.pendingInvitations,
       });
+    },
+  });
+}
+
+/**
+ * Récupère une invitation à partir du token reçu par email.
+ *
+ * Endpoint public — pas besoin d'être connecté. Désactivé tant qu'aucun
+ * token n'a été fourni (on évite ainsi un fetch parasite).
+ */
+export function useInvitationByToken(
+  token: string | null,
+): UseQueryResult<InvitationByToken, Error> {
+  return useQuery({
+    queryKey: ['invitations', 'by-token', token],
+    queryFn: () => invitationService.getByToken(token as string),
+    enabled: Boolean(token),
+    // Pas de retry sur 404 (token invalide) ; une seule tentative suffit.
+    retry: false,
+    // L'utilisateur peut reconfirmer via un bouton, on ne refetch pas tout seul.
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Accepte une invitation à partir du token reçu par email.
+ */
+export function useAcceptInvitationByToken(): UseMutationResult<
+  AcceptInvitationResponse,
+  Error,
+  string
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (token: string) => invitationService.acceptByToken(token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: hrQueryKeys.pendingInvitations,
+      });
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      queryClient.invalidateQueries({ queryKey: hrQueryKeys.myMemberships });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
     },
   });
 }

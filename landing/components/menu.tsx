@@ -4,13 +4,13 @@ import Link from "next/link";
 import * as React from "react";
 
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
+    NavigationMenu,
+    NavigationMenuContent,
+    NavigationMenuItem,
+    NavigationMenuLink,
+    NavigationMenuList,
+    NavigationMenuTrigger,
+    navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { siteConfig } from "@/landing/lib/config";
 import { cn } from "@/landing/lib/utils";

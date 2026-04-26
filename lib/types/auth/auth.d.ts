@@ -100,6 +100,47 @@ export interface LoginResponse {
 export type RegisterResponse = LoginResponse;
 
 /**
+ * Réponse de l'endpoint /auth/register/.
+ *
+ * Aucun token JWT n'est délivré au moment de l'inscription : l'utilisateur
+ * doit d'abord confirmer son email. Le payload contient uniquement les
+ * informations nécessaires pour rediriger vers /auth/verify-pending.
+ */
+export interface RegisterPendingResponse {
+  message: string;
+  data: {
+    user: BaseUser;
+    requires_email_verification: true;
+  };
+}
+
+/**
+ * Réponse de /auth/email/verify/ (POST { token }).
+ */
+export interface VerifyEmailResponse {
+  message: string;
+  data: {
+    user: BaseUser;
+  };
+}
+
+/**
+ * Réponse neutre du renvoi de mail (200 même si l'email n'existe pas).
+ */
+export interface ResendVerificationResponse {
+  message: string;
+}
+
+/**
+ * Données d'un échec de login pour cause d'email non vérifié (HTTP 403).
+ */
+export interface EmailNotVerifiedError {
+  message: string;
+  code: 'email_not_verified';
+  email: string;
+}
+
+/**
  * Format de réponse aplati pour l'usage frontend
  * Extrait les tokens du niveau `data` pour simplifier l'usage
  */
@@ -120,6 +161,13 @@ export interface AuthResponse {
 export interface LoginCredentials {
   email: string;
   password: string;
+  /**
+   * Si vrai, les tokens sont persistés dans localStorage et la durée de vie
+   * du refresh token est prolongée côté backend.
+   * Sinon, les tokens sont stockés en sessionStorage (effacés à la fermeture
+   * du navigateur) et la durée de vie standard est appliquée.
+   */
+  remember_me?: boolean;
 }
 
 /**

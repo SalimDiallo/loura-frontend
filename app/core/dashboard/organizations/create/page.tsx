@@ -18,7 +18,7 @@ import {
   PartyPopper,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 // ============================================================================
@@ -38,6 +38,8 @@ const STEPS = [
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isOnboarding = searchParams.get("onboarding") === "1";
   const [step, setStep] = useState(1);
   const [createdOrgId, setCreatedOrgId] = useState<string | null>(null);
 
@@ -132,8 +134,13 @@ export default function CreateOrganizationPage() {
     if (logoFile && createdOrgId) {
       await handleLogoUpload();
     }
-    router.push("/core/dashboard");
-  }, [logoFile, createdOrgId, handleLogoUpload, router]);
+    // Si on était dans le flow onboarding, on enchaîne sur la visite guidée de la nouvelle org
+    if (isOnboarding && createdOrgId) {
+      router.push(`/organisation/${createdOrgId}/dashboard?onboarding=1`);
+    } else {
+      router.push("/core/dashboard");
+    }
+  }, [logoFile, createdOrgId, handleLogoUpload, router, isOnboarding]);
 
   // ========================================================================
   // RENDER

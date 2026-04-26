@@ -1,5 +1,6 @@
 "use client";
 
+import PageHelper from "@/components/services/organisation/PageHelper";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -128,9 +129,11 @@ export function PageHeader({
           </div>
         </div>
 
-        {/* Right side - Actions */}
-        {actions.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+        {/* Right side - Helper + Actions */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+          <PageHelper />
+          {actions.length > 0 && (
+          <>
             {actions.map((action, index) => {
               const ActionIcon = action.icon;
               const isLastAction = index === actions.length - 1;
@@ -157,6 +160,8 @@ export function PageHeader({
                 isLastAction && actions.length > 1 && "order-first sm:order-last"
               );
 
+              const tourAttr = isLastAction ? "page-action-create" : undefined;
+
               if (action.href) {
                 return (
                   <Button
@@ -165,6 +170,7 @@ export function PageHeader({
                     disabled={action.disabled || action.loading}
                     asChild
                     className={buttonClassName}
+                    data-tour={tourAttr}
                   >
                     <Link href={action.href}>{buttonContent}</Link>
                   </Button>
@@ -178,13 +184,15 @@ export function PageHeader({
                   onClick={action.onClick}
                   disabled={action.disabled || action.loading}
                   className={buttonClassName}
+                  data-tour={tourAttr}
                 >
                   {buttonContent}
                 </Button>
               );
             })}
-          </div>
-        )}
+          </>
+          )}
+        </div>
       </div>
     </div>
   );

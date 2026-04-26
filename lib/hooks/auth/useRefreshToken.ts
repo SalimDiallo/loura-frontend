@@ -1,11 +1,12 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
+import { apiClient, tokenManager } from '@/lib/api/client';
 import { API_ENDPOINTS } from '@/lib/api/config';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface RefreshTokenResponse {
   access: string;
+  refresh?: string;
 }
 
 /**
@@ -17,9 +18,7 @@ export function useRefreshToken() {
 
   return useMutation({
     mutationFn: async (): Promise<RefreshTokenResponse> => {
-      const refreshToken = typeof window !== 'undefined'
-        ? localStorage.getItem('loura_refresh_token')
-        : null;
+      const refreshToken = tokenManager.getRefreshToken();
 
       if (!refreshToken) {
         throw new Error('No refresh token available');
@@ -34,10 +33,12 @@ export function useRefreshToken() {
     },
 
     onSuccess: (data) => {
-      // Mettre à jour le token d'accès dans localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('loura_access_token', data.access);
-      }
+      // Met à jour les tokens via le tokenManager pour respecter le storage
+      // (localStorage / sessionStorage) choisi via "Se souvenir de moi".
+      // SimpleJWT renvoie un nouveau refresh quand ROTATE_REFRESH_TOKENS est
+      // activé : on le préserve si présent, sinon on conserve l'actuel.
+      const currentRefresh = tokenManager.getRefreshToken() ?? '';
+      tokenManager.setTokens(data.access, data.refresh ?? currentRefresh);
 
       // Invalider les queries pour refetch avec le nouveau token
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
@@ -47,11 +48,7 @@ export function useRefreshToken() {
       console.error('Token refresh failed:', error);
 
       // Nettoyer l'auth si le refresh échoue
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('loura_access_token');
-        localStorage.removeItem('loura_refresh_token');
-        localStorage.removeItem('loura_user');
-      }
+      tokenManager.clearTokens();
 
       // Nettoyer le cache
       queryClient.clear();

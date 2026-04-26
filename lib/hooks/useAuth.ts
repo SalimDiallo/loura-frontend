@@ -1,9 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useLogin, useLogout, useRegister, useIsAuthenticated } from './auth';
-import { useUser } from './useUser';
 import type { LoginCredentials, RegisterData } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import { useIsAuthenticated, useLogin, useLogout, useRegister } from './auth';
+import { useUser } from './useUser';
 
 /**
  * Hook principal pour la gestion de l'authentification
@@ -45,11 +45,23 @@ export function useAuth() {
   };
 
   /**
-   * Inscription avec redirection automatique
+   * Inscription : crée le compte puis redirige vers la page d'attente
+   * de vérification d'email. Le backend ne délivre PAS de tokens : il faut
+   * que l'utilisateur clique sur le lien envoyé par email.
+   *
+   * @param data        Payload d'inscription.
+   * @param redirectTo  Destination après création. Par défaut, la page
+   *                    d'attente avec l'email en query.
    */
-  const register = async (data: RegisterData, redirectTo: string = '/dashboard') => {
+  const register = async (
+    data: RegisterData,
+    redirectTo?: string,
+  ) => {
     const result = await registerMutation.mutateAsync(data);
-    router.push(redirectTo);
+    const target =
+      redirectTo
+      ?? `/auth/verify-pending?email=${encodeURIComponent(data.email)}`;
+    router.push(target);
     return result;
   };
 

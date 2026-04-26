@@ -1,4 +1,3 @@
-import { Icons } from "@/landing/components/icons";
 import { FaTwitter } from "react-icons/fa";
 import { FaYoutube } from "react-icons/fa6";
 import { RiInstagramFill } from "react-icons/ri";
@@ -29,49 +28,7 @@ export const siteConfig = {
     instagram: "https://instagram.com/louratech/",
   },
   header: [
-    {
-      trigger: "Modules",
-      content: {
-        main: {
-          icon: <Icons.logo className="h-6 w-6" />,
-          title: "Modules Intégrés & Intelligents",
-          description: "Gérez l'ensemble de votre entreprise sur une seule plateforme.",
-          href: "#",
-        },
-        items: [
-          {
-            href: "#",
-            title: "Ressources humaines",
-            description: "Pilotez vos équipes, congés et paies facilement.",
-          },
-          {
-            href: "#",
-            title: "Gestion de Stock",
-            description: "Suivi des inventaires, alertes, entrées/sorties centralisées.",
-          },
-          {
-            href: "#",
-            title: "CRM & Clients",
-            description: "Centralisez la relation client, suivez vos opportunités et ventes.",
-          },
-          {
-            href: "#",
-            title: "Facturation",
-            description: "Éditez devis et factures, suivez les paiements & relances.",
-          },
-          {
-            href: "#",
-            title: "Gestion de Projets",
-            description: "Planifiez, suivez l’avancement et collaborez efficacement.",
-          },
-          {
-            href: "#",
-            title: "Reporting & Tableaux de bord",
-            description: "Visualisez vos indicateurs clés pour piloter l’activité.",
-          },
-        ],
-      },
-    },
+   
     {
       trigger: "Solutions",
       content: {
@@ -112,6 +69,10 @@ export const siteConfig = {
     {
       href: "/blog",
       label: "Blog",
+    },
+    {
+      href: "/docs/documentation",
+      label: "Docs",
     },
   ],
   pricing: [

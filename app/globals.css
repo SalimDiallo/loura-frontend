@@ -349,3 +349,179 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ─── Documentation prose ─────────────────────────────────────────── */
+.docs-prose {
+  @apply text-[15px] leading-[1.7] text-foreground/90;
+}
+.docs-prose > * + * {
+  @apply mt-5;
+}
+.docs-prose h2 {
+  @apply text-2xl font-bold tracking-tight text-foreground mt-12 mb-3 pb-2 border-b border-border scroll-mt-20;
+}
+.docs-prose h3 {
+  @apply text-lg font-semibold tracking-tight text-foreground mt-8 mb-2 scroll-mt-20;
+}
+.docs-prose h4 {
+  @apply text-base font-semibold text-foreground mt-6 mb-2;
+}
+.docs-prose .doc-heading-anchor {
+  @apply mr-2 text-muted-foreground/30 no-underline hover:text-primary transition-colors;
+}
+.docs-prose p {
+  @apply my-4;
+}
+.docs-prose a {
+  @apply text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary transition-colors;
+}
+.docs-prose strong {
+  @apply font-semibold text-foreground;
+}
+.docs-prose ul,
+.docs-prose ol {
+  @apply my-4 pl-6 space-y-1.5;
+}
+.docs-prose ul {
+  @apply list-disc marker:text-muted-foreground/40;
+}
+.docs-prose ol {
+  @apply list-decimal marker:text-muted-foreground/60;
+}
+.docs-prose li > p {
+  @apply my-1;
+}
+.docs-prose blockquote {
+  @apply border-l-2 border-primary/40 pl-4 my-5 italic text-muted-foreground;
+}
+.docs-prose hr {
+  @apply my-10 border-border;
+}
+.docs-prose code:not(pre code) {
+  @apply px-1.5 py-0.5 rounded bg-muted text-foreground text-[13px] font-mono;
+}
+.docs-prose pre {
+  @apply my-5 p-4 rounded-lg bg-neutral-50 dark:bg-neutral-950 border border-border overflow-x-auto text-[13px] leading-relaxed;
+}
+.docs-prose pre code {
+  @apply font-mono;
+}
+.docs-prose pre [data-line] {
+  @apply px-1;
+}
+.docs-prose figure[data-rehype-pretty-code-figure] {
+  @apply my-5;
+}
+.docs-prose [data-rehype-pretty-code-title] {
+  @apply text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-t-lg border border-b-0 border-border -mb-px block;
+}
+.docs-prose table {
+  @apply w-full my-6 text-sm border-collapse;
+}
+.docs-prose thead {
+  @apply border-b border-border;
+}
+.docs-prose th {
+  @apply text-left font-semibold text-foreground px-3 py-2;
+}
+.docs-prose td {
+  @apply px-3 py-2 border-b border-border/60;
+}
+.docs-prose img {
+  @apply rounded-lg border border-border my-5;
+}
+.docs-prose kbd {
+  @apply px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[11px] text-foreground;
+}
+
+/* ─── Composants doc enrichis ────────────────────────────────────────── */
+
+/* Callouts */
+.docs-prose .doc-callout {
+  @apply my-6 rounded-lg border-l-4 px-5 py-4 bg-muted/30;
+}
+.docs-prose .doc-callout-title {
+  @apply text-[12px] font-semibold uppercase tracking-[0.12em] m-0 mb-2;
+}
+.docs-prose .doc-callout-body > * {
+  @apply m-0;
+}
+.docs-prose .doc-callout-body > * + * {
+  @apply mt-2;
+}
+.docs-prose .doc-callout-body p {
+  @apply m-0 text-[14px] leading-relaxed;
+}
+.docs-prose .doc-callout-info {
+  @apply border-blue-500/60 bg-blue-500/5;
+}
+.docs-prose .doc-callout-info .doc-callout-title {
+  @apply text-blue-700 dark:text-blue-400;
+}
+.docs-prose .doc-callout-tip {
+  @apply border-violet-500/60 bg-violet-500/5;
+}
+.docs-prose .doc-callout-tip .doc-callout-title {
+  @apply text-violet-700 dark:text-violet-400;
+}
+.docs-prose .doc-callout-warning {
+  @apply border-amber-500/60 bg-amber-500/5;
+}
+.docs-prose .doc-callout-warning .doc-callout-title {
+  @apply text-amber-700 dark:text-amber-400;
+}
+.docs-prose .doc-callout-success {
+  @apply border-emerald-500/60 bg-emerald-500/5;
+}
+.docs-prose .doc-callout-success .doc-callout-title {
+  @apply text-emerald-700 dark:text-emerald-400;
+}
+
+/* Vidéo YouTube */
+.docs-prose .doc-video {
+  @apply my-7;
+}
+.docs-prose .doc-video-frame {
+  @apply relative w-full overflow-hidden rounded-lg border border-border bg-black;
+  aspect-ratio: 16 / 9;
+}
+.docs-prose .doc-video-frame iframe {
+  @apply absolute inset-0 w-full h-full;
+}
+.docs-prose .doc-video-caption {
+  @apply text-[12px] text-muted-foreground text-center mt-2 italic m-0;
+}
+
+/* Image avec légende */
+.docs-prose .doc-image {
+  @apply my-7;
+}
+.docs-prose .doc-image img {
+  @apply w-full rounded-lg border border-border my-0 shadow-sm;
+}
+.docs-prose .doc-image figcaption {
+  @apply text-[12px] text-muted-foreground text-center mt-2 italic;
+}
+
+/* Steps numérotés */
+.docs-prose .doc-steps {
+  @apply my-6 list-none p-0 space-y-4;
+}
+.docs-prose .doc-step {
+  @apply flex gap-4 pl-0;
+}
+.docs-prose .doc-step-num {
+  @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[13px] font-bold tabular-nums mt-0.5;
+}
+.docs-prose .doc-step-body {
+  @apply flex-1 min-w-0;
+}
+.docs-prose .doc-step-body > * {
+  @apply m-0;
+}
+.docs-prose .doc-step-body > * + * {
+  @apply mt-2;
+}
+.docs-prose .doc-step-body p:first-child {
+  @apply font-medium text-foreground text-[15px];
+}
