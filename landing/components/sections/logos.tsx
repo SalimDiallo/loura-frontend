@@ -1,90 +1,47 @@
-import Marquee from "@/landing/components/magicui/marquee";
 import Image from "next/image";
+import Link from "next/link";
 
-const compagnies = [
-  {
-    name: "EasyTrip",
-    logo: "/images/landing/compagnies/easytrip.svg"
-  },
-  {
-    name: "Diora",
-    logo: "/images/landing/compagnies/diora.svg"
-  },
-  {
-    name: "Nimba Miel",
-    logo: "/images/landing/compagnies/nimbamiel.svg"
-  },
-  {
-    name: "It Solutions",
-    logo: "/images/landing/compagnies/itsolutions.svg"
-  },
-  {
-    name: "Avitech Guinée",
-    logo: "/images/landing/compagnies/avitech.svg"
-  },
-  {
-    name: "Faabeh",
-    logo: "/images/landing/compagnies/faabeh.svg"
-  },
-  {
-    name: "Broderix",
-    logo: "/images/landing/compagnies/broderix.svg"
-  }
+type Compagnie = {
+  name: string;
+  logo: string;
+};
+
+const compagnies: Compagnie[] = [
+  { name: "EasyTrip", logo: "/images/landing/compagnies/easytrip.svg" },
+  { name: "Diora", logo: "/images/landing/compagnies/diora.svg" },
+  { name: "Nimba Miel", logo: "/images/landing/compagnies/nimbamiel.svg" },
+  { name: "Avitech Guinée", logo: "/images/landing/compagnies/avitech.svg" },
+  { name: "It Solutions", logo: "/images/landing/compagnies/itsolutions.svg" },
+  { name: "Faabeh", logo: "/images/landing/compagnies/faabeh.svg" },
+  { name: "Broderix", logo: "/images/landing/compagnies/broderix.svg" },
+  { name: "Time Informatique", logo: "/images/landing/compagnies/timeinformatique.svg" },
 ];
 
-export default function Logos() {
+const half = Math.ceil(compagnies.length / 2);
+const rowOne = compagnies.slice(0, half);
+const rowTwo = compagnies.slice(half);
+
+export default function Logos() {  
   return (
-    <section id="logos">
-      <div className="container mx-auto px-4 md:px-8 py-12">
-        <h3 className="text-center text-sm font-semibold text-gray-500">
-          PARTENAIRES DE CONFIANCE
-        </h3>
-        <div className="relative mt-6">
-          <style>
-            {`
-              .logo-img {
-                /* En mode clair (white), logos s'affichent couleur = aucun filtre appliqué */
-                opacity: 0.9; /* plus visible */
-                filter: none;
-                filter: invert(0) brightness(1);
-                transition: 
-                  opacity 0.3s,
-                  filter 0.3s;
-              }
-              .logo-hover:hover .logo-img {
-                opacity: 1;
-              }
-              @media (prefers-color-scheme: dark) {
-                .logo-img {
-                  filter: grayscale(1) invert(1) brightness(0.7) opacity(0.3);
-                  /* En mode dark : logos désaturés, effet inversé, faible opacité */
-                  opacity: 1;
-                }
-                .logo-hover:hover .logo-img {
-                  filter: invert(0) brightness(1);
-                  opacity: 1;
-                }
-              }
-            `}
-          </style>
-          <Marquee className="max-w-full [--duration:40s]">
-            {compagnies.map((c, idx) => (
-              <div
-                key={idx}
-                className="logo-hover flex items-center justify-center h-20 w-48 transition"
-              >
-                <Image
-                  width={112}
-                  height={40}
-                  src={c.logo}
-                  className="logo-img h-20 w-48"
-                  alt={c.name}
-                  draggable={false}
-                />
-              </div>
-            ))}
-          </Marquee>
-        </div>
+    <section
+      id="company"
+      className="flex flex-col items-center justify-center gap-8 py-16 pt-24 w-full relative px-6"
+    >
+      <h2 className="text-3xl md:text-4xl lg:text-5xl tracking-tight text-center text-balance pb-2">
+        <span className="font-display font-bold">Ils</span>
+        <span className="text-muted-foreground font-normal"> nous font </span>
+        <span className="font-display font-bold italic">confiance</span>
+      </h2>
+      <div className="grid w-full max-w-6xl grid-cols-2 md:grid-cols-4 overflow-hidden border-y border-border items-center justify-center z-20">
+        {compagnies.slice(0, 8).map((c) => (
+          <Link
+            href="#"
+            className="group w-full h-32 flex items-center justify-center relative p-4 before:absolute before:-left-1 before:top-0 before:z-10 before:h-screen before:w-px before:bg-border before:content-[''] after:absolute after:-top-1 after:left-0 after:z-10 after:h-px after:w-screen after:bg-border after:content-[''] opacity-90 hover:opacity-100 transition-opacity duration-300"
+            key={c.name}
+          >
+            <Image src={c.logo} alt={c.name} width={200} height={200} className="flex items-center justify-center w-full h-full transition-all duration-300" />
+          </Link>
+        ))}
       </div>
     </section>
   );
