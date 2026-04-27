@@ -5,12 +5,12 @@
 import { apiClient } from '@/lib/api/client';
 import { API_ENDPOINTS } from '@/lib/api/config';
 import type {
-  PositionAssignment,
   CreatePositionAssignmentData,
-  UpdatePositionAssignmentData,
   CreatePositionAssignmentResponse,
-  UpdatePositionAssignmentResponse,
   DeletePositionAssignmentResponse,
+  PositionAssignment,
+  UpdatePositionAssignmentData,
+  UpdatePositionAssignmentResponse,
 } from '@/lib/types/hr';
 
 export const assignmentsService = {
@@ -29,7 +29,7 @@ export const assignmentsService = {
   ) {
     return apiClient.get<PositionAssignment[]>(
       API_ENDPOINTS.HR.ASSIGNMENTS.LIST(orgId),
-      params
+      { params }
     );
   },
 

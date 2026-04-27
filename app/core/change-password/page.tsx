@@ -1,12 +1,13 @@
 'use client';
 
 import {
-  Alert,
-  Button,
-  Form,
-  PasswordFieldWithToggle
+    Alert,
+    Button,
+    Form,
+    PasswordFieldWithToggle
 } from '@/components/ui';
 import { Card } from '@/components/ui/card';
+import { ApiError } from '@/lib/api';
 import { useChangePassword } from '@/lib/hooks/profile/useChangePassword';
 import { useZodForm } from '@/lib/hooks/useZodForm';
 import { ArrowLeft, Key } from 'lucide-react';

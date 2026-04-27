@@ -57,27 +57,19 @@ export function useFileUpload(options: FileUploadOptions) {
       // Uploader le fichier
       setUploadProgress(0);
 
-      const response = await apiClient.post<{ message: string; data: any }>(
+      const response = await apiClient.post<{ message: string; data: { avatar_url?: string } }>(
         options.endpoint,
         formData,
         {
-          // Ne pas définir Content-Type pour FormData
-          // Le navigateur va automatiquement ajouter le boundary
           headers: {},
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              setUploadProgress(progress);
-              options.onProgress?.(progress);
-            }
-          },
         }
       );
 
       setUploadProgress(100);
+      options.onProgress?.(100);
 
       return {
-        url: response.data.avatar_url || '',
+        url: response.data?.avatar_url || '',
         message: response.message,
       };
     },

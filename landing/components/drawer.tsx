@@ -1,18 +1,17 @@
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger
 } from "@/components/ui/drawer";
 import { Icons } from "@/landing/components/icons";
 import { buttonVariants } from "@/landing/components/ui/button";
 import { siteConfig } from "@/landing/lib/config";
 import { cn } from "@/landing/lib/utils";
 import Link from "next/link";
-import { VisuallyHidden } from "radix-ui";
 import { IoMenuSharp } from "react-icons/io5";
 export default function drawerDemo() {
   return (
@@ -21,12 +20,8 @@ export default function drawerDemo() {
         <IoMenuSharp className="text-2xl" />
       </DrawerTrigger>
       <DrawerContent>
-        <DrawerTitle>
-          <VisuallyHidden>Navigation</VisuallyHidden>
-        </DrawerTitle>
-        <DrawerDescription>
-          <VisuallyHidden>Navigation</VisuallyHidden>
-        </DrawerDescription>
+        <DrawerTitle className="sr-only">Navigation</DrawerTitle>
+        <DrawerDescription className="sr-only">Navigation</DrawerDescription>
         <DrawerHeader className="px-6">
           <div className="">
             <Link

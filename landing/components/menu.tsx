@@ -4,34 +4,45 @@ import Link from "next/link";
 import * as React from "react";
 
 import {
-    NavigationMenu,
-    NavigationMenuContent,
-    NavigationMenuItem,
-    NavigationMenuLink,
-    NavigationMenuList,
-    NavigationMenuTrigger,
-    navigationMenuTriggerStyle,
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { siteConfig } from "@/landing/lib/config";
 import { cn } from "@/landing/lib/utils";
 
+type HeaderItem = {
+  trigger?: string
+  href?: string
+  label?: string
+  content?: {
+    main?: { href: string; title: string; description: string; icon?: React.ReactNode }
+    items: { title: string; href: string; description: string }[]
+  }
+}
+
 export default function NavigationMenuDemo() {
+  const headerItems = siteConfig.header as HeaderItem[]
   return (
     <NavigationMenu>
       <NavigationMenuList>
-        {siteConfig.header.map((item, index) => (
+        {headerItems.map((item, index) => (
           <NavigationMenuItem key={index}>
             {item.trigger ? (
               <>
                 <NavigationMenuTrigger>{item.trigger}</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul
-                    className={`grid gap-3 p-6 ${item.content.main
+                    className={`grid gap-3 p-6 ${item.content?.main
                       ? "md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]"
                       : "w-[400px] md:w-[500px] md:grid-cols-2 lg:w-[600px]"
                       }`}
                   >
-                    {item.content.main && (
+                    {item.content?.main && (
                       <li className="row-span-3">
                         <NavigationMenuLink asChild>
                           <Link
@@ -49,7 +60,7 @@ export default function NavigationMenuDemo() {
                         </NavigationMenuLink>
                       </li>
                     )}
-                    {item.content.items.map((subItem, subIndex) => (
+                    {item.content?.items.map((subItem, subIndex) => (
                       <ListItem
                         key={subIndex}
                         href={subItem.href}

@@ -9,6 +9,7 @@ import type {
     FilterParams,
     Membership,
     MyMembership,
+    MyOrgPermissions,
     PaginatedResponse,
     UpdateMembershipData,
     UpdateMembershipResponse

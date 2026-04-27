@@ -5,13 +5,13 @@
 import { apiClient } from '@/lib/api/client';
 import { API_ENDPOINTS } from '@/lib/api/config';
 import type {
-  Department,
-  DepartmentTree,
-  CreateDepartmentData,
-  UpdateDepartmentData,
-  CreateDepartmentResponse,
-  UpdateDepartmentResponse,
-  DeleteDepartmentResponse,
+    CreateDepartmentData,
+    CreateDepartmentResponse,
+    DeleteDepartmentResponse,
+    Department,
+    DepartmentTree,
+    UpdateDepartmentData,
+    UpdateDepartmentResponse,
 } from '@/lib/types/hr';
 
 export const departmentsService = {
@@ -21,7 +21,7 @@ export const departmentsService = {
   async getAll(orgId: string, params?: { search?: string; page_size?: string | number }) {
     return apiClient.get<Department[]>(
       API_ENDPOINTS.HR.DEPARTMENTS.LIST(orgId),
-      params
+      { params }
     );
   },
 
