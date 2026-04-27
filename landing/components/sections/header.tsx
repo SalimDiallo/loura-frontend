@@ -1,5 +1,6 @@
 "use client";
 
+import { InstallButton } from "@/components/pwa/InstallButton";
 import { buttonVariants, ThemeToggle } from "@/components/ui";
 import Logo from "@/components/ui/Logo";
 import { Icons } from "@/landing/components/icons";
@@ -51,7 +52,8 @@ export default function Header() {
 
             <ThemeToggle />
 
-            <div className="gap-2 flex">
+            <div className="gap-2 flex items-center">
+              <InstallButton className="hidden xl:inline-flex" />
               <Link
                 href="/auth"
                 className={buttonVariants({ variant: "outline" })}
@@ -71,8 +73,11 @@ export default function Header() {
             </div>
           </div>
         </div>
-        <div className="mt-2 cursor-pointer block lg:hidden">
-          <Drawer />
+        <div className="mt-2 flex items-center gap-2 lg:hidden">
+          <InstallButton />
+          <div className="cursor-pointer">
+            <Drawer />
+          </div>
         </div>
       </div>
       <hr
