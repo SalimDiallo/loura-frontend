@@ -15,7 +15,7 @@ import type { ActiveContractExistsError, Contract, ContractStatus, ContractType 
 import { formatCurrency } from "@/utils/formatters";
 import { AlertTriangle, CalendarDays, DollarSign, FileText, Loader2, Save, UserCheck } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const CONTRACT_TYPES: { id: ContractType; label: string }[] = [
@@ -48,7 +48,9 @@ const CONTRACT_STATUSES: { id: ContractStatus; label: string }[] = [
 export default function CreateContractPageWrapper() {
   return (
     <PermissionGuard permission={PERMISSIONS.CONTRACTS.MANAGE}>
-      <CreateContractPage />
+      <Suspense fallback={null}>
+        <CreateContractPage />
+      </Suspense>
     </PermissionGuard>
   );
 }

@@ -46,14 +46,16 @@ import {
     Warehouse as WarehouseIcon,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { FaMoneyBillWave, FaPlus } from "react-icons/fa";
 import { toast } from "sonner";
 
 export default function CreateSalePageWrapper() {
     return (
         <PermissionGuard permission={PERMISSIONS.SALES.MANAGE}>
-            <CreateSalePage />
+            <Suspense fallback={null}>
+                <CreateSalePage />
+            </Suspense>
         </PermissionGuard>
     );
 }

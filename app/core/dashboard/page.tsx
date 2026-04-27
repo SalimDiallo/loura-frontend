@@ -26,7 +26,7 @@ import {
     X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 // ============================================================================
@@ -373,7 +373,7 @@ function EmptyState({
 // MAIN PAGE
 // ============================================================================
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: user, isLoading: isUserLoading, isError } = useCurrentUser();
@@ -758,5 +758,13 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

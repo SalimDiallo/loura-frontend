@@ -8,18 +8,18 @@ import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
 import { useCategories, useCreateOrganization, useUploadOrganizationLogo } from "@/lib/hooks/core";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  Check,
-  Globe,
-  ImagePlus,
-  Loader2,
-  PartyPopper,
-  X,
+    ArrowLeft,
+    ArrowRight,
+    Building2,
+    Check,
+    Globe,
+    ImagePlus,
+    Loader2,
+    PartyPopper,
+    X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
 
 // ============================================================================
 // STEP DEFINITIONS
@@ -36,7 +36,7 @@ const STEPS = [
 // COMPONENT
 // ============================================================================
 
-export default function CreateOrganizationPage() {
+function CreateOrganizationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOnboarding = searchParams.get("onboarding") === "1";
@@ -392,5 +392,13 @@ export default function CreateOrganizationPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CreateOrganizationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center"><span className="text-sm text-muted-foreground">Chargement…</span></div>}>
+      <CreateOrganizationContent />
+    </Suspense>
   );
 }

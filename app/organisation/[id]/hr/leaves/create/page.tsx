@@ -22,7 +22,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import type { LeaveType } from "@/lib/types";
 import { CalendarDays, FileText, Loader2, Save, UserCheck } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const LEAVE_TYPES: { id: LeaveType; label: string }[] = [
@@ -51,7 +51,7 @@ function countWorkingDays(start: string, end: string): number {
     return count;
 }
 
-export default function CreateLeavePage() {
+function CreateLeavePageContent() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -367,5 +367,13 @@ export default function CreateLeavePage() {
                 </CardContent>
             </Card>
         </FormPageLayout>
+    );
+}
+
+export default function CreateLeavePage() {
+    return (
+        <Suspense fallback={null}>
+            <CreateLeavePageContent />
+        </Suspense>
     );
 }

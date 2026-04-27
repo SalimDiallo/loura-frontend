@@ -12,7 +12,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import type { PaymentType } from "@/lib/types";
 import { CalendarDays, DollarSign, FileText, Loader2, Save, UserCheck } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const PAYMENT_TYPES: { id: PaymentType; label: string; desc: string }[] = [
@@ -25,7 +25,9 @@ const PAYMENT_TYPES: { id: PaymentType; label: string; desc: string }[] = [
 export default function CreatePaymentPageWrapper() {
   return (
     <PermissionGuard permission={PERMISSIONS.PAYMENTS.MANAGE}>
-      <CreatePaymentPage />
+      <Suspense fallback={null}>
+        <CreatePaymentPage />
+      </Suspense>
     </PermissionGuard>
   );
 }

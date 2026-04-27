@@ -11,10 +11,10 @@ import { useCreateAdvanceRequest, useMembers } from "@/lib/hooks/hr";
 import { PERMISSIONS } from "@/lib/permissions";
 import { CalendarDays, DollarSign, FileText, Loader2, Save, UserCheck } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-export default function CreateAdvancePage() {
+function CreateAdvancePageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -189,5 +189,13 @@ export default function CreateAdvancePage() {
         </CardContent>
       </Card>
     </FormPageLayout>
+  );
+}
+
+export default function CreateAdvancePage() {
+  return (
+    <Suspense fallback={null}>
+      <CreateAdvancePageContent />
+    </Suspense>
   );
 }

@@ -17,7 +17,7 @@ import { useCreateLeaveBalance, useMembers } from "@/lib/hooks/hr";
 import { PERMISSIONS } from "@/lib/permissions";
 import { Loader2, Save, UserCheck } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // Valeur de secours côté UI ; le backend renverra max_days via le solde après
@@ -27,7 +27,9 @@ const DEFAULT_MAX_DAYS = 60;
 export default function CreateLeaveBalancePageWrapper() {
     return (
         <PermissionGuard permission={PERMISSIONS.LEAVES.MANAGE_BALANCES}>
-            <CreateLeaveBalancePage />
+            <Suspense fallback={null}>
+                <CreateLeaveBalancePage />
+            </Suspense>
         </PermissionGuard>
     );
 }

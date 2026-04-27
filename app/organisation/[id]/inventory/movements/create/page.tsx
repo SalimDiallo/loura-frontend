@@ -2,7 +2,6 @@
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { PermissionGuard } from "@/components/permissions";
-import { getApiErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -14,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
+import { getApiErrorMessage } from "@/lib/api";
 import {
     useCreateStockMovement,
     useProducts,
@@ -39,13 +39,15 @@ import {
     Warehouse as WarehouseIcon,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function CreateMovementPageWrapper() {
     return (
         <PermissionGuard permission={PERMISSIONS.STOCK.MANAGE}>
-            <CreateMovementPage />
+            <Suspense fallback={null}>
+                <CreateMovementPage />
+            </Suspense>
         </PermissionGuard>
     );
 }

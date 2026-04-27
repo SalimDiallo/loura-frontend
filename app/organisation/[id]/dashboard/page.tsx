@@ -12,7 +12,7 @@ import {
     PanelLeft,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 // Utilitaire pour un affichage fluide et naturel de la date/heure et de la salutation
 function getSmoothDateTimeInfo() {
@@ -81,7 +81,7 @@ function getSmoothDateTimeInfo() {
 
 const ORG_TOUR_STORAGE_KEY = "org-tour-completed";
 
-export default function OrganizationDashboardPage() {
+function OrganizationDashboardPageContent() {
   const { id: orgId } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -238,5 +238,13 @@ export default function OrganizationDashboardPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function OrganizationDashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrganizationDashboardPageContent />
+    </Suspense>
   );
 }
