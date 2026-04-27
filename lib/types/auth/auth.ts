@@ -76,6 +76,29 @@ export interface ResendVerificationResponse {
 }
 
 /**
+ * Réponse neutre de /auth/password/forgot/ (200 même si l'email n'existe pas).
+ */
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+/**
+ * Réponse de /auth/password/reset/ après mise à jour réussie.
+ */
+export interface ResetPasswordResponse {
+  message: string;
+}
+
+/**
+ * Données envoyées à /auth/password/reset/.
+ */
+export interface ResetPasswordData {
+  token: string;
+  new_password: string;
+  new_password_confirm: string;
+}
+
+/**
  * Données d'un échec de login pour cause d'email non vérifié (403).
  */
 export interface EmailNotVerifiedError {

@@ -3,18 +3,21 @@ import { BaseService } from '@/lib/api/base-service';
 import { apiClient, tokenManager } from '@/lib/api/client';
 import { API_ENDPOINTS } from '@/lib/api/config';
 import type {
-    BaseUser,
-    ChangePasswordData,
-    LoginCredentials,
-    LoginResponse,
-    RegisterData,
+  BaseUser,
+  ChangePasswordData,
+  LoginCredentials,
+  LoginResponse,
+  RegisterData,
 } from '@/lib/types';
 import { isLoginResponse } from '@/lib/types';
 import {
-    AuthResponse,
-    RegisterPendingResponse,
-    ResendVerificationResponse,
-    VerifyEmailResponse,
+  AuthResponse,
+  ForgotPasswordResponse,
+  RegisterPendingResponse,
+  ResendVerificationResponse,
+  ResetPasswordData,
+  ResetPasswordResponse,
+  VerifyEmailResponse
 } from '@/lib/types/auth/auth';
 
 // AuthService n'est pas strictement CRUD, mais expose getCurrentUser, updateProfile, etc.
@@ -64,6 +67,30 @@ class AuthService extends BaseService<BaseUser, RegisterData, Partial<BaseUser>>
     return apiClient.post<ResendVerificationResponse>(
       API_ENDPOINTS.AUTH.RESEND_VERIFICATION,
       { email },
+      { requiresAuth: false }
+    );
+  }
+
+  /**
+   * Demande un email de réinitialisation de mot de passe.
+   * Réponse neutre côté backend (200 même si l'email est inconnu) pour
+   * éviter l'énumération des comptes.
+   */
+  async forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+    return apiClient.post<ForgotPasswordResponse>(
+      API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+      { email },
+      { requiresAuth: false }
+    );
+  }
+
+  /**
+   * Soumet un nouveau mot de passe à partir d'un token signé reçu par mail.
+   */
+  async resetPassword(data: ResetPasswordData): Promise<ResetPasswordResponse> {
+    return apiClient.post<ResetPasswordResponse>(
+      API_ENDPOINTS.AUTH.RESET_PASSWORD,
+      data,
       { requiresAuth: false }
     );
   }
