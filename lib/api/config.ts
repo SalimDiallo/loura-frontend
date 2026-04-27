@@ -43,6 +43,8 @@ export const API_ENDPOINTS = {
     DELETE_AVATAR: '/auth/profile/upload-avatar/', // Suppression d'avatar (même endpoint, méthode DELETE)
     VERIFY_EMAIL: '/auth/email/verify/',           // Vérification d'email via token signé
     RESEND_VERIFICATION: '/auth/email/resend/',    // Renvoi du lien de vérification
+    FORGOT_PASSWORD: '/auth/password/forgot/',     // Demande d'email de reset
+    RESET_PASSWORD: '/auth/password/reset/',       // Soumission du nouveau mot de passe
   },
 
   CORE: {
