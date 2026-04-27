@@ -2,30 +2,39 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
+import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
 import {
+  coreQueryKeys,
   useCategories,
   useOrganization,
   useUpdateOrganization,
   useUploadOrganizationLogo,
 } from "@/lib/hooks/core";
 import { organizationService } from "@/lib/services/core";
-import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ArrowLeft,
   Camera,
   Check,
-  Coins,
-  Globe,
-  Layers,
   Loader2,
   Trash2,
   X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 // ============================================================================
 // COMPONENT
@@ -37,6 +46,7 @@ export default function EditOrganizationPage() {
   const orgId = params.id as string;
 
   // API hooks
+  const queryClient = useQueryClient();
   const { data: org, isLoading, isError } = useOrganization(orgId);
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const updateMutation = useUpdateOrganization();
@@ -50,6 +60,7 @@ export default function EditOrganizationPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [deletingLogo, setDeletingLogo] = useState(false);
+  const [confirmDeleteLogo, setConfirmDeleteLogo] = useState(false);
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,12 +112,25 @@ export default function EditOrganizationPage() {
       await organizationService.deleteLogo(orgId);
       setLogoPreview(null);
       setLogoFile(null);
-    } catch {
-      // ignore
+      // Invalide le détail ET la liste pour que la nouvelle valeur (logo=null)
+      // remplace immédiatement l'URL en cache (sinon le composant continue
+      // d'afficher l'ancien logo via `org?.logo`).
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coreQueryKeys.organization(orgId) }),
+        queryClient.invalidateQueries({ queryKey: coreQueryKeys.organizations }),
+      ]);
+      toast("Logo supprimé", {
+        description: "Le logo de l'organisation a été retiré.",
+      });
+    } catch (error: any) {
+      toast("Erreur", {
+        description: error?.message || "Impossible de supprimer le logo.",
+      });
     } finally {
       setDeletingLogo(false);
+      setConfirmDeleteLogo(false);
     }
-  }, [orgId]);
+  }, [orgId, queryClient]);
 
   const handleSave = useCallback(async () => {
     try {
@@ -124,12 +148,26 @@ export default function EditOrganizationPage() {
         await logoMutation.mutateAsync({ id: orgId, file: logoFile });
       }
 
+      // Force la relecture du détail (les mutations n'invalident que la liste
+      // par défaut) puis reset l'aperçu local pour que `currentLogoUrl`
+      // bascule sur la nouvelle URL servie par l'API.
+      await queryClient.invalidateQueries({
+        queryKey: coreQueryKeys.organization(orgId),
+      });
+      setLogoFile(null);
+      setLogoPreview(null);
+
       setSaved(true);
+      toast("Modifications enregistrées", {
+        description: "L'organisation a été mise à jour.",
+      });
       setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // Error handled by mutation state
+    } catch (error: any) {
+      toast("Erreur", {
+        description: error?.message || "Impossible d'enregistrer les modifications.",
+      });
     }
-  }, [orgId, name, categoryId, country, currency, logoFile, updateMutation, logoMutation]);
+  }, [orgId, name, categoryId, country, currency, logoFile, updateMutation, logoMutation, queryClient]);
 
   const isPending = updateMutation.isPending || logoMutation.isPending;
   const currentLogoUrl = logoPreview || org?.logo || null;
@@ -246,7 +284,7 @@ export default function EditOrganizationPage() {
                   variant="ghost"
                   size="sm"
                   className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={handleDeleteLogo}
+                  onClick={() => setConfirmDeleteLogo(true)}
                   disabled={deletingLogo}
                 >
                   {deletingLogo ? (
@@ -370,6 +408,62 @@ export default function EditOrganizationPage() {
           Une erreur est survenue. Veuillez réessayer.
         </p>
       )}
+
+      {/* Confirmation suppression du logo */}
+      <Dialog
+        open={confirmDeleteLogo}
+        onOpenChange={(open) => {
+          // Empêche la fermeture pendant la requête pour éviter un double clic.
+          if (!deletingLogo) setConfirmDeleteLogo(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 shrink-0 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-4.5 w-4.5 text-destructive" />
+              </div>
+              <div className="space-y-1">
+                <DialogTitle>Supprimer le logo ?</DialogTitle>
+                <DialogDescription>
+                  Le logo de <span className="font-medium text-foreground">{org.name}</span> sera retiré
+                  définitivement. Cette action est irréversible — le fichier
+                  sera également supprimé du stockage.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmDeleteLogo(false)}
+              disabled={deletingLogo}
+              className="mr-2"
+            >
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleDeleteLogo}
+              disabled={deletingLogo}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              {deletingLogo ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  Suppression…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Supprimer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
