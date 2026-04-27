@@ -1,5 +1,6 @@
 "use client";
 import { QueryProvider } from "@/components/providers";
+import { PwaRegister } from "@/components/pwa/PwaRegister";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,7 @@ export default function RootLayout({
           <ThemeProvider>
             {children}
             <Toaster richColors position='top-center' />
+            <PwaRegister />
           </ThemeProvider>
         </QueryProvider>
       </body>

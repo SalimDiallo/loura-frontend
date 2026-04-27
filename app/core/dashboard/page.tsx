@@ -13,17 +13,17 @@ import type { Invitation, MyMembership } from "@/lib/types";
 import type { Organization } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
-    Building2,
-    Check,
-    Compass,
-    Crown,
-    Mail,
-    Palette,
-    Plus,
-    Shield,
-    UserPlus,
-    Users,
-    X,
+  Building2,
+  Check,
+  Compass,
+  Crown,
+  Mail,
+  Palette,
+  Plus,
+  Shield,
+  UserPlus,
+  Users,
+  X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -651,7 +651,7 @@ function DashboardPageContent() {
                 <OwnedOrgCard
                   key={org.id}
                   org={org}
-                  onClick={() => window.open(`/organisation/${org.id}/dashboard`, '_blank')}
+                  onClick={() => router.push(`/organisation/${org.id}/dashboard`)}
                 />
               ))}
             </div>
@@ -743,7 +743,7 @@ function DashboardPageContent() {
               <MemberOrgCard
                 key={membership.id}
                 membership={membership}
-                onClick={() => window.open(`/organisation/${membership.organization.id}/dashboard`, '_blank')}
+                onClick={() => router.push(`/organisation/${membership.organization.id}/dashboard`)}
               />
             ))}
           </div>
