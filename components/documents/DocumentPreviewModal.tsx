@@ -40,6 +40,9 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   physical_inventory: "Rapport d'inventaire physique",
   quote: "Devis",
   proforma: "Facture pro forma",
+  // Services
+  service_enrollment_invoice: "Facture de service",
+  service_transaction_receipt: "Reçu de transaction",
 };
 
 interface DocumentPreviewModalProps {

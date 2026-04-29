@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
-import { usePaginatedCustomers } from "@/lib/hooks/inventory";
+import { usePaginatedCustomers } from "@/lib/hooks/hr";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { CustomerType } from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
@@ -98,7 +98,7 @@ function ClientsPage() {
                               icon: FaPlus,
                               onClick: () =>
                                   router.push(
-                                      `/organisation/${orgId}/inventory/clients/create`
+                                      `/organisation/${orgId}/hr/clients/create`
                                   ),
                           },
                       ]
@@ -174,7 +174,7 @@ function ClientsPage() {
                                 <Button
                                     onClick={() =>
                                         router.push(
-                                            `/organisation/${orgId}/inventory/clients/create`
+                                            `/organisation/${orgId}/hr/clients/create`
                                         )
                                     }
                                 >
@@ -287,7 +287,7 @@ function ClientsPage() {
                                                 size="sm"
                                                 onClick={() =>
                                                     router.push(
-                                                        `/organisation/${orgId}/inventory/clients/${c.id}`
+                                                        `/organisation/${orgId}/hr/clients/${c.id}`
                                                     )
                                                 }
                                             >

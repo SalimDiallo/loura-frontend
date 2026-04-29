@@ -5,18 +5,29 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
-import { useCategories, useCreateOrganization, useUploadOrganizationLogo } from "@/lib/hooks/core";
+import {
+    useCategories,
+    useCreateOrganization,
+    useModulesCatalog,
+    useUploadOrganizationLogo,
+} from "@/lib/hooks/core";
+import type { ModuleCode } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
     ArrowLeft,
     ArrowRight,
+    Blocks,
+    Briefcase,
     Building2,
     Check,
     Globe,
     ImagePlus,
     Loader2,
+    Package,
     PartyPopper,
+    Users,
     X,
+    type LucideIcon,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useRef, useState } from "react";
@@ -28,9 +39,22 @@ import { Suspense, useCallback, useMemo, useRef, useState } from "react";
 const STEPS = [
   { id: 1, label: "Nom", icon: Building2 },
   { id: 2, label: "Catégorie", icon: Check },
-  { id: 3, label: "Paramètres", icon: Globe },
-  { id: 4, label: "Finalisation", icon: Check },
+  { id: 3, label: "Modules", icon: Blocks },
+  { id: 4, label: "Paramètres", icon: Globe },
+  { id: 5, label: "Finalisation", icon: Check },
 ] as const;
+
+const LAST_FORM_STEP = 4;
+
+/**
+ * Mapping code module → icône Lucide pour la card de sélection.
+ * Sert de fallback quand le backend ne renvoie pas explicitement d'icône.
+ */
+const MODULE_ICONS: Record<string, LucideIcon> = {
+  hr: Users,
+  inventory: Package,
+  services: Briefcase,
+};
 
 // ============================================================================
 // COMPONENT
@@ -48,14 +72,22 @@ function CreateOrganizationContent() {
   const [categoryId, setCategoryId] = useState("");
   const [country, setCountry] = useState("Guinée");
   const [currency, setCurrency] = useState("GNF");
+  const [selectedModules, setSelectedModules] = useState<ModuleCode[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // API hooks
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: modules = [], isLoading: modulesLoading } = useModulesCatalog();
   const createMutation = useCreateOrganization();
   const logoMutation = useUploadOrganizationLogo();
+
+  const toggleModule = useCallback((code: ModuleCode) => {
+    setSelectedModules((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    );
+  }, []);
 
   // Map categories to SmartSelector format
   const categoryItems: SmartSelectorItem[] = useMemo(() => 
@@ -82,30 +114,32 @@ function CreateOrganizationContent() {
     switch (step) {
       case 1: return name.trim().length >= 2;
       case 2: return true; // Category is optional
-      case 3: return true;
+      case 3: return true; // Modules are optional too (mais on encourage la sélection)
+      case 4: return true;
       default: return false;
     }
   }, [step, name]);
 
   const handleNext = useCallback(async () => {
-    if (step === 3) {
-      // Create the organization
+    if (step === LAST_FORM_STEP) {
+      // Create the organization (étape finale du formulaire)
       try {
         const org = await createMutation.mutateAsync({
           name: name.trim(),
           category_id: categoryId || null,
           country,
           currency,
+          module_codes: selectedModules,
         });
         setCreatedOrgId(org.id);
-        setStep(4);
+        setStep(LAST_FORM_STEP + 1);
       } catch {
         // Error is handled by mutation state
       }
     } else {
       setStep((s) => s + 1);
     }
-  }, [step, name, categoryId, country, currency, createMutation]);
+  }, [step, name, categoryId, country, currency, selectedModules, createMutation]);
 
   const handleBack = useCallback(() => {
     if (step > 1) setStep((s) => s - 1);
@@ -155,8 +189,8 @@ function CreateOrganizationContent() {
             Créer une organisation
           </h1>
           <p className="text-sm text-muted-foreground">
-            {step < 4
-              ? `Étape ${step} sur 3`
+            {step <= LAST_FORM_STEP
+              ? `Étape ${step} sur ${LAST_FORM_STEP}`
               : "Votre organisation est prête !"}
           </p>
         </div>
@@ -243,8 +277,92 @@ function CreateOrganizationContent() {
             </div>
           )}
 
-          {/* Step 3: Settings */}
+          {/* Step 3: Modules */}
           {step === 3 && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">
+                  Modules à activer
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Sélectionnez les domaines métier que vous souhaitez utiliser. Vous pourrez en
+                  ajouter ou retirer plus tard depuis les paramètres de l'organisation.
+                </p>
+              </div>
+
+              {modulesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : modules.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Aucun module disponible.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {modules.map((m) => {
+                    const Icon = MODULE_ICONS[m.code] ?? Blocks;
+                    const isSelected = selectedModules.includes(m.code);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleModule(m.code)}
+                        className={cn(
+                          "w-full flex items-start gap-3 rounded-xl border p-3 text-left transition-all",
+                          isSelected
+                            ? "border-primary/60 bg-primary/5"
+                            : "border-border/60 bg-background hover:border-border hover:bg-muted/40",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
+                            isSelected
+                              ? "bg-primary/15 text-primary"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-foreground truncate">
+                              {m.name}
+                            </span>
+                            <span
+                              className={cn(
+                                "h-4 w-4 rounded-md border flex items-center justify-center transition-colors",
+                                isSelected
+                                  ? "bg-primary border-primary text-primary-foreground"
+                                  : "border-border bg-background",
+                              )}
+                            >
+                              {isSelected && <Check className="h-3 w-3" />}
+                            </span>
+                          </div>
+                          {m.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                              {m.description}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <p className="text-[11px] text-muted-foreground">
+                {selectedModules.length === 0
+                  ? "Aucun module sélectionné — vous pourrez en activer plus tard."
+                  : `${selectedModules.length} module${selectedModules.length > 1 ? "s" : ""} sélectionné${selectedModules.length > 1 ? "s" : ""}.`}
+              </p>
+            </div>
+          )}
+
+          {/* Step 4: Settings */}
+          {step === 4 && (
             <div className="space-y-5">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Pays</label>
@@ -270,8 +388,8 @@ function CreateOrganizationContent() {
             </div>
           )}
 
-          {/* Step 4: Finalization */}
-          {step === 4 && (
+          {/* Step 5: Finalization */}
+          {step === LAST_FORM_STEP + 1 && (
             <div className="space-y-6 text-center">
               <div className="flex justify-center">
                 <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -327,7 +445,7 @@ function CreateOrganizationContent() {
 
         {/* Navigation */}
         <div className="flex items-center justify-between">
-          {step > 1 && step < 4 ? (
+          {step > 1 && step <= LAST_FORM_STEP ? (
             <Button
               variant="ghost"
               size="sm"
@@ -341,7 +459,7 @@ function CreateOrganizationContent() {
             <div />
           )}
 
-          {step < 4 ? (
+          {step <= LAST_FORM_STEP ? (
             <Button
               size="sm"
               onClick={handleNext}
@@ -350,12 +468,12 @@ function CreateOrganizationContent() {
             >
               {createMutation.isPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-              ) : step === 3 ? (
+              ) : step === LAST_FORM_STEP ? (
                 <Check className="h-3.5 w-3.5 mr-1.5" />
               ) : (
                 <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
               )}
-              {step === 3 ? "Créer" : "Suivant"}
+              {step === LAST_FORM_STEP ? "Créer" : "Suivant"}
             </Button>
           ) : (
             <div className="flex gap-2 ml-auto">

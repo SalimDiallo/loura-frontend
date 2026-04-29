@@ -10,6 +10,7 @@ import {
     advancesService,
     assignmentsService,
     contractsService,
+    customersService,
     departmentsService,
     invitationService,
     leaveBalancesService,
@@ -32,8 +33,15 @@ import type {
     CreateAdvanceRequestResponse,
     CreateContractData,
     CreateContractResponse,
+    CreateCustomerData,
+    CreateCustomerResponse,
     CreateDepartmentData,
     CreateDepartmentResponse,
+    Customer,
+    DeleteCustomerResponse,
+    ListCustomersParams,
+    UpdateCustomerData,
+    UpdateCustomerResponse,
     CreateInvitationData,
     CreateInvitationResponse,
     CreateLeaveBalanceData,
@@ -1488,3 +1496,88 @@ export {
     useHRPendingActions
 } from './analytics';
 
+
+// ─── Clients (Customers) ─────────────────────────────────────────────────────
+// Déplacé d'`@/lib/hooks/inventory` vers `@/lib/hooks/hr` (le module Customer
+// est désormais hébergé par l'app hr côté backend).
+
+export function useCustomers(
+  orgId: string,
+  params?: ListCustomersParams
+): UseQueryResult<Customer[], Error> {
+  return useQuery({
+    queryKey: ["hr", "customers", orgId, params ?? {}],
+    queryFn: () => customersService.getAll(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function usePaginatedCustomers(
+  orgId: string,
+  filters?: Omit<ListCustomersParams, "page" | "page_size">,
+  options?: { pageSize?: number; initialPage?: number; enabled?: boolean }
+): UsePaginatedQueryReturn<Customer> {
+  return usePaginatedQuery<Customer, any>({
+    queryKey: ["hr", "customers", orgId],
+    fetchFn: (params) => customersService.getAll(orgId, params) as any,
+    filters,
+    pageSize: options?.pageSize ?? 10,
+    initialPage: options?.initialPage ?? 1,
+    enabled: options?.enabled !== false && !!orgId,
+  });
+}
+
+export function useCustomer(
+  orgId: string,
+  id: string
+): UseQueryResult<Customer, Error> {
+  return useQuery({
+    queryKey: ["hr", "customers", orgId, id],
+    queryFn: () => customersService.getById(orgId, id),
+    enabled: !!orgId && !!id,
+  });
+}
+
+export function useCreateCustomer(): UseMutationResult<
+  CreateCustomerResponse,
+  Error,
+  { orgId: string; data: CreateCustomerData }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, data }) => customersService.create(orgId, data),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["hr", "customers", orgId] });
+    },
+  });
+}
+
+export function useUpdateCustomer(): UseMutationResult<
+  UpdateCustomerResponse,
+  Error,
+  { orgId: string; id: string; data: UpdateCustomerData }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id, data }) =>
+      customersService.update(orgId, id, data),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: ["hr", "customers", orgId, id] });
+      qc.invalidateQueries({ queryKey: ["hr", "customers", orgId] });
+    },
+  });
+}
+
+export function useDeleteCustomer(): UseMutationResult<
+  DeleteCustomerResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => customersService.delete(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["hr", "customers", orgId] });
+    },
+  });
+}

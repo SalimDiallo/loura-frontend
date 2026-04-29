@@ -29,7 +29,7 @@ import {
     useCustomer,
     useDeleteCustomer,
     useUpdateCustomer,
-} from "@/lib/hooks/inventory";
+} from "@/lib/hooks/hr";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { CustomerType, UpdateCustomerData } from "@/lib/types";
 import {
@@ -123,7 +123,7 @@ function ClientDetailPage() {
         try {
             await deleteCustomer.mutateAsync({ orgId, id: clientId });
             toast.success("Client supprimé.");
-            router.push(`/organisation/${orgId}/inventory/clients`);
+            router.push(`/organisation/${orgId}/hr/clients`);
         } catch (error: any) {
             toast.error("Erreur", {
                 description: error?.data?.detail || error?.message,
@@ -148,7 +148,7 @@ function ClientDetailPage() {
             <FormPageLayout
                 title={customer.name}
                 subtitle={customer.customer_type_display}
-                backLink={`/organisation/${orgId}/inventory/clients`}
+                backLink={`/organisation/${orgId}/hr/clients`}
                 sidebar={
                     <Card>
                         <CardHeader>

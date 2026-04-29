@@ -21,7 +21,10 @@ export type DocumentType =
   | "purchase_payment_receipt"
   | "physical_inventory"
   | "quote"
-  | "proforma";
+  | "proforma"
+  // Services
+  | "service_enrollment_invoice"
+  | "service_transaction_receipt";
 
 export const documentsService = {
   /**

@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/smart-selector";
 import { getApiErrorMessage } from "@/lib/api";
 import { useCurrencyFormatter } from "@/lib/hooks";
+import { useCustomers } from "@/lib/hooks/hr";
 import {
-    useCustomers,
     useProducts,
     useSale,
     useUpdateSale,
