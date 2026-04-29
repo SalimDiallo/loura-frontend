@@ -5,6 +5,7 @@
  */
 
 import type { UserMiniInfo } from "../shared";
+import type { CustomerType } from "../hr";
 
 // ─── Category ────────────────────────────────────────────────────────────────
 
@@ -467,82 +468,6 @@ export interface ListSuppliersParams {
   page?: number;
   page_size?: number | string;
 }
-
-// ─── Clients ─────────────────────────────────────────────────────────────────
-
-export type CustomerType = "individual" | "company";
-
-export interface Customer {
-  id: string;
-  organization: string;
-  customer_type: CustomerType;
-  customer_type_display: string;
-  name: string;
-  code: string;
-  contact_name: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  country: string;
-  tax_id: string;
-  credit_limit: string;
-  payment_terms_days: number;
-  notes: string;
-  is_active: boolean;
-  sales_count: number;
-  outstanding_amount: string;
-  created_at: string;
-  updated_at: string;
-  created_by_info?: UserMiniInfo | null;
-  updated_by_info?: UserMiniInfo | null;
-}
-
-export interface CreateCustomerData {
-  customer_type?: CustomerType;
-  name: string;
-  code?: string;
-  contact_name?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  tax_id?: string;
-  credit_limit?: string | number;
-  payment_terms_days?: number;
-  notes?: string;
-  is_active?: boolean;
-}
-
-export type UpdateCustomerData = Partial<CreateCustomerData>;
-
-export interface CreateCustomerResponse {
-  message: string;
-  data: Customer;
-}
-
-export interface UpdateCustomerResponse {
-  message: string;
-  data: Customer;
-}
-
-export interface DeleteCustomerResponse {
-  message: string;
-}
-
-export interface ListCustomersParams {
-  search?: string;
-  is_active?: boolean | string;
-  customer_type?: CustomerType;
-  page?: number;
-  page_size?: number | string;
-}
-
-export const CUSTOMER_TYPES: { value: CustomerType; label: string }[] = [
-  { value: "individual", label: "Particulier" },
-  { value: "company", label: "Entreprise" },
-];
 
 // ─── Approvisionnements (Purchase Orders) ────────────────────────────────────
 

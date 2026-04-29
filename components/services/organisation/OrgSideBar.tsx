@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useOrganization } from "@/lib/hooks/core";
 import { PERMISSIONS } from "@/lib/permissions";
+import type { ModuleCode } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -46,18 +47,24 @@ import {
     FaClipboardCheck,
     FaClipboardList,
     FaCog,
+    FaConciergeBell,
     FaCreditCard,
     FaDochub,
     FaExclamationTriangle,
+    FaHistory,
+    FaMoneyBillWave,
+    FaProjectDiagram,
     FaReceipt,
     FaSearch,
     FaShoppingCart,
+    FaSitemap,
     FaTachometerAlt,
     FaTags,
     FaTimes,
     FaTruck,
     FaUmbrellaBeach,
     FaUserCheck,
+    FaUserPlus,
     FaUsers,
     FaWarehouse
 } from "react-icons/fa";
@@ -91,6 +98,10 @@ interface MenuGroup {
   icon: React.ElementType;
   items: MenuItem[];
   defaultOpen?: boolean;
+  /** Si renseigné, le groupe n'est affiché que si le module correspondant
+   *  est installé sur l'organisation. Les groupes "transverses" (ex :
+   *  ``general``, ``org``) laissent ce champ à ``undefined``. */
+  requiredModule?: ModuleCode;
 }
 
 // ============================================================================
@@ -115,6 +126,7 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
       title: "Ressources humaines",
       icon: FaUsers,
       defaultOpen: false,
+      requiredModule: "hr",
       items: [
         { title: "Vue d'ensemble", url: `${b}/hr`, icon: FaClipboardList },
         { title: "Départements", url: `${b}/hr/departments`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
@@ -124,6 +136,12 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
         { title: "Paie", url: `${b}/hr/payroll`, icon: FaCreditCard},
         { title: "Contrats", url: `${b}/hr/contracts`, icon: FaClipboardList },
         { title: "Congés", url: `${b}/hr/leaves`, icon: FaUmbrellaBeach },
+        {
+          title: "Clients",
+          url: `${b}/hr/clients`,
+          icon: FaUserCheck,
+          requiredPermission: PERMISSIONS.CUSTOMERS.VIEW,
+        },
         // { title: "Pointage", url: `${b}/hr/attendance`, icon: FaClock },
       ],
     },
@@ -132,6 +150,7 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
       title: "Gestion des stocks",
       icon: FaBoxOpen,
       defaultOpen: false,
+      requiredModule: "inventory",
       items: [
         { 
           title: "Vue d'ensemble", 
@@ -193,14 +212,8 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           icon: FaDochub,
           requiredPermission: PERMISSIONS.SALES.VIEW 
         },
-        { 
-          title: "Clients", 
-          url: `${b}/inventory/clients`, 
-          icon: FaUserCheck,
-          requiredPermission: PERMISSIONS.CUSTOMERS.VIEW 
-        },
-        { 
-          title: "Entrepôts", 
+        {
+          title: "Entrepôts",
           url: `${b}/inventory/warehouses`, 
           icon: FaWarehouse,
           requiredPermission: PERMISSIONS.WAREHOUSES.VIEW 
@@ -234,6 +247,63 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
  
     },
     {
+      id: "services",
+      title: "Services",
+      icon: FaConciergeBell,
+      defaultOpen: false,
+      requiredModule: "services",
+      items: [
+        {
+          title: "Vue d'ensemble",
+          url: `${b}/services`,
+          icon: FaClipboardList,
+          requiredPermission: PERMISSIONS.SERVICES.VIEW,
+        },
+        {
+          title: "Catalogue",
+          url: `${b}/services/catalog`,
+          icon: FaConciergeBell,
+          requiredPermission: PERMISSIONS.SERVICES.VIEW,
+        },
+        {
+          title: "Catégories",
+          url: `${b}/services/categories`,
+          icon: FaSitemap,
+          requiredPermission: PERMISSIONS.SERVICE_CATEGORIES.VIEW,
+        },
+        {
+          title: "Dossiers clients",
+          url: `${b}/services/enrollments`,
+          icon: FaUserPlus,
+          requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
+        },
+        {
+          title: "Workflow modules",
+          url: `${b}/services/workflow`,
+          icon: FaProjectDiagram,
+          requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
+        },
+        {
+          title: "Transactions",
+          url: `${b}/services/transactions`,
+          icon: FaMoneyBillWave,
+          requiredPermission: PERMISSIONS.SERVICE_TRANSACTIONS.VIEW,
+        },
+        {
+          title: "Journal d'activité",
+          url: `${b}/services/activity`,
+          icon: FaHistory,
+          requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
+        },
+        {
+          title: "Rapports",
+          url: `${b}/services/reports`,
+          icon: FaChartBar,
+          requiredPermission: PERMISSIONS.SERVICE_REPORTS.VIEW,
+        },
+      ],
+    },
+    {
       id: "org",
       title: "Organisation",
       icon: FaCog,
@@ -249,7 +319,7 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
 // ROUTE MATCHING
 // ============================================================================
 
-const EXACT_ROUTES = new Set(["/dashboard", "/inventory", "/hr"]);
+const EXACT_ROUTES = new Set(["/dashboard", "/inventory", "/hr", "/services"]);
 
 function isRouteActive(pathname: string, url: string, base: string): boolean {
   if (pathname === url) return true;
@@ -520,11 +590,25 @@ function OrgSideBarInner({
     }
   }, [isMobile, setOpenMobile]);
 
+  const installedModules = useMemo<Set<string>>(
+    () => new Set(org?.module_codes ?? []),
+    [org?.module_codes],
+  );
+
   const menuGroups = useMemo(() => {
     const allGroups = buildMenuGroups(orgId);
     if (permsLoading) return allGroups;
 
     return allGroups
+      // 1) Filtre par module installé. Tant que l'org n'est pas chargée
+      //    on n'affiche **que** les groupes transverses pour éviter un
+      //    flash trompeur des sections métier.
+      .filter((group) => {
+        if (!group.requiredModule) return true;
+        if (!org) return false;
+        return installedModules.has(group.requiredModule);
+      })
+      // 2) Filtre par permission au niveau item.
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
@@ -537,7 +621,7 @@ function OrgSideBarInner({
         }),
       }))
       .filter((group) => group.items.length > 0);
-  }, [orgId, canAny, isOwner, permsLoading]);
+  }, [orgId, canAny, isOwner, permsLoading, org, installedModules]);
 
   const orgName = org?.name || "Organisation";
   const orgInitials = orgName

@@ -67,6 +67,15 @@ export const API_ENDPOINTS = {
       LIST: '/core/categories/',
       DETAIL: (id: number) => `/core/categories/${id}/`,
     },
+    // Modules (catalogue + installations par organisation)
+    MODULES: {
+      CATALOG: '/core/modules/',
+      LIST: (orgId: string) => `/core/organizations/${orgId}/modules/`,
+      INSTALL: (orgId: string) => `/core/organizations/${orgId}/modules/`,
+      DETAIL: (orgId: string, id: string) => `/core/organizations/${orgId}/modules/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/core/organizations/${orgId}/modules/${id}/`,
+      UNINSTALL: (orgId: string, id: string) => `/core/organizations/${orgId}/modules/${id}/`,
+    },
   },
 
   // ── HR (Human Resources) ────────────────────────────────────────────────────
@@ -184,6 +193,14 @@ export const API_ENDPOINTS = {
       CONTRACTS: (orgId: string) => `/hr/organizations/${orgId}/analytics/contracts/`,
       PENDING_ACTIONS: (orgId: string) => `/hr/organizations/${orgId}/analytics/pending-actions/`,
     },
+    // Clients (déplacé d'INVENTORY vers HR)
+    CUSTOMERS: {
+      LIST: (orgId: string) => `/hr/organizations/${orgId}/customers/`,
+      CREATE: (orgId: string) => `/hr/organizations/${orgId}/customers/`,
+      DETAIL: (orgId: string, id: string) => `/hr/organizations/${orgId}/customers/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/hr/organizations/${orgId}/customers/${id}/`,
+      DELETE: (orgId: string, id: string) => `/hr/organizations/${orgId}/customers/${id}/`,
+    },
   },
 
   // ── INVENTORY (Catalogue, Entrepôts) ────────────────────────────────────────
@@ -240,14 +257,6 @@ export const API_ENDPOINTS = {
       DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/suppliers/${id}/`,
       UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/suppliers/${id}/`,
       DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/suppliers/${id}/`,
-    },
-    // Clients
-    CUSTOMERS: {
-      LIST: (orgId: string) => `/inventory/organizations/${orgId}/customers/`,
-      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/customers/`,
-      DETAIL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/customers/${id}/`,
-      UPDATE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/customers/${id}/`,
-      DELETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/customers/${id}/`,
     },
     // Ventes (Sales)
     SALES: {
@@ -310,6 +319,92 @@ export const API_ENDPOINTS = {
       ITEMS: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/items/`,
       COMPLETE: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/complete/`,
       CANCEL: (orgId: string, id: string) => `/inventory/organizations/${orgId}/physical-inventories/${id}/cancel/`,
+    },
+  },
+
+  // ── SERVICES (Catalogue, Inscriptions, Transactions) ──────────────────────
+  SERVICES: {
+    CATEGORIES: {
+      LIST: (orgId: string) => `/services/organizations/${orgId}/categories/`,
+      CREATE: (orgId: string) => `/services/organizations/${orgId}/categories/`,
+      TREE: (orgId: string) => `/services/organizations/${orgId}/categories/tree/`,
+      DETAIL: (orgId: string, id: string) => `/services/organizations/${orgId}/categories/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/services/organizations/${orgId}/categories/${id}/`,
+      DELETE: (orgId: string, id: string) => `/services/organizations/${orgId}/categories/${id}/`,
+    },
+    SERVICES: {
+      LIST: (orgId: string) => `/services/organizations/${orgId}/services/`,
+      CREATE: (orgId: string) => `/services/organizations/${orgId}/services/`,
+      DETAIL: (orgId: string, id: string) => `/services/organizations/${orgId}/services/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/services/organizations/${orgId}/services/${id}/`,
+      DELETE: (orgId: string, id: string) => `/services/organizations/${orgId}/services/${id}/`,
+    },
+    SERVICE_MODULES: {
+      LIST: (orgId: string, serviceId: string) =>
+        `/services/organizations/${orgId}/services/${serviceId}/modules/`,
+      CREATE: (orgId: string, serviceId: string) =>
+        `/services/organizations/${orgId}/services/${serviceId}/modules/`,
+      DETAIL: (orgId: string, serviceId: string, id: string) =>
+        `/services/organizations/${orgId}/services/${serviceId}/modules/${id}/`,
+      UPDATE: (orgId: string, serviceId: string, id: string) =>
+        `/services/organizations/${orgId}/services/${serviceId}/modules/${id}/`,
+      DELETE: (orgId: string, serviceId: string, id: string) =>
+        `/services/organizations/${orgId}/services/${serviceId}/modules/${id}/`,
+    },
+    ENROLLMENTS: {
+      LIST: (orgId: string) => `/services/organizations/${orgId}/enrollments/`,
+      CREATE: (orgId: string) => `/services/organizations/${orgId}/enrollments/`,
+      DETAIL: (orgId: string, id: string) => `/services/organizations/${orgId}/enrollments/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/services/organizations/${orgId}/enrollments/${id}/`,
+      DELETE: (orgId: string, id: string) => `/services/organizations/${orgId}/enrollments/${id}/`,
+      GENERATE_MODULES: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/enrollments/${id}/generate-modules/`,
+      ADD_MODULE: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/enrollments/${id}/add-module/`,
+      RECOMPUTE_TOTAL: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/enrollments/${id}/recompute-total/`,
+      MODULES: (orgId: string, enrollmentId: string) =>
+        `/services/organizations/${orgId}/enrollments/${enrollmentId}/modules/`,
+      TRANSACTIONS: (orgId: string, enrollmentId: string) =>
+        `/services/organizations/${orgId}/enrollments/${enrollmentId}/transactions/`,
+      BY_CUSTOMER: (orgId: string, customerId: string) =>
+        `/services/organizations/${orgId}/customers/${customerId}/enrollments/`,
+    },
+    MODULE_INSTANCES: {
+      DETAIL: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/`,
+      START: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/start/`,
+      COMPLETE: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/complete/`,
+      BLOCK: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/block/`,
+      SKIP: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/skip/`,
+      REOPEN: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/reopen/`,
+      NOTES: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/notes/`,
+      ATTACHMENTS: (orgId: string, id: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/attachments/`,
+      ATTACHMENT_DETAIL: (orgId: string, id: string, attId: string) =>
+        `/services/organizations/${orgId}/module-instances/${id}/attachments/${attId}/`,
+    },
+    TRANSACTIONS: {
+      LIST: (orgId: string) => `/services/organizations/${orgId}/transactions/`,
+      CREATE: (orgId: string) => `/services/organizations/${orgId}/transactions/`,
+      DETAIL: (orgId: string, id: string) => `/services/organizations/${orgId}/transactions/${id}/`,
+      UPDATE: (orgId: string, id: string) => `/services/organizations/${orgId}/transactions/${id}/`,
+      DELETE: (orgId: string, id: string) => `/services/organizations/${orgId}/transactions/${id}/`,
+      CONFIRM: (orgId: string, id: string) => `/services/organizations/${orgId}/transactions/${id}/confirm/`,
+      CANCEL: (orgId: string, id: string) => `/services/organizations/${orgId}/transactions/${id}/cancel/`,
+    },
+    ACTIVITY_LOGS: {
+      LIST: (orgId: string) => `/services/organizations/${orgId}/activity-logs/`,
+    },
+    ANALYTICS: {
+      SUMMARY: (orgId: string) =>
+        `/services/organizations/${orgId}/analytics/summary/`,
     },
   },
 

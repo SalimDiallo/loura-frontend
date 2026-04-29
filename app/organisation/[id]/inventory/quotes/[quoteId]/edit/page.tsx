@@ -19,8 +19,8 @@ import {
     type SmartSelectorItem,
 } from "@/components/ui/smart-selector";
 import { useCurrencyFormatter } from "@/lib/hooks";
+import { useCustomers } from "@/lib/hooks/hr";
 import {
-    useCustomers,
     useProducts,
     useQuote,
     useUpdateQuote,

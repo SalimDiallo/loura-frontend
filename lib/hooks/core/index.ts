@@ -3,8 +3,18 @@
  */
 
 import { usePaginatedQuery } from '@/lib/hooks/usePagination';
-import { categoryService, organizationService, settingsService } from '@/lib/services/core';
-import type { CreateOrganizationData, UpdateOrganizationSettingsData } from '@/lib/types/core';
+import {
+    categoryService,
+    moduleCatalogService,
+    organizationModuleService,
+    organizationService,
+    settingsService,
+} from '@/lib/services/core';
+import type {
+    CreateOrganizationData,
+    ModuleCode,
+    UpdateOrganizationSettingsData,
+} from '@/lib/types/core';
 import type { FilterParams } from '@/lib/types/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -16,7 +26,9 @@ export const coreQueryKeys = {
   organizations: ['organizations'] as const,
   organization: (id: string) => ['organizations', id] as const,
   organizationSettings: (id: string) => ['organizations', id, 'settings'] as const,
+  organizationModules: (id: string) => ['organizations', id, 'modules'] as const,
   categories: ['categories'] as const,
+  modulesCatalog: ['modules-catalog'] as const,
 };
 
 // ============================================================================
@@ -148,6 +160,87 @@ export function useUpdateOrganizationSettings() {
       queryClient.invalidateQueries({
         queryKey: coreQueryKeys.organizationSettings(variables.orgId),
       });
+    },
+  });
+}
+
+// ============================================================================
+// MODULES (catalogue + installations)
+// ============================================================================
+
+/**
+ * Catalogue des modules disponibles (HR, Inventory, Services…).
+ * Ne dépend pas de l'organisation : une seule requête partagée.
+ */
+export function useModulesCatalog() {
+  return useQuery({
+    queryKey: coreQueryKeys.modulesCatalog,
+    queryFn: () => moduleCatalogService.getAll(),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Modules installés sur une organisation donnée.
+ */
+export function useOrganizationModules(orgId: string) {
+  return useQuery({
+    queryKey: coreQueryKeys.organizationModules(orgId),
+    queryFn: () => organizationModuleService.list(orgId),
+    enabled: !!orgId,
+  });
+}
+
+/**
+ * Installe un module sur une organisation.
+ */
+export function useInstallOrganizationModule(orgId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (code: ModuleCode) =>
+      organizationModuleService.install(orgId, code),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: coreQueryKeys.organizationModules(orgId),
+      });
+      queryClient.invalidateQueries({ queryKey: coreQueryKeys.organization(orgId) });
+    },
+  });
+}
+
+/**
+ * Active / désactive une installation existante (toggle).
+ */
+export function useToggleOrganizationModule(orgId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ installationId, isEnabled }: { installationId: string; isEnabled: boolean }) =>
+      organizationModuleService.setEnabled(orgId, installationId, isEnabled),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: coreQueryKeys.organizationModules(orgId),
+      });
+      queryClient.invalidateQueries({ queryKey: coreQueryKeys.organization(orgId) });
+    },
+  });
+}
+
+/**
+ * Désinstalle un module (suppression dure de la ligne).
+ */
+export function useUninstallOrganizationModule(orgId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (installationId: string) =>
+      organizationModuleService.uninstall(orgId, installationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: coreQueryKeys.organizationModules(orgId),
+      });
+      queryClient.invalidateQueries({ queryKey: coreQueryKeys.organization(orgId) });
     },
   });
 }

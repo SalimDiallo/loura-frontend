@@ -71,7 +71,9 @@ export const PERMISSIONS = {
     VIEW: 'inventory.view_purchase_orders',
     MANAGE: 'inventory.manage_purchase_orders',
   },
-  // ── Inventaire : Clients ──────────────────────────────────────────────────
+  // ── HR : Clients (déplacé d'inventory) ────────────────────────────────────
+  // Codenames conservés en `inventory.*` pour rétro-compatibilité avec les
+  // rôles existants en base ; le module backend est désormais `hr`.
   CUSTOMERS: {
     VIEW: 'inventory.view_customers',
     MANAGE: 'inventory.manage_customers',
@@ -84,6 +86,38 @@ export const PERMISSIONS = {
   // ── Inventaire : Rapports ─────────────────────────────────────────────────
   INVENTORY_REPORTS: {
     VIEW: 'inventory.view_reports',
+  },
+  // ── Services : Catégories ─────────────────────────────────────────────────
+  SERVICE_CATEGORIES: {
+    VIEW: 'services.view_categories',
+    MANAGE: 'services.manage_categories',
+  },
+  // ── Services : Catalogue ──────────────────────────────────────────────────
+  SERVICES: {
+    VIEW: 'services.view_services',
+    MANAGE: 'services.manage_services',
+  },
+  // ── Services : Modules (template) ─────────────────────────────────────────
+  SERVICE_MODULES: {
+    VIEW: 'services.view_modules',
+    MANAGE: 'services.manage_modules',
+  },
+  // ── Services : Inscriptions clients ───────────────────────────────────────
+  SERVICE_ENROLLMENTS: {
+    VIEW: 'services.view_enrollments',
+    MANAGE: 'services.manage_enrollments',
+    ASSIGN_MODULES: 'services.assign_modules',
+    UPDATE_MODULE_STATUS: 'services.update_module_status',
+  },
+  // ── Services : Transactions financières ───────────────────────────────────
+  SERVICE_TRANSACTIONS: {
+    VIEW: 'services.view_transactions',
+    MANAGE: 'services.manage_transactions',
+    CONFIRM: 'services.confirm_transactions',
+  },
+  // ── Services : Rapports (BI) ──────────────────────────────────────────────
+  SERVICE_REPORTS: {
+    VIEW: 'services.view_reports',
   },
 } as const;
 

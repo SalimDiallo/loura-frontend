@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useCurrencyFormatter } from "@/lib/hooks";
-import { useCreateCustomer } from "@/lib/hooks/inventory";
+import { useCreateCustomer } from "@/lib/hooks/hr";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { CreateCustomerData, CustomerType } from "@/lib/types";
 import {
@@ -82,7 +82,7 @@ function CreateClientPage() {
         try {
             await createCustomer.mutateAsync({ orgId, data: formData });
             toast.success("Client créé avec succès.");
-            router.push(`/organisation/${orgId}/inventory/clients`);
+            router.push(`/organisation/${orgId}/hr/clients`);
         } catch (error: any) {
             toast.error("Erreur", {
                 description:
@@ -102,7 +102,7 @@ function CreateClientPage() {
         <FormPageLayout
             title="Nouveau client"
             subtitle="Ajoutez un client à votre portefeuille"
-            backLink={`/organisation/${orgId}/inventory/clients`}
+            backLink={`/organisation/${orgId}/hr/clients`}
             sidebar={
                 <Card>
                     <CardHeader>

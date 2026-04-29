@@ -21,3 +21,6 @@ export * from './hr';
 // Types Inventory (produits, catégories, entrepôts)
 export * from './inventory';
 
+// Types Services (catalogue, inscriptions, transactions)
+export * from './services';
+

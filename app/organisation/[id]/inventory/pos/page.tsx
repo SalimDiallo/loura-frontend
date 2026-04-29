@@ -25,12 +25,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
+import { useCustomers } from "@/lib/hooks/hr";
 import {
     useCategories,
     useCompleteSale,
     useCreateSale,
     useCreateSalePayment,
-    useCustomers,
     usePaginatedProducts,
     useStocks,
     useWarehouses,

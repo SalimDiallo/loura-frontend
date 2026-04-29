@@ -145,7 +145,31 @@ export function QuickSelect({
             </div>
           </div>
           {!disabled && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => onSelect("")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Effacer la sélection"
+              onMouseDown={(e) => {
+                // ``mousedown`` arrive avant le ``click``. Sans cela, le
+                // listener ``handleClickOutside`` peut interagir avec d'autres
+                // QuickSelect ouverts simultanément et masquer la mise à jour.
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                // On stoppe la propagation pour éviter qu'un éventuel
+                // ``onClick`` parent (carte cliquable, formulaire) ré-ouvre
+                // immédiatement la sélection précédente.
+                e.preventDefault();
+                e.stopPropagation();
+                // Réinitialise l'état interne de recherche pour repartir
+                // proprement sur l'input « vide ».
+                setSearch("");
+                setIsOpen(false);
+                onSelect("");
+              }}
+            >
               <X className="h-4 w-4" />
             </Button>
           )}
