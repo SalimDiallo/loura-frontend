@@ -127,3 +127,149 @@ export interface OrganizationSettings {
 export type UpdateOrganizationSettingsData = Partial<
   Omit<OrganizationSettings, 'id' | 'organization' | 'created_at' | 'updated_at'>
 >;
+
+// ─── Abonnements (Billing) ───────────────────────────────────────────────────
+
+export type PlanCode = 'free' | 'basic' | 'pro' | 'enterprise';
+export type SubscriptionCycle = 'monthly' | 'yearly';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'past_due';
+
+export interface Plan {
+  id: string;
+  code: PlanCode | string;
+  name: string;
+  description: string;
+  price_monthly: string;
+  price_yearly: string;
+  currency: string;
+  /** null = illimité */
+  max_organizations: number | null;
+  /** null = illimité */
+  max_modules_per_org: number | null;
+  /** Liste blanche de codes de modules. Vide = tous autorisés. */
+  allowed_module_codes: string[];
+  is_active: boolean;
+  is_free: boolean;
+  sort_order: number;
+}
+
+export interface SubscriptionUsage {
+  organization_count: number;
+  modules_count: number;
+}
+
+export interface Subscription {
+  id: string;
+  plan: Plan;
+  cycle: SubscriptionCycle;
+  status: SubscriptionStatus;
+  current_period_start: string;
+  current_period_end: string;
+  cancelled_at: string | null;
+  auto_renew: boolean;
+  is_active: boolean;
+  days_remaining: number;
+  /** Statistiques d'utilisation pour l'affichage des limites */
+  usage?: SubscriptionUsage;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Méthodes de paiement supportées par Djomy. */
+export type DjomyPaymentMethod =
+  | 'OM'           // Orange Money
+  | 'MOMO'         // MTN Mobile Money
+  | 'KULU'         // Kulu de Digital Pay
+  | 'SOUTRA_MONEY' // Soutra Money
+  | 'PAYCARD'      // PayCard
+  | 'YMO'          // Ymo
+  | 'CARD';        // Carte bancaire (Visa/Mastercard)
+
+export interface ChangePlanData {
+  plan_code: PlanCode | string;
+  cycle: SubscriptionCycle;
+  /** Téléphone du payeur au format international (ex: 00224623707722). */
+  payer_number?: string;
+  /** Liste blanche des méthodes de paiement à proposer ; vide = toutes. */
+  allowed_payment_methods?: DjomyPaymentMethod[];
+}
+
+export type DjomyTransactionStatus =
+  | 'PENDING' | 'CREATED' | 'REDIRECTED'
+  | 'SUCCESS' | 'CAPTURED'
+  | 'FAILED' | 'CANCELLED' | 'TIMEOUT' | 'REFUNDED';
+
+export interface ProrataInfo {
+  prorata_applied: boolean;
+  previous_plan: string;
+  previous_cycle: string;
+  days_remaining: number;
+  credit_amount: string;
+  base_price: string;
+  final_price: string;
+}
+
+export interface DjomyTransaction {
+  id: string;
+  reference: string;
+  djomy_transaction_id: string;
+  plan_code: string;
+  cycle: SubscriptionCycle;
+  amount: string;
+  currency: string;
+  country_code: string;
+  payer_number: string;
+  allowed_payment_methods: string[];
+  status: DjomyTransactionStatus;
+  provider_redirect_url: string;
+  is_successful: boolean;
+  is_terminal: boolean;
+  completed_at: string | null;
+  /** Payload de statut brut pour debugging/diagnostics */
+  last_status_payload?: Record<string, unknown>;
+  /** Informations de prorata pour les upgrades */
+  prorata?: ProrataInfo;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Réponse de POST /change-plan/.
+ *
+ * - Plan gratuit : ``requires_payment=false`` + ``subscription`` activée
+ * - Plan payant : ``requires_payment=true`` + ``redirect_url`` à suivre
+ */
+export interface ChangePlanResponse {
+  message: string;
+  data: {
+    transaction: DjomyTransaction;
+    subscription?: Subscription;
+    requires_payment: boolean;
+    redirect_url?: string;
+  };
+}
+
+export interface CancelSubscriptionResponse {
+  message: string;
+  data: Subscription;
+}
+
+export type BillingEventType =
+  | 'created'
+  | 'upgraded'
+  | 'downgraded'
+  | 'renewed'
+  | 'cancelled'
+  | 'expired'
+  | 'payment_success'
+  | 'payment_failed'
+  | 'limit_reached';
+
+export interface BillingEvent {
+  id: string;
+  event_type: BillingEventType;
+  message: string;
+  metadata: Record<string, unknown>;
+  subscription: string | null;
+  created_at: string;
+}

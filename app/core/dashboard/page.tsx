@@ -1,5 +1,6 @@
 "use client";
 
+import { SubscriptionSummaryCard } from "@/components/billing/SubscriptionSummaryCard";
 import GuidedTour from "@/components/GuidedTour";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -572,6 +573,9 @@ function DashboardPageContent() {
           Onboarding
         </Button>
       </div>
+
+      {/* Aperçu abonnement courant + lien upgrade */}
+      <SubscriptionSummaryCard />
 
       {/* Onboarding — visite guidée (spotlight + blur) */}
       {showOnboarding && (

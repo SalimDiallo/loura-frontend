@@ -244,3 +244,85 @@ export function useUninstallOrganizationModule(orgId: string) {
     },
   });
 }
+
+// ============================================================================
+// BILLING (abonnements + plans)
+// ============================================================================
+
+import { billingService } from '@/lib/services/core';
+import type { ChangePlanData } from '@/lib/types/core';
+
+export const billingQueryKeys = {
+  plans: ['billing', 'plans'] as const,
+  mySubscription: ['billing', 'subscription', 'mine'] as const,
+  events: ['billing', 'events'] as const,
+};
+
+/** Catalogue des forfaits proposés. */
+export function usePlans() {
+  return useQuery({
+    queryKey: billingQueryKeys.plans,
+    queryFn: () => billingService.listPlans(),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Abonnement de l'utilisateur courant (auto-Free si aucun). */
+export function useMySubscription() {
+  return useQuery({
+    queryKey: billingQueryKeys.mySubscription,
+    queryFn: () => billingService.getMySubscription(),
+  });
+}
+
+/** Mutation : change de plan (Phase 1 : simulation immédiate du paiement). */
+export function useChangePlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ChangePlanData) => billingService.changePlan(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.mySubscription });
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.events });
+    },
+  });
+}
+
+/** Mutation : annule l'abonnement payant (revient à Free en fin de période). */
+export function useCancelSubscription() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => billingService.cancel(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.mySubscription });
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.events });
+    },
+  });
+}
+
+/** Historique des événements de facturation de l'utilisateur. */
+export function useBillingEvents() {
+  return useQuery({
+    queryKey: billingQueryKeys.events,
+    queryFn: () => billingService.listEvents(),
+  });
+}
+
+/**
+ * Suit le statut d'une transaction Djomy avec polling.
+ *
+ * Utilisé sur la page de retour Djomy : poll toutes les 2s tant que la
+ * transaction n'est pas terminale (succès/échec/annulation).
+ */
+export function useTransactionStatus(reference: string | null) {
+  return useQuery({
+    queryKey: ['billing', 'transactions', reference],
+    queryFn: () => billingService.getTransactionStatus(reference!),
+    enabled: !!reference,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.is_terminal) return false;
+      return 2000;
+    },
+    refetchIntervalInBackground: false,
+  });
+}

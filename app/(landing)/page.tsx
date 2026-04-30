@@ -1,3 +1,4 @@
+import { LandingAuthRedirect } from "@/landing/components/landing-auth-redirect";
 import { CTASection } from "@/landing/components/sections/cta";
 import FAQ from "@/landing/components/sections/faq";
 import Features from "@/landing/components/sections/features";
@@ -14,6 +15,7 @@ import TestimonialsCarousel from "@/landing/components/sections/testimonials-car
 export default function Home() {
   return (
     <main>
+      <LandingAuthRedirect />
       <Header />
       <Hero />
       <Logos />
