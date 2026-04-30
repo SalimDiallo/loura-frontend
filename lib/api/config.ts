@@ -76,6 +76,16 @@ export const API_ENDPOINTS = {
       UPDATE: (orgId: string, id: string) => `/core/organizations/${orgId}/modules/${id}/`,
       UNINSTALL: (orgId: string, id: string) => `/core/organizations/${orgId}/modules/${id}/`,
     },
+    // Abonnements / Facturation
+    BILLING: {
+      PLANS: '/core/billing/plans/',
+      MY_SUBSCRIPTION: '/core/billing/subscription/',
+      CHANGE_PLAN: '/core/billing/subscription/change-plan/',
+      CANCEL: '/core/billing/subscription/cancel/',
+      EVENTS: '/core/billing/events/',
+      TRANSACTION_STATUS: (reference: string) =>
+        `/core/billing/transactions/${reference}/status/`,
+    },
   },
 
   // ── HR (Human Resources) ────────────────────────────────────────────────────

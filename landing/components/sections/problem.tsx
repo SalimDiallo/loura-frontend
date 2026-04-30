@@ -6,18 +6,18 @@ import { Brain, Layers, ShieldAlert } from "lucide-react";
 
 const problems = [
   {
-    title: "Trop de saisie, trop peu d'action.",
-    description: "Les données ressaisies sur plusieurs outils génèrent erreurs et perte de temps.",
+    title: "Saisie répétitive.",
+    description: "Duplication = erreurs, perte de temps.",
     icon: Brain,
   },
   {
-    title: "Décider sans données fiables.",
-    description: "RH, stock, clients dispersés — piloter l'activité devient impossible.",
+    title: "Décisions sans données.",
+    description: "RH, stock, clients dispersés.",
     icon: Layers,
   },
   {
-    title: "Vos données méritent mieux qu'Excel.",
-    description: "Accès non contrôlés, conformité floue — la fuite n'est qu'une question de temps.",
+    title: "Données exposées.",
+    description: "Excel = sécurité et contrôle faibles.",
     icon: ShieldAlert,
   },
 ];
@@ -25,8 +25,8 @@ const problems = [
 export default function ProblemSection() {
   return (
     <Section
-      title="Problématiques"
-      subtitle="Les freins classiques à la gestion d'entreprise sans solution centralisée."
+      title="Problèmes"
+      subtitle="Les blocages sans gestion centralisée."
     >
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
         {problems.map((p, i) => (

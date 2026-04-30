@@ -303,15 +303,6 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
         },
       ],
     },
-    {
-      id: "org",
-      title: "Organisation",
-      icon: FaCog,
-      defaultOpen: true,
-      items: [
-        { title: "Paramètres", url: `${b}/settings`, icon: FaCog },
-      ],
-    },
   ];
 }
 

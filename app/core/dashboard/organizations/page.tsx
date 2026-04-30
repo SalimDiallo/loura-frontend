@@ -18,6 +18,7 @@ import {
 import type { Organization } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
+    Blocks,
     Building2,
     ChevronLeft,
     ChevronRight,
@@ -119,6 +120,15 @@ export default function OrganizationsPage() {
   return (
     <div className="px-4 py-8 max-w-4xl mx-auto space-y-6">
       {/* Header */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="mb-2"
+        onClick={() => router.push("/core/dashboard")}
+      >
+        ← Retour à l’accueil
+      </Button>
+ 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Organisations</h1>
@@ -250,6 +260,13 @@ export default function OrganizationsPage() {
                       >
                         <Settings className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                         Paramètres
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-xs"
+                        onClick={() => router.push(`/core/dashboard/organizations/${org.id}/modules`)}
+                      >
+                        <Blocks className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                        Modules & forfait
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem

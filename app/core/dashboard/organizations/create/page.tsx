@@ -4,31 +4,34 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
+import { getApiErrorMessage } from "@/lib/api";
 import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
 import {
-    useCategories,
-    useCreateOrganization,
-    useModulesCatalog,
-    useUploadOrganizationLogo,
+  useCategories,
+  useCreateOrganization,
+  useModulesCatalog,
+  useUploadOrganizationLogo,
 } from "@/lib/hooks/core";
 import type { ModuleCode } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
-    ArrowLeft,
-    ArrowRight,
-    Blocks,
-    Briefcase,
-    Building2,
-    Check,
-    Globe,
-    ImagePlus,
-    Loader2,
-    Package,
-    PartyPopper,
-    Users,
-    X,
-    type LucideIcon,
+  ArrowLeft,
+  ArrowRight,
+  Blocks,
+  Briefcase,
+  Building2,
+  Check,
+  Crown,
+  Globe,
+  ImagePlus,
+  Loader2,
+  Package,
+  PartyPopper,
+  Users,
+  X,
+  type LucideIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useRef, useState } from "react";
 
@@ -502,11 +505,53 @@ function CreateOrganizationContent() {
           )}
         </div>
 
-        {/* Error display */}
+        {/* Error display - Amélioré pour limites de plan */}
         {createMutation.isError && (
-          <p className="text-xs text-red-500 text-center">
-            Une erreur est survenue. Veuillez réessayer.
-          </p>
+          <div className="space-y-3">
+            {(() => {
+              const rawError = createMutation.error;
+              const message = getApiErrorMessage(rawError);
+              const isPlanLimit = message.toLowerCase().includes("forfait") || 
+                                  message.toLowerCase().includes("plan") ||
+                                  message.toLowerCase().includes("limite");
+              
+              if (isPlanLimit) {
+                return (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                        <Crown className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-900">
+                          Limite de forfait atteinte
+                        </p>
+                        <p className="text-sm text-amber-700 mt-1">
+                          {message}
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      asChild 
+                      size="sm" 
+                      className="w-full bg-amber-600 hover:bg-amber-700"
+                    >
+                      <Link href="/core/billing">
+                        <Crown className="h-4 w-4 mr-2" />
+                        Voir les forfaits disponibles
+                      </Link>
+                    </Button>
+                  </div>
+                );
+              }
+              
+              return (
+                <p className="text-sm text-destructive text-center">
+                  {message || "Une erreur est survenue. Veuillez réessayer."}
+                </p>
+              );
+            })()}
+          </div>
         )}
       </div>
     </div>

@@ -12,6 +12,12 @@ export {
 
 export { useAuth, useRequireAuth } from './useAuth';
 export { useCurrencyFormatter, useOrgCurrency } from './useCurrency';
+export {
+    formatUsd,
+    formatUsdWithGnfSubtitle,
+    gnfToUsd,
+    useUsdToGnfRate,
+} from './useExchangeRate';
 export { useUser } from './useUser';
 
 // Form hooks

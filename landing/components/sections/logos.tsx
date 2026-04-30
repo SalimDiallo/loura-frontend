@@ -1,3 +1,4 @@
+import Marquee from "@/landing/components/magicui/marquee";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -17,11 +18,7 @@ const compagnies: Compagnie[] = [
   { name: "Time Informatique", logo: "/images/landing/compagnies/timeinformatique.svg" },
 ];
 
-const half = Math.ceil(compagnies.length / 2);
-const rowOne = compagnies.slice(0, half);
-const rowTwo = compagnies.slice(half);
-
-export default function Logos() {  
+export default function Logos() {
   return (
     <section
       id="company"
@@ -32,16 +29,38 @@ export default function Logos() {
         <span className="text-muted-foreground font-normal"> nous font </span>
         <span className="font-display font-bold italic">confiance</span>
       </h2>
-      <div className="grid w-full max-w-6xl grid-cols-2 md:grid-cols-4 overflow-hidden border-y border-border items-center justify-center z-20">
-        {compagnies.slice(0, 8).map((c) => (
-          <Link
-            href="#"
-            className="group w-full h-32 flex items-center justify-center relative p-4 before:absolute before:-left-1 before:top-0 before:z-10 before:h-screen before:w-px before:bg-border before:content-[''] after:absolute after:-top-1 after:left-0 after:z-10 after:h-px after:w-screen after:bg-border after:content-[''] opacity-90 hover:opacity-100 transition-opacity duration-300"
-            key={c.name}
-          >
-            <Image src={c.logo} alt={c.name} width={200} height={200} className="flex items-center justify-center w-full h-full transition-all duration-300" />
-          </Link>
-        ))}
+      <div className="relative w-full max-w-6xl overflow-hidden border-y border-border z-20 py-4 bg-background/70">
+        {/* Left shadow */}
+        <div
+          aria-hidden
+          className="pointer-events-noned absolute left-0 top-0 h-full w-14 bg-gradient-to-r from-background/80 via-background/40 to-transparent z-30"
+          style={{}}
+        />
+        {/* Right shadow */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute right-0 top-0 h-full w-14 bg-gradient-to-l from-background/80 via-background/40 to-transparent z-30"
+          style={{}}
+        />
+        <Marquee className="[--gap:2.5rem]" pauseOnHover repeat={4}>
+          {compagnies.map((c) => (
+            <Link
+              href="#"
+              key={c.name}
+              className="group flex items-center justify-center h-24 px-8 py-2 relative opacity-90 hover:opacity-100 transition-opacity duration-300"
+              tabIndex={-1}
+              aria-label={c.name}
+            >
+              <Image
+                src={c.logo}
+                alt={c.name}
+                width={160}
+                height={80}
+                className="max-h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              />
+            </Link>
+          ))}
+        </Marquee>
       </div>
     </section>
   );
