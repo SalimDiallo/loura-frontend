@@ -134,6 +134,8 @@ export const API_ENDPOINTS = {
       MY_MEMBERSHIPS: "/hr/my-memberships/",
       MY_PERMISSIONS: (orgId: string) =>
         `/hr/organizations/${orgId}/my-permissions/`,
+      WAREHOUSE_ACCESS: (orgId: string, id: string) =>
+        `/hr/organizations/${orgId}/members/${id}/warehouse-access/`,
     },
     // Invitations
     INVITATIONS: {
@@ -392,6 +394,19 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/analytics/margin/`,
       MOVEMENTS: (orgId: string) =>
         `/inventory/organizations/${orgId}/analytics/movements/`,
+      EXPENSES: (orgId: string) =>
+        `/inventory/organizations/${orgId}/analytics/expenses/`,
+    },
+    // Dépenses
+    EXPENSES: {
+      LIST: (orgId: string) => `/inventory/organizations/${orgId}/expenses/`,
+      CREATE: (orgId: string) => `/inventory/organizations/${orgId}/expenses/`,
+      DETAIL: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/expenses/${id}/`,
+      UPDATE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/expenses/${id}/`,
+      DELETE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/expenses/${id}/`,
     },
     // Commandes fournisseur (Purchase Orders)
     PURCHASE_ORDERS: {

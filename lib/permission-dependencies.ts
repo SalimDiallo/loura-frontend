@@ -61,6 +61,14 @@ export const PERMISSION_DEPENDENCIES: Record<string, readonly string[]> = {
   // Inventaire — Ventes
   "inventory.manage_sales": ["inventory.view_sales"],
 
+  // Inventaire — Dépenses
+  "inventory.manage_expenses": ["inventory.view_expenses"],
+
+  // Inventaire — Restriction par entrepôt
+  // La permission de scope a besoin a minima de pouvoir voir les entrepôts
+  // (sinon le membre n'a aucun moyen de connaître ses entrepôts assignés).
+  "inventory.scope_warehouses": ["inventory.view_warehouses"],
+
   // Inventaire — Rapports (si besoin de dépendances à l'avenir)
   // "inventory.manage_reports": ["inventory.view_reports"], // décommentez/corrigez si applicable
 };

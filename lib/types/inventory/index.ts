@@ -1138,3 +1138,78 @@ export const PRODUCT_UNITS: { value: ProductUnit; label: string }[] = [
   { value: "hour", label: "Heure" },
   { value: "other", label: "Autre" },
 ];
+
+
+// ─── Dépenses ──────────────────────────────────────────────────────────────
+
+export interface ExpenseWarehouseMini {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface Expense {
+  id: string;
+  organization: string;
+  warehouse: ExpenseWarehouseMini | null;
+  description: string;
+  amount: string;
+  reason: string;
+  expense_date: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  created_by_info: UserMiniInfo | null;
+  updated_by_info: UserMiniInfo | null;
+}
+
+export interface CreateExpenseData {
+  description: string;
+  amount: string;
+  reason?: string;
+  expense_date: string;
+  warehouse_id?: string | null;
+  notes?: string;
+}
+
+export type UpdateExpenseData = Partial<CreateExpenseData>;
+
+export interface ListExpensesParams {
+  search?: string;
+  warehouse?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  page_size?: number | string;
+}
+
+export interface ExpensesByWarehouseRow {
+  warehouse_id: string | null;
+  name: string;
+  code: string;
+  count: number;
+  amount: string;
+}
+
+export interface ExpensesByDayRow {
+  date: string;
+  count: number;
+  amount: string;
+}
+
+export interface ExpensesAnalyticsResponse {
+  from: string;
+  to: string;
+  total_amount: string;
+  total_count: number;
+  by_warehouse: ExpensesByWarehouseRow[];
+  by_day: ExpensesByDayRow[];
+}
+
+// ─── Accès entrepôt par membre (HR + inventory) ────────────────────────────
+
+export interface MemberWarehouseAccessResponse {
+  membership_id: string;
+  is_scoped: boolean;
+  warehouses: { id: string; name: string; code: string }[];
+}

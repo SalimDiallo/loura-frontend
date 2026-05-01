@@ -1353,3 +1353,163 @@ export function useDuplicateQuote(): UseMutationResult<
     },
   });
 }
+
+
+// ─── Dépenses ──────────────────────────────────────────────────────────────
+
+import { expensesService } from "@/lib/services/inventory";
+import { memberService } from "@/lib/services/hr/member.service";
+import type {
+  CreateExpenseData,
+  Expense,
+  ExpensesAnalyticsResponse,
+  ListExpensesParams,
+  MemberWarehouseAccessResponse,
+  UpdateExpenseData,
+} from "@/lib/types/inventory";
+
+const EXPENSES_KEY = (orgId: string) => ["inventory", "expenses", orgId];
+const EXPENSE_KEY = (orgId: string, id: string) => [
+  "inventory",
+  "expense",
+  orgId,
+  id,
+];
+const EXPENSES_ANALYTICS_KEY = (
+  orgId: string,
+  params?: { from?: string; to?: string }
+) => ["inventory", "expenses-analytics", orgId, params];
+
+export function useExpenses(orgId: string, params?: ListExpensesParams) {
+  return useQuery({
+    queryKey: [...EXPENSES_KEY(orgId), params],
+    queryFn: () => expensesService.list(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function usePaginatedExpenses(
+  orgId: string,
+  filters?: Omit<ListExpensesParams, "page" | "page_size">,
+  options?: { pageSize?: number; initialPage?: number; enabled?: boolean }
+): UsePaginatedQueryReturn<Expense> {
+  return usePaginatedQuery<Expense, any>({
+    queryKey: EXPENSES_KEY(orgId),
+    fetchFn: (params) => expensesService.list(orgId, params) as any,
+    filters,
+    pageSize: options?.pageSize ?? 10,
+    initialPage: options?.initialPage ?? 1,
+    enabled: options?.enabled !== false && !!orgId,
+  });
+}
+
+export function useExpense(
+  orgId: string,
+  id: string
+): UseQueryResult<Expense, Error> {
+  return useQuery({
+    queryKey: EXPENSE_KEY(orgId, id),
+    queryFn: () => expensesService.getById(orgId, id),
+    enabled: !!orgId && !!id,
+  });
+}
+
+export function useCreateExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, data }: { orgId: string; data: CreateExpenseData }) =>
+      expensesService.create(orgId, data),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: EXPENSES_KEY(orgId) });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "expenses-analytics", orgId],
+      });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "analytics", "overview", orgId],
+      });
+    },
+  });
+}
+
+export function useUpdateExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orgId,
+      id,
+      data,
+    }: {
+      orgId: string;
+      id: string;
+      data: UpdateExpenseData;
+    }) => expensesService.update(orgId, id, data),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: EXPENSE_KEY(orgId, id) });
+      qc.invalidateQueries({ queryKey: EXPENSES_KEY(orgId) });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "expenses-analytics", orgId],
+      });
+    },
+  });
+}
+
+export function useDeleteExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      expensesService.delete(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: EXPENSES_KEY(orgId) });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "expenses-analytics", orgId],
+      });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "analytics", "overview", orgId],
+      });
+    },
+  });
+}
+
+export function useExpensesAnalytics(
+  orgId: string,
+  params?: { from?: string; to?: string }
+): UseQueryResult<ExpensesAnalyticsResponse, Error> {
+  return useQuery({
+    queryKey: EXPENSES_ANALYTICS_KEY(orgId, params),
+    queryFn: () => expensesService.analytics(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+// ─── Accès entrepôts par membre ───────────────────────────────────────────
+
+export function useMemberWarehouseAccess(
+  orgId: string,
+  memberId: string
+): UseQueryResult<MemberWarehouseAccessResponse, Error> {
+  return useQuery({
+    queryKey: ["hr", "member-warehouse-access", orgId, memberId],
+    queryFn: () => memberService.getWarehouseAccess(orgId, memberId),
+    enabled: !!orgId && !!memberId,
+  });
+}
+
+export function useSetMemberWarehouseAccess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orgId,
+      memberId,
+      warehouseIds,
+    }: {
+      orgId: string;
+      memberId: string;
+      warehouseIds: string[];
+    }) => memberService.setWarehouseAccess(orgId, memberId, warehouseIds),
+    onSuccess: (_, { orgId, memberId }) => {
+      qc.invalidateQueries({
+        queryKey: ["hr", "member-warehouse-access", orgId, memberId],
+      });
+    },
+  });
+}

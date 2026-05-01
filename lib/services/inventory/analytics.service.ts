@@ -29,6 +29,8 @@ export interface AnalyticsOverview {
     pending_outstanding: string;
     stock_alerts_count: number;
     stock_value: string;
+    /** Total des dépenses du mois en cours. */
+    expenses_month: string;
 }
 
 export interface SalesTrendPoint {

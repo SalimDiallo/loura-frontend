@@ -1,7 +1,7 @@
 "use client";
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
-import { PermissionGuard } from "@/components/permissions";
+import { PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { AuditFootprint } from "@/components/services/AuditBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

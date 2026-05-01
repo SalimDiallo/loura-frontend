@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EntityAvatar } from "@/components/ui/entity-avatar";
+import { MemberWarehouseAccessSection } from "@/components/inventory/MemberWarehouseAccessSection";
 import { InfoField } from "@/components/ui/info-field";
 import { PermissionsBadgeList } from "@/components/ui/permissions-badge-list";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -728,6 +729,9 @@ export default function EmployeeDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ═══ Accès aux entrepôts (inventory) ═══ */}
+        <MemberWarehouseAccessSection orgId={orgId} memberId={memberId} />
       </div>
 
       {/* ═══ Dialogs ═══ */}

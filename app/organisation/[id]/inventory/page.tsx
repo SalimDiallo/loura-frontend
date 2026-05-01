@@ -33,6 +33,7 @@ import type { IconType } from "react-icons";
 import {
     FaBox,
     FaClipboardCheck,
+    FaCoins,
     FaDollarSign,
     FaPlus,
     FaReceipt,
@@ -281,6 +282,13 @@ function KpisRow({ orgId }: { orgId: string }) {
                         ? ("danger" as const)
                         : ("success" as const),
             },
+            {
+                label: "Dépenses (mois)",
+                value: formatCurrency(Number(data.expenses_month ?? 0)),
+                sub: "Total du mois en cours",
+                icon: FaCoins,
+                tone: "warning" as const,
+            },
         ];
     }, [data, formatCurrency]);
 
@@ -291,8 +299,8 @@ function KpisRow({ orgId }: { orgId: string }) {
                 description="Vue temps réel"
             />
             {isLoading ? (
-                <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-4">
-                    {Array.from({ length: 4 }).map((_, i) => (
+                <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-5">
+                    {Array.from({ length: 5 }).map((_, i) => (
                         <Skeleton
                             key={i}
                             className="h-24 w-full rounded-none bg-card"
@@ -300,7 +308,7 @@ function KpisRow({ orgId }: { orgId: string }) {
                     ))}
                 </div>
             ) : (
-                <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-5">
                     {kpis.map((kpi) => (
                         <KpiTile key={kpi.label} {...kpi} />
                     ))}

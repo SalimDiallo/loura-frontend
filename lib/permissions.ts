@@ -87,6 +87,18 @@ export const PERMISSIONS = {
   INVENTORY_REPORTS: {
     VIEW: 'inventory.view_reports',
   },
+  // ── Inventaire : Dépenses ─────────────────────────────────────────────────
+  EXPENSES: {
+    VIEW: 'inventory.view_expenses',
+    MANAGE: 'inventory.manage_expenses',
+  },
+  // ── Inventaire : Restriction par entrepôt ────────────────────────────────
+  // Si attribuée à un membre, restreint son accès aux entrepôts listés dans
+  // sa liste blanche (``MembershipWarehouseAccess``). Sans cette permission,
+  // accès total.
+  WAREHOUSE_SCOPE: {
+    SCOPE: 'inventory.scope_warehouses',
+  },
   // ── Services : Catégories ─────────────────────────────────────────────────
   SERVICE_CATEGORIES: {
     VIEW: 'services.view_categories',

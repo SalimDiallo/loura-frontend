@@ -23,6 +23,12 @@ interface PermissionsContextValue {
   canAll: (permissions: string[]) => boolean;
   /** Check if user has ANY of the given permissions */
   canAny: (permissions: string[]) => boolean;
+  /**
+   * True si le membre est restreint à un sous-ensemble d'entrepôts via la
+   * permission ``inventory.scope_warehouses``. Toujours ``false`` pour
+   * l'owner (qui contourne toutes les restrictions).
+   */
+  isWarehouseScoped: boolean;
 }
 
 const PermissionsContext = createContext<PermissionsContextValue>({
@@ -34,6 +40,7 @@ const PermissionsContext = createContext<PermissionsContextValue>({
   can: () => false,
   canAll: () => false,
   canAny: () => false,
+  isWarehouseScoped: false,
 });
 
 interface PermissionsProviderProps {
@@ -71,6 +78,12 @@ export function PermissionsProvider({ children, orgId: propOrgId }: PermissionsP
       return perms.some((p) => permissions.includes(p));
     };
 
+    // Restriction par entrepôt : owner contourne toujours, sinon on regarde
+    // explicitement la perm ``inventory.scope_warehouses``.
+    const isWarehouseScoped = !isOwner && permissions.includes(
+      "inventory.scope_warehouses"
+    );
+
     return {
       data,
       isLoading,
@@ -80,6 +93,7 @@ export function PermissionsProvider({ children, orgId: propOrgId }: PermissionsP
       can,
       canAll,
       canAny,
+      isWarehouseScoped,
     };
   }, [data, isLoading]);
 
