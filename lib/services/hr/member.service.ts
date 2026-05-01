@@ -14,6 +14,7 @@ import type {
     UpdateMembershipData,
     UpdateMembershipResponse
 } from '@/lib/types';
+import type { MemberWarehouseAccessResponse } from '@/lib/types/inventory';
 
 export interface MemberListParams extends FilterParams {
   // Hérite de search, page, page_size, ordering
@@ -83,6 +84,33 @@ class MemberService {
   async getMyPermissions(orgId: string): Promise<MyOrgPermissions> {
     return apiClient.get<MyOrgPermissions>(
       API_ENDPOINTS.HR.MEMBERS.MY_PERMISSIONS(orgId)
+    );
+  }
+
+  /**
+   * Liste blanche d'entrepôts accessibles par un membre.
+   *
+   * - GET : retourne `{ membership_id, is_scoped, warehouses[] }`.
+   *   `is_scoped=false` ⇒ le membre voit tous les entrepôts.
+   * - PUT : remplace la liste blanche par les ``warehouseIds`` fournis (idempotent).
+   */
+  async getWarehouseAccess(
+    orgId: string,
+    memberId: string
+  ): Promise<MemberWarehouseAccessResponse> {
+    return apiClient.get<MemberWarehouseAccessResponse>(
+      API_ENDPOINTS.HR.MEMBERS.WAREHOUSE_ACCESS(orgId, memberId)
+    );
+  }
+
+  async setWarehouseAccess(
+    orgId: string,
+    memberId: string,
+    warehouseIds: string[]
+  ): Promise<MemberWarehouseAccessResponse> {
+    return apiClient.put<MemberWarehouseAccessResponse>(
+      API_ENDPOINTS.HR.MEMBERS.WAREHOUSE_ACCESS(orgId, memberId),
+      { warehouse_ids: warehouseIds }
     );
   }
 }

@@ -47,6 +47,7 @@ import {
     FaClipboardCheck,
     FaClipboardList,
     FaCog,
+    FaCoins,
     FaConciergeBell,
     FaCreditCard,
     FaDochub,
@@ -236,15 +237,21 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           icon: FaExclamationTriangle,
           requiredPermission: PERMISSIONS.STOCK.VIEW 
         },
-        { 
-          title: "Rapports", 
-          url: `${b}/inventory/reports`, 
-          icon: FaChartBar,
-          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW 
+        {
+          title: "Dépenses",
+          url: `${b}/inventory/expenses`,
+          icon: FaCoins,
+          requiredPermission: PERMISSIONS.EXPENSES.VIEW
         },
-   
+        {
+          title: "Rapports",
+          url: `${b}/inventory/reports`,
+          icon: FaChartBar,
+          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW
+        },
+
       ],
- 
+
     },
     {
       id: "services",
