@@ -1,0 +1,39 @@
+"use client"
+
+import { useBackendLogs } from "@/lib/hooks/monitoring"
+import type { LogLevel } from "@/lib/types/monitoring"
+import Link from "next/link"
+import { useState } from "react"
+import { LogsViewer } from "../_components/logs-viewer"
+
+type Filters = { limit?: number; offset?: number; level?: LogLevel; q?: string }
+
+export default function MonitoringBackendLogsPage() {
+  const [filters, setFilters] = useState<Filters>({ limit: 100, offset: 0 })
+  const { data, isLoading } = useBackendLogs(filters)
+
+  return (
+    <div className="container mx-auto space-y-6 px-4 py-8">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Logs backend</h1>
+        </div>
+        <Link
+          href="/admin/monitoring"
+          className="text-sm text-primary hover:underline"
+        >
+          ← Retour
+        </Link>
+      </header>
+
+      <LogsViewer
+        title="logs/backend.log"
+        description="Lu en sens inverse, plus récent en haut. Auto-refresh 30s."
+        data={data}
+        isLoading={isLoading}
+        filters={filters}
+        setFilters={setFilters}
+      />
+    </div>
+  )
+}
