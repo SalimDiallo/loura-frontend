@@ -1,7 +1,7 @@
 "use client";
 
 import { BadgeStatus } from "@/components/BadgeStatus";
-import { PermissionGuard } from "@/components/permissions";
+import { PermissionGuard, PermissionsPicker } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,6 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
     Select,
@@ -29,11 +28,6 @@ import {
     useRoles,
     useUpdateMember,
 } from "@/lib/hooks/hr";
-import {
-    getDependentSelectedIds,
-    getRequiredIds,
-    resolvePermissionSelection,
-} from "@/lib/permission-dependencies";
 import { PERMISSIONS } from "@/lib/permissions";
 import { ArrowLeft, Check, Save, Shield, ShieldAlert, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -93,22 +87,10 @@ function EditEmployeePage() {
     setHasChanges(roleChanged || permissionsChanged || statusChanged);
   }, [selectedRoleId, selectedPermissions, isActive, member]);
 
-  // Handlers
-  const handleTogglePermission = (permId: string) => {
-    setSelectedPermissions((prev) => {
-      const nextRaw = prev.includes(permId)
-        ? prev.filter((id) => id !== permId)
-        : [...prev, permId];
-      // Les permissions déjà apportées par le rôle sont "implicites" :
-      // pas besoin de les répéter dans les extras lors d'un auto-add.
-      const implicitIds = roles?.find((r) => r.id === selectedRoleId)?.permissions.map((p) => p.id) ?? [];
-      return resolvePermissionSelection(
-        prev,
-        nextRaw,
-        permissions ?? [],
-        { implicitIds },
-      );
-    });
+  // PermissionsPicker gère lui-même les dépendances/exclusions via les
+  // implicitIds (permissions déjà accordées par le rôle).
+  const handleExtraPermissionsChange = (newIds: string[]) => {
+    setSelectedPermissions(newIds);
   };
 
   const handleSubmit = async () => {
@@ -175,20 +157,12 @@ function EditEmployeePage() {
   // Get permissions from selected role
   const rolePermissions =
     roles?.find((r) => r.id === selectedRoleId)?.permissions || [];
-  const rolePermissionIds = new Set(rolePermissions.map((p) => p.id));
+  const rolePermissionIds = rolePermissions.map((p) => p.id);
 
-  // Group permissions by module
-  const permissionsByModule =
-    permissions?.reduce((acc, perm) => {
-      if (!acc[perm.module]) {
-        acc[perm.module] = [];
-      }
-      acc[perm.module].push(perm);
-      return acc;
-    }, {} as Record<string, typeof permissions>) || {};
-
-  // Calculate total permissions
-  const totalPermissions = rolePermissions.length + selectedPermissions.length;
+  // Calculate total permissions (rôle + extras non déjà couvertes)
+  const totalPermissions =
+    rolePermissions.length +
+    selectedPermissions.filter((id) => !rolePermissionIds.includes(id)).length;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -327,94 +301,17 @@ function EditEmployeePage() {
                 Permissions supplémentaires
               </CardTitle>
               <CardDescription>
-                Ajoutez des permissions individuelles en plus de celles du rôle
+                Ajoutez des permissions individuelles en plus de celles du rôle.
+                Les permissions héritées du rôle apparaissent verrouillées.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
-                {Object.entries(permissionsByModule).map(([module, perms]) => (
-                  <div key={module} className="space-y-3">
-                    <div className="sticky top-0 bg-background py-2">
-                      <h4 className="text-sm font-semibold uppercase text-muted-foreground">
-                        {module}
-                      </h4>
-                      <Separator className="mt-2" />
-                    </div>
-                    <div className="space-y-3 ml-2">
-                      {perms.map((perm) => {
-                        const isFromRole = rolePermissionIds.has(perm.id);
-                        const isExtra = selectedPermissions.includes(perm.id);
-                        const isChecked = isFromRole || isExtra;
-
-                        // Décochage bloqué si une extra-permission sélectionnée
-                        // dépend de celle-ci.
-                        const lockingIds = isExtra
-                          ? getDependentSelectedIds(
-                              perm.id,
-                              selectedPermissions,
-                              permissions ?? [],
-                            )
-                          : [];
-                        const isLocked = lockingIds.length > 0;
-                        const lockingLabels = lockingIds
-                          .map((id) => permissions?.find((p) => p.id === id)?.label)
-                          .filter((l): l is string => Boolean(l));
-                        const requiredIds = !isChecked
-                          ? getRequiredIds(perm.id, permissions ?? [])
-                          : [];
-                        const requiredLabels = requiredIds
-                          .filter((id) => !rolePermissionIds.has(id))
-                          .map((id) => permissions?.find((p) => p.id === id)?.label)
-                          .filter((l): l is string => Boolean(l));
-
-                        const disabled = isFromRole || isLocked;
-
-                        return (
-                          <div key={perm.id} className="flex items-start space-x-3">
-                            <Checkbox
-                              id={perm.id}
-                              checked={isChecked}
-                              onCheckedChange={() =>
-                                !disabled && handleTogglePermission(perm.id)
-                              }
-                              disabled={disabled}
-                              className="mt-0.5"
-                            />
-                            <div className="flex-1 space-y-0.5">
-                              <label
-                                htmlFor={perm.id}
-                                className={`text-sm font-medium leading-none flex items-center gap-2 ${
-                                  isFromRole ? "text-muted-foreground" : ""
-                                } ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
-                              >
-                                {perm.label}
-                                {isFromRole && (
-                                  <Badge variant="outline" className="text-xs">
-                                    Du rôle
-                                  </Badge>
-                                )}
-                              </label>
-                              <p className="text-xs text-muted-foreground">
-                                {perm.codename}
-                              </p>
-                              {isLocked && (
-                                <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                                  Requise par : {lockingLabels.join(", ")}
-                                </p>
-                              )}
-                              {!isChecked && requiredLabels.length > 0 && (
-                                <p className="text-[10px] text-muted-foreground/70">
-                                  Implique : {requiredLabels.join(", ")}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <PermissionsPicker
+                permissions={permissions ?? []}
+                selectedIds={selectedPermissions}
+                onChange={handleExtraPermissionsChange}
+                implicitIds={rolePermissionIds}
+              />
             </CardContent>
           </Card>
         </div>

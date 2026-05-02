@@ -1,7 +1,7 @@
 "use client";
 
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
-import { PermissionGuard } from "@/components/permissions";
+import { PermissionGuard, PermissionsPicker } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateRole, usePermissions } from "@/lib/hooks/hr";
-import { resolvePermissionSelection } from "@/lib/permission-dependencies";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { CreateRoleData } from "@/lib/types";
 import { Save, Shield, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 /**
@@ -51,29 +49,12 @@ function CreateRolePage() {
   // Fetch permissions
   const { data: permissions = [], isLoading: permissionsLoading } = usePermissions();
 
-  // Map permissions to SmartSelector format
-  const permissionItems: SmartSelectorItem[] = useMemo(() => 
-    permissions.map(p => ({
-      id: p.id,
-      name: p.label,
-      subtitle: p.codename,
-      group: p.module,
-    }))
-  , [permissions]);
-
   // Mutation
   const createRole = useCreateRole();
 
-  // Handlers
+  // Handler — la résolution des dépendances et exclusions est gérée par PermissionsPicker.
   const handlePermissionsChange = (newIds: string[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      permission_ids: resolvePermissionSelection(
-        prev.permission_ids,
-        newIds,
-        permissions,
-      ),
-    }));
+    setFormData((prev) => ({ ...prev, permission_ids: newIds }));
   };
 
   const handleSubmit = async () => {
@@ -201,14 +182,11 @@ function CreateRolePage() {
           </Badge>
         </CardHeader>
         <CardContent>
-          <SmartSelector
-            items={permissionItems}
+          <PermissionsPicker
+            permissions={permissions}
             selectedIds={formData.permission_ids}
             onChange={handlePermissionsChange}
-            multiple
-            mode="inline"
-            accentColor="primary"
-            searchPlaceholder="Rechercher une permission ou un module..."
+            description="Cochez les permissions que ce rôle accordera à ses membres. Les dépendances et exclusions mutuelles sont gérées automatiquement."
           />
         </CardContent>
       </Card>

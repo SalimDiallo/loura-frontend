@@ -1,10 +1,13 @@
 /**
- * Dépendances entre permissions (logique UI, "soft").
+ * Dépendances et exclusions entre permissions (logique UI, "soft").
  *
  * Les règles exprimées ici forcent, côté interface, la cohérence d'une
  * sélection de permissions :
  *   - Cocher une permission "manage" coche automatiquement la "view" associée.
  *   - Décocher "view" est bloqué tant qu'une permission dépendante reste cochée.
+ *   - Deux permissions mutuellement exclusives ne peuvent pas être cochées en
+ *     même temps : sélectionner l'une décoche automatiquement l'autre, et
+ *     l'autre est désactivée tant que la première est cochée.
  *
  * Les codenames doivent correspondre au backend (`PermissionRegistry`).
  * Les règles sont purement front : le backend n'est pas impacté.
@@ -73,6 +76,21 @@ export const PERMISSION_DEPENDENCIES: Record<string, readonly string[]> = {
   // "inventory.manage_reports": ["inventory.view_reports"], // décommentez/corrigez si applicable
 };
 
+/**
+ * Exclusions mutuelles : si une permission est sélectionnée, toutes celles
+ * listées ici sont automatiquement désactivées (et inversement).
+ *
+ * Cas courant : `inventory.scope_warehouses` (restriction d'accès par
+ * entrepôt) est incompatible avec `inventory.manage_warehouses` (gestion
+ * globale des entrepôts) — les deux décrivent des intentions opposées.
+ *
+ * La relation est SYMÉTRIQUE : déclarer A ↔ B d'un seul côté suffit, le code
+ * propage la règle dans les deux sens.
+ */
+export const PERMISSION_EXCLUSIONS: Record<string, readonly string[]> = {
+  "inventory.scope_warehouses": ["inventory.manage_warehouses"],
+};
+
 interface PermissionLite {
   id: string;
   codename: string;
@@ -91,6 +109,18 @@ export function getRequiredCodenames(codename: string): string[] {
   };
   walk(codename);
   return Array.from(visited);
+}
+
+/**
+ * Retourne les codenames mutuellement exclusifs avec `codename`.
+ * La relation est symétrique : on regarde dans les deux sens du registre.
+ */
+export function getExcludedCodenames(codename: string): string[] {
+  const direct = PERMISSION_EXCLUSIONS[codename] ?? [];
+  const reverse = Object.entries(PERMISSION_EXCLUSIONS)
+    .filter(([, excl]) => (excl as readonly string[]).includes(codename))
+    .map(([code]) => code);
+  return Array.from(new Set<string>([...direct, ...reverse]));
 }
 
 /** Retourne tous les codenames qui dépendent (récursivement) de `codename`. */
@@ -155,11 +185,29 @@ export function resolvePermissionSelection(
     }
   }
 
-  // 2) Bloquer le retrait d'une permission encore requise par une autre
-  //    permission sélectionnée : on la remet dans la sélection.
+  // 2) Appliquer les exclusions mutuelles : pour chaque nouvellement cochée,
+  //    retirer ses exclues — y compris celles ajoutées indirectement par les
+  //    dépendances ci-dessus (sinon scope_warehouses ré-ajouterait
+  //    view_warehouses qui à son tour, via dépendance inverse, conserverait
+  //    manage_warehouses).
+  for (const id of added) {
+    const code = idToCode.get(id);
+    if (!code) continue;
+    for (const exclCode of getExcludedCodenames(code)) {
+      const exclId = codeToId.get(exclCode);
+      if (exclId) nextSet.delete(exclId);
+    }
+  }
+
+  // 3) Bloquer le retrait d'une permission encore requise par une autre
+  //    permission sélectionnée : on la remet dans la sélection. On ignore les
+  //    permissions explicitement retirées par exclusion à l'étape 2.
   for (const id of removed) {
     const code = idToCode.get(id);
     if (!code) continue;
+    if (!nextSet.has(id) && wasRemovedByExclusion(id, added, idToCode, codeToId)) {
+      continue;
+    }
     const stillNeeded = getDependentCodenames(code).some((depCode) => {
       const depId = codeToId.get(depCode);
       return depId !== undefined && nextSet.has(depId);
@@ -168,6 +216,32 @@ export function resolvePermissionSelection(
   }
 
   return Array.from(nextSet);
+}
+
+/**
+ * Détermine si `id` a été retiré de la sélection à cause d'une exclusion
+ * mutuelle déclenchée par l'une des permissions nouvellement cochées.
+ */
+function wasRemovedByExclusion(
+  id: string,
+  addedIds: string[],
+  idToCode: Map<string, string>,
+  codeToId: Map<string, string>,
+): boolean {
+  const code = idToCode.get(id);
+  if (!code) return false;
+  for (const addedId of addedIds) {
+    const addedCode = idToCode.get(addedId);
+    if (!addedCode) continue;
+    const exclusions = getExcludedCodenames(addedCode);
+    if (exclusions.includes(code)) return true;
+    // Vérifie aussi via codeToId pour être sûr de la cohérence du mapping
+    const exclIds = exclusions
+      .map((c) => codeToId.get(c))
+      .filter((x): x is string => Boolean(x));
+    if (exclIds.includes(id)) return true;
+  }
+  return false;
 }
 
 /**
@@ -204,6 +278,44 @@ export function getRequiredIds(
   const code = idToCode.get(permId);
   if (!code) return [];
   return getRequiredCodenames(code)
+    .map((c) => codeToId.get(c))
+    .filter((id): id is string => Boolean(id));
+}
+
+/**
+ * Ids des permissions actuellement sélectionnées qui sont mutuellement
+ * exclusives avec `permId`. Sert à désactiver la case en affichant
+ * "Incompatible avec : ...".
+ */
+export function getExcludingSelectedIds(
+  permId: string,
+  selectedIds: string[],
+  allPermissions: PermissionLite[]
+): string[] {
+  const { idToCode, codeToId } = buildMaps(allPermissions);
+  const code = idToCode.get(permId);
+  if (!code) return [];
+  const selectedSet = new Set(selectedIds);
+  const result: string[] = [];
+  for (const exclCode of getExcludedCodenames(code)) {
+    const exclId = codeToId.get(exclCode);
+    if (exclId && selectedSet.has(exclId)) result.push(exclId);
+  }
+  return result;
+}
+
+/**
+ * Ids de toutes les permissions exclues (présentes ou non dans la sélection)
+ * par `permId`. Utile pour afficher un hint informatif.
+ */
+export function getExcludedIds(
+  permId: string,
+  allPermissions: PermissionLite[]
+): string[] {
+  const { idToCode, codeToId } = buildMaps(allPermissions);
+  const code = idToCode.get(permId);
+  if (!code) return [];
+  return getExcludedCodenames(code)
     .map((c) => codeToId.get(c))
     .filter((id): id is string => Boolean(id));
 }
