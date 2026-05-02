@@ -1,5 +1,6 @@
 "use client"
 import { QueryProvider } from "@/components/providers";
+import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -77,7 +78,7 @@ export default function RootLayout({
 
   return (
     <html
-      lang="en"
+      lang="fr"
       suppressHydrationWarning
       className={cn(
         spaceGrotesk.variable,
@@ -85,6 +86,47 @@ export default function RootLayout({
         playfairDisplay.variable
       )}
     >
+      <head>
+        {/* Viewport mobile : autorise pinch-zoom mais évite le double-tap zoom
+            indésirable, occupe toute la zone safe (notch). */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+
+        {/* Manifest PWA */}
+        <link rel="manifest" href="/manifest.webmanifest" />
+
+        {/* Couleur de la barre système (Android Chrome / Edge) — adaptative
+            light/dark via media queries. */}
+        <meta
+          name="theme-color"
+          content="#ffffff"
+          media="(prefers-color-scheme: light)"
+        />
+        <meta
+          name="theme-color"
+          content="#0f172a"
+          media="(prefers-color-scheme: dark)"
+        />
+
+        {/* iOS : permet l'installation depuis Safari "Sur l'écran d'accueil"
+            avec une apparence native. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="LouraTech" />
+        <link rel="apple-touch-icon" href="/images/logo-icon.png" />
+
+        {/* Favicon */}
+        <link rel="icon" type="image/png" href="/images/logo-icon.png" />
+        <link rel="shortcut icon" href="/images/logo-icon.png" />
+
+        {/* Empêche le format auto-détecté des numéros sur iOS qui casse l'UX */}
+        <meta name="format-detection" content="telephone=no" />
+      </head>
       <body>
         <QueryProvider>
           <ThemeProvider>
@@ -92,10 +134,9 @@ export default function RootLayout({
             {children}
             <Toaster richColors position="top-center" />
             <PwaRegister />
+            <InstallBanner />
           </ThemeProvider>
         </QueryProvider>
-
-
       </body>
     </html>
   )
