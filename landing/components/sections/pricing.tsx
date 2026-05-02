@@ -12,23 +12,14 @@ import Link from "next/link";
 import { useState } from "react";
 
 // ─── Données statiques (fallback si API indisponible) ────────────────────────
-//
-// Ces données sont **synchronisées** avec les plans seedés en base
-// (cf. core/migrations/0006_seed_plans.py). Servent de filet quand la page
-// landing est rendue sans backend joignable (build statique, dev offline,
-// API en panne...).
 
 interface PricingItem {
-  /** Identifiant logique stable, aligné avec ``Plan.code`` du backend. */
   code: "free" | "basic" | "pro" | "enterprise";
   name: string;
-  /** Prix mensuel, en GNF. 0 = gratuit. */
   price: number;
-  /** Prix mensualisé en mode annuel (price_yearly / 12), en GNF. 0 = gratuit. */
   yearlyPrice: number;
   description: string;
   buttonText: string;
-  /** Lien du CTA quand l'utilisateur n'est pas connecté (landing). */
   buttonLink: string;
   buttonType: "internal" | "external";
   isPopular: boolean;
@@ -56,7 +47,7 @@ const FALLBACK_PRICING_ITEMS: PricingItem[] = [
     code: "basic",
     name: "Basic",
     price: 49000,
-    yearlyPrice: 40833, // 49000 * 12 * 0.8 / 12
+    yearlyPrice: 40833,
     description: "Les fonctionnalités essentielles pour commencer sereinement.",
     buttonText: "Choisir Basic",
     isPopular: false,
@@ -73,7 +64,7 @@ const FALLBACK_PRICING_ITEMS: PricingItem[] = [
     code: "pro",
     name: "Pro",
     price: 99000,
-    yearlyPrice: 79200, // 99000 * 12 * 0.8 / 12
+    yearlyPrice: 79200,
     description: "Pour les équipes ambitieuses souhaitant aller plus loin.",
     buttonText: "Choisir Pro",
     isPopular: true,
@@ -90,7 +81,7 @@ const FALLBACK_PRICING_ITEMS: PricingItem[] = [
   {
     code: "enterprise",
     name: "Entreprise",
-    price: 0, // sur devis
+    price: 0,
     yearlyPrice: 0,
     description:
       "Pour les organisations avec des besoins sur-mesure et souhaitant profiter de l'intelligence artificielle.",
@@ -144,8 +135,6 @@ const BUTTON_LINK_BY_CODE: Record<string, { link: string; type: "internal" | "ex
 function planToPricingItem(plan: Plan): PricingItem {
   const monthly = parseFloat(plan.price_monthly) || 0;
   const yearly = parseFloat(plan.price_yearly) || 0;
-  // On affiche le prix mensualisé en mode annuel (yearly / 12) pour
-  // cohérence avec le format "FNG/mois/an".
   const yearlyPerMonth = yearly > 0 ? Math.round(yearly / 12) : 0;
   const cta = BUTTON_LINK_BY_CODE[plan.code] ?? {
     link: "/auth/register",
@@ -167,11 +156,6 @@ function planToPricingItem(plan: Plan): PricingItem {
 
 /**
  * Hook public : récupère le catalogue des plans depuis l'API.
- *
- * - L'endpoint ``/billing/plans/`` est ouvert (``AllowAny``) → utilisable
- *   sans connexion sur la landing page.
- * - En cas d'échec (offline, build static, backend down), on retourne le
- *   fallback statique pour ne jamais casser le rendu.
  */
 function usePublicPricingItems(): {
   items: PricingItem[];
@@ -181,7 +165,7 @@ function usePublicPricingItems(): {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["public", "plans"],
     queryFn: () => billingService.listPlans(),
-    staleTime: 10 * 60_000, // 10 min — ces données changent rarement
+    staleTime: 10 * 60_000,
     retry: 1,
   });
 
@@ -236,7 +220,6 @@ export function BillingToggle({
 
 // ─── Helpers prix ───────────────────────────────────────────────────────────
 
-/** Format GNF brut (gardé pour rétro-compatibilité ; non utilisé sur l'UI). */
 export function formatFng(price: number) {
   return price
     ? price
@@ -248,18 +231,10 @@ export function formatFng(price: number) {
     : "Gratuit";
 }
 
-/**
- * Affichage du prix en USD (converti depuis GNF via le hook ``useUsdToGnfRate``).
- *
- * Le montant en GNF est conservé en sous-texte discret pour la transparence —
- * la facturation Djomy se fait toujours en GNF, le USD n'est qu'un confort
- * d'affichage.
- */
 export function AnimatedPrice({
   price,
   cycle,
 }: {
-  /** Montant en **GNF**. */
   price: number;
   cycle: SubscriptionCycle;
 }) {
@@ -292,7 +267,7 @@ export function AnimatedPrice({
   );
 }
 
-// ─── PricingCards (composant public, garde l'API existante) ────────────────
+// ─── PricingCards (shadow & no border version) ──────────────────────────────
 
 export function PricingCards({
   pricingItems,
@@ -302,10 +277,68 @@ export function PricingCards({
   cycle: SubscriptionCycle;
 }) {
   return (
-    <div className="grid grid-cols-1 min-[650px]:grid-cols-2 min-[900px]:grid-cols-2 lg:grid-cols-4 gap-px bg-border/50 border border-border/50">
+    <div className="grid grid-cols-1 min-[650px]:grid-cols-2 min-[900px]:grid-cols-2 lg:grid-cols-4 gap-6">
       {pricingItems.map((tier, i) => {
         const isEnterprise = tier.code === "enterprise";
         const displayPrice = cycle === "yearly" ? tier.yearlyPrice : tier.price;
+
+        // --- SHADOW : Utilise la couleur primaire avec effet accent, gère light/dark, inspiré de solution.tsx ---
+
+        // Utilisation d'un gradient subtile sur la shadow, plus accentuée pour "isPopular"
+        // Astuce : utilise la couleur primary (text-primary dans tailwind ~ #6366f1) et sa variante claire pour dark
+        // Les valeurs exactes de shadow deviennent :
+        // - soft primary en light, plus lumineuse/bleue en dark
+        // - popular = plus large plus visible
+        // CSS vars en fallback
+
+        const baseShadow =
+          "0 2px 22px 0 rgba(99,102,241,0.13), 0 2px 12px 0 rgba(99,102,241,0.07)"; // primary-500
+        const baseShadowDark =
+          "0 4px 44px 0 rgba(129,140,248,0.20), 0 2px 10px 0 rgba(99,102,241,0.09)"; // primary-400
+        const popularShadow =
+          "0 8px 44px 0 rgba(99,102,241,0.27), 0 2px 18px 0 rgba(67,56,202,0.13)";
+        const popularShadowDark =
+          "0 14px 62px 0 rgba(165,180,252,0.38), 0 4px 18px 0 rgba(99,102,241,0.20)";
+
+        // Par défaut on applique le shadow via CSS var pour SSR/hydratation, style direct côté client
+        const shadowVar = `--pricing-shadow-${tier.code}`;
+        let boxShadow: string | undefined;
+        if (typeof window !== "undefined") {
+          const isDark =
+            document.documentElement.classList.contains("dark") ||
+            window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+          boxShadow = tier.isPopular
+            ? isDark
+              ? popularShadowDark
+              : popularShadow
+            : isDark
+            ? baseShadowDark
+            : baseShadow;
+        } else {
+          // SSR fallback, met CSS var, theme sera pris si définie plus tard
+          boxShadow = `var(${shadowVar}, ${tier.isPopular ? popularShadow : baseShadow})`;
+        }
+
+        // Pour gèrer .dark côté SSR, injecte les vars dans <style> si client-side
+        if (typeof window !== "undefined") {
+          const styleId = `pricing-shadow-style-${tier.code}`;
+          if (!document.getElementById(styleId)) {
+            const styleEl = document.createElement("style");
+            styleEl.id = styleId;
+            styleEl.innerHTML = `
+              :root { ${shadowVar}: ${tier.isPopular ? popularShadow : baseShadow}; }
+              @media (prefers-color-scheme: dark) {
+                :root { ${shadowVar}: ${
+              tier.isPopular ? popularShadowDark : baseShadowDark
+            }; }
+              }
+              .dark { ${shadowVar}: ${
+              tier.isPopular ? popularShadowDark : baseShadowDark
+            }; }
+            `;
+            document.head.appendChild(styleEl);
+          }
+        }
 
         return (
           <motion.div
@@ -316,12 +349,18 @@ export function PricingCards({
             transition={{ duration: 0.4, delay: i * 0.1 }}
             className={cn(
               "relative flex flex-col gap-6 p-8 bg-background",
-              tier.isPopular && "bg-foreground text-background"
+              "transition-shadow",
+              tier.isPopular
+                ? "bg-foreground text-background"
+                : ""
             )}
+            style={{
+              boxShadow,
+            }}
           >
             {/* Badge populaire */}
             {tier.isPopular && (
-              <span className="absolute top-6 right-6 text-[10px] font-mono uppercase tracking-widest bg-background text-foreground px-2 py-0.5">
+              <span className="absolute top-6 right-6 text-[10px] font-mono uppercase tracking-widest bg-background text-foreground px-2 py-0.5 shadow">
                 Populaire
               </span>
             )}
@@ -452,9 +491,15 @@ export function PricingSection() {
         <BillingToggle value={cycle} onChange={setCycle} />
 
         {isLoading && !isFromApi ? (
-          <div className="grid grid-cols-1 min-[650px]:grid-cols-2 lg:grid-cols-4 gap-px bg-border/50 border border-border/50 animate-pulse">
+          <div className="grid grid-cols-1 min-[650px]:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-background p-8 h-96" />
+              <div
+                key={i}
+                className="bg-background p-8 h-96 rounded-lg shadow-md"
+                style={{
+                  boxShadow: "0 2px 10px 0 rgb(0 0 0 / 0.05)",
+                }}
+              />
             ))}
           </div>
         ) : (

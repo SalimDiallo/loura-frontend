@@ -1,5 +1,15 @@
 "use client";
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +20,12 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
     useInstallOrganizationModule,
     useModulesCatalog,
     useMySubscription,
@@ -18,9 +34,10 @@ import {
     useOrganizations,
     useToggleOrganizationModule,
 } from "@/lib/hooks/core";
-import type { Module, ModuleCode } from "@/lib/types/core";
+import type { Module, ModuleCode, OrganizationModule } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
+    AlertTriangle,
     ArrowLeft,
     Blocks,
     Briefcase,
@@ -31,6 +48,7 @@ import {
     Plus,
     Power,
     PowerOff,
+    ShieldCheck,
     Sparkles,
     Users,
     Zap,
@@ -38,6 +56,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -64,6 +83,34 @@ function isModuleAllowedByPlan(
     return allowedCodes.includes(moduleCode);
 }
 
+/**
+ * Fenêtre (en millisecondes) après la création d'une organisation pendant
+ * laquelle un module installé est considéré comme « choisi à la création »
+ * et donc non désactivable.
+ *
+ * 2 minutes : large pour absorber les latences (upload de logo, redirections,
+ * etc.) sans risquer un faux positif sur un module ajouté manuellement plus
+ * tard depuis cette même page.
+ */
+const CREATION_LOCK_WINDOW_MS = 2 * 60 * 1000;
+
+/**
+ * Un module installé est verrouillé si son `installed_at` tombe dans la
+ * fenêtre suivant `org.created_at`. L'utilisateur a délibérément choisi ces
+ * modules au moment de créer l'organisation : on l'empêche de revenir
+ * dessus pour préserver la cohérence des données métier déjà engagées.
+ */
+function isInstallationLocked(
+    installation: OrganizationModule,
+    orgCreatedAt: string | undefined,
+): boolean {
+    if (!orgCreatedAt) return false;
+    const orgTs = new Date(orgCreatedAt).getTime();
+    const installTs = new Date(installation.installed_at).getTime();
+    if (!Number.isFinite(orgTs) || !Number.isFinite(installTs)) return false;
+    return installTs - orgTs <= CREATION_LOCK_WINDOW_MS;
+}
+
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function OrganizationSettingsPage() {
@@ -79,6 +126,13 @@ export default function OrganizationSettingsPage() {
 
     const installMutation = useInstallOrganizationModule(orgId);
     const toggleMutation = useToggleOrganizationModule(orgId);
+
+    // Cible de la confirmation de désactivation. Stocke l'installation
+    // visée + son module pour pouvoir afficher le contexte dans le dialog.
+    const [pendingDisable, setPendingDisable] = useState<{
+        installation: OrganizationModule;
+        module: Module;
+    } | null>(null);
 
     const installationsByCode = new Map(
         installed.map((i) => [i.module.code, i] as const),
@@ -106,13 +160,39 @@ export default function OrganizationSettingsPage() {
         }
     };
 
-    const handleToggle = async (installationId: string, isEnabled: boolean) => {
+    const performToggle = async (installationId: string, isEnabled: boolean) => {
         try {
             await toggleMutation.mutateAsync({ installationId, isEnabled });
             toast.success(isEnabled ? "Module activé." : "Module désactivé.");
         } catch {
             toast.error("Mise à jour impossible.");
         }
+    };
+
+    /**
+     * Réactivation : pas de confirmation nécessaire (action sans risque).
+     * Désactivation : on bloque si le module est verrouillé, sinon on ouvre
+     * le dialog de confirmation pour avertir des conséquences.
+     */
+    const handleToggleClick = (installation: OrganizationModule) => {
+        const isEnabled = installation.is_enabled;
+        if (!isEnabled) {
+            void performToggle(installation.id, true);
+            return;
+        }
+        if (isInstallationLocked(installation, org?.created_at)) {
+            toast.error(
+                "Ce module a été activé à la création de l'organisation et ne peut plus être désactivé.",
+            );
+            return;
+        }
+        setPendingDisable({ installation, module: installation.module });
+    };
+
+    const confirmDisable = async () => {
+        if (!pendingDisable) return;
+        await performToggle(pendingDisable.installation.id, false);
+        setPendingDisable(null);
     };
 
     const isLoading = catalogLoading || installedLoading;
@@ -203,7 +283,8 @@ export default function OrganizationSettingsPage() {
                             Aucun module disponible.
                         </p>
                     ) : (
-                        catalog.map((m: Module) => {
+                        <TooltipProvider delayDuration={250}>
+                        {catalog.map((m: Module) => {
                             const Icon = MODULE_ICONS[m.code] ?? Blocks;
                             const installation = installationsByCode.get(m.code);
                             const isInstalled = !!installation;
@@ -219,6 +300,12 @@ export default function OrganizationSettingsPage() {
                                 installedCount >= maxModules &&
                                 !isInstalled;
                             const isBlockedByPlan = !isInstalled && (!moduleAllowed || quotaReached);
+
+                            // Module installé à la création → non désactivable.
+                            const isLocked =
+                                installation !== undefined &&
+                                installation.is_enabled &&
+                                isInstallationLocked(installation, org?.created_at);
 
                             return (
                                 <div
@@ -260,6 +347,31 @@ export default function OrganizationSettingsPage() {
                                                 >
                                                     {isEnabled ? "Activé" : "Désactivé"}
                                                 </Badge>
+                                            )}
+                                            {isLocked && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-[10px] uppercase tracking-wide font-medium border-emerald-300 text-emerald-700 bg-emerald-50 cursor-help"
+                                                        >
+                                                            <ShieldCheck className="h-2.5 w-2.5 mr-1" />
+                                                            Verrouillé
+                                                        </Badge>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="max-w-xs">
+                                                        <p className="font-semibold mb-1">
+                                                            Module choisi à la création
+                                                        </p>
+                                                        <p className="text-xs">
+                                                            Ce module a été activé au moment de la
+                                                            création de l&apos;organisation. Il ne peut
+                                                            plus être désactivé pour préserver la
+                                                            cohérence des données métier déjà
+                                                            engagées.
+                                                        </p>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             )}
                                             {isBlockedByPlan && (
                                                 <Badge
@@ -305,13 +417,31 @@ export default function OrganizationSettingsPage() {
                                                     Activer
                                                 </Button>
                                             )
+                                        ) : isLocked ? (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            disabled
+                                                            className="cursor-not-allowed"
+                                                        >
+                                                            <Lock className="h-3.5 w-3.5 mr-1.5" />
+                                                            Verrouillé
+                                                        </Button>
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="left" className="max-w-xs">
+                                                    Module choisi à la création de l&apos;organisation —
+                                                    désactivation impossible.
+                                                </TooltipContent>
+                                            </Tooltip>
                                         ) : (
                                             <Button
                                                 size="sm"
                                                 variant={isEnabled ? "outline" : "default"}
-                                                onClick={() =>
-                                                    handleToggle(installation!.id, !isEnabled)
-                                                }
+                                                onClick={() => handleToggleClick(installation!)}
                                                 disabled={toggleMutation.isPending}
                                             >
                                                 {toggleMutation.isPending &&
@@ -329,10 +459,81 @@ export default function OrganizationSettingsPage() {
                                     </div>
                                 </div>
                             );
-                        })
+                        })}
+                        </TooltipProvider>
                     )}
                 </CardContent>
             </Card>
+
+            {/* ── Dialog de confirmation : désactivation d'un module ─────── */}
+            <AlertDialog
+                open={!!pendingDisable}
+                onOpenChange={(open) => {
+                    if (!open && !toggleMutation.isPending) setPendingDisable(null);
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <div className="flex items-start gap-3">
+                            <div className="h-9 w-9 shrink-0 rounded-full bg-amber-100 flex items-center justify-center">
+                                <AlertTriangle className="h-4.5 w-4.5 text-amber-600" />
+                            </div>
+                            <div className="space-y-1.5 flex-1">
+                                <AlertDialogTitle>
+                                    Désactiver{" "}
+                                    <span className="font-semibold">
+                                        {pendingDisable?.module.name}
+                                    </span>{" "}
+                                    ?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription asChild>
+                                    <div className="space-y-2">
+                                        <p>
+                                            Les utilisateurs n&apos;auront plus accès à ce
+                                            module sur cette organisation. Les données
+                                            métier (historique, transactions, configurations)
+                                            sont conservées et redeviendront accessibles
+                                            si vous réactivez le module plus tard.
+                                        </p>
+                                        <p className="text-xs">
+                                            Cette action est{" "}
+                                            <span className="font-medium text-foreground">
+                                                réversible
+                                            </span>{" "}
+                                            — vous pourrez réactiver le module à tout moment.
+                                        </p>
+                                    </div>
+                                </AlertDialogDescription>
+                            </div>
+                        </div>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={toggleMutation.isPending}>
+                            Annuler
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                void confirmDisable();
+                            }}
+                            disabled={toggleMutation.isPending}
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                            {toggleMutation.isPending ? (
+                                <>
+                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                    Désactivation…
+                                </>
+                            ) : (
+                                <>
+                                    <PowerOff className="h-3.5 w-3.5 mr-1.5" />
+                                    Désactiver
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
