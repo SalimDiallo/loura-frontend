@@ -6,9 +6,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { FrontendErrorReporter } from "@/lib/monitoring/error-reporter";
 import { cn } from "@/lib/utils";
 import {
-  JetBrains_Mono,
-  Playfair_Display,
-  Space_Grotesk,
+    JetBrains_Mono,
+    Playfair_Display,
+    Space_Grotesk,
 } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
