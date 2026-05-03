@@ -1,29 +1,32 @@
 "use client";
 
+import { TemplateSamplePreviewModal } from "@/components/documents/TemplateSamplePreviewModal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  useOrganization,
-  useOrganizationSettings,
-  useUpdateOrganizationSettings,
+    useOrganization,
+    useOrganizationSettings,
+    useUpdateOrganizationSettings,
 } from "@/lib/hooks/core";
-import type { UpdateOrganizationSettingsData } from "@/lib/types/core";
+import type { DocumentTemplate, UpdateOrganizationSettingsData } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
-  Building2,
-  Check,
-  FileText,
-  Globe,
-  Loader2,
-  Mail,
-  MapPin,
-  Palette,
-  Phone,
-  Receipt,
-  Type,
+    ArrowLeft,
+    Building2,
+    Check,
+    Eye,
+    FileText,
+    Globe,
+    LayoutTemplate,
+    Loader2,
+    Mail,
+    MapPin,
+    Palette,
+    Phone,
+    Receipt,
+    Type
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -44,6 +47,150 @@ const FONT_OPTIONS = [
   "Arial",
   "Helvetica",
 ];
+
+// ============================================================================
+// DOCUMENT TEMPLATES
+// ============================================================================
+
+const DOCUMENT_TEMPLATES: Array<{
+  id: DocumentTemplate;
+  name: string;
+  description: string;
+}> = [
+  {
+    id: "classic",
+    name: "Classique",
+    description: "Sobre, bande fine haute aux couleurs de la marque.",
+  },
+  {
+    id: "modern",
+    name: "Moderne",
+    description: "Bandeau d'en-tête foncé avec soulignement accentué.",
+  },
+  {
+    id: "minimal",
+    name: "Minimal",
+    description: "Typographie pure, aérée, sans bordures ni fioritures.",
+  },
+  {
+    id: "corporate",
+    name: "Corporate",
+    description: "Bande latérale verticale marquée — identité forte.",
+  },
+];
+
+// Tiny visual preview of each template (document mock, not real render).
+function TemplatePreview({
+  template,
+  primary,
+  secondary,
+}: {
+  template: DocumentTemplate;
+  primary: string;
+  secondary: string;
+}) {
+  const line = (w: string, op = 1) => (
+    <div
+      className="h-[2px] rounded-sm"
+      style={{ width: w, backgroundColor: "#94a3b8", opacity: op }}
+    />
+  );
+
+  if (template === "classic") {
+    return (
+      <div className="relative h-full w-full bg-white rounded-sm overflow-hidden border border-border/50">
+        <div
+          className="absolute top-0 left-0 right-0 h-[3px]"
+          style={{
+            background: `linear-gradient(90deg, ${primary} 0%, ${primary} 65%, ${secondary} 100%)`,
+          }}
+        />
+        <div className="p-2 pt-3 space-y-1.5">
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <div className="h-1.5 w-8 rounded-sm bg-slate-800" />
+              {line("60%", 0.5)}
+            </div>
+            <div className="h-1.5 w-10 rounded-sm bg-slate-800" />
+          </div>
+          <div className="h-px bg-slate-800 mt-1" />
+          <div className="space-y-1 pt-1">
+            {line("90%", 0.4)}
+            {line("70%", 0.4)}
+            {line("80%", 0.4)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "modern") {
+    return (
+      <div className="relative h-full w-full bg-white rounded-sm overflow-hidden border border-border/50">
+        <div
+          className="p-2 pb-1.5"
+          style={{ backgroundColor: "#0f172a", borderBottom: `2px solid ${primary}` }}
+        >
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <div className="h-1.5 w-8 rounded-sm bg-white" />
+              <div className="h-[2px] w-10 rounded-sm bg-white/40" />
+            </div>
+            <div className="h-1.5 w-10 rounded-sm" style={{ backgroundColor: primary }} />
+          </div>
+        </div>
+        <div className="p-2 pt-2 space-y-1">
+          {line("90%", 0.4)}
+          {line("70%", 0.4)}
+          {line("80%", 0.4)}
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "minimal") {
+    return (
+      <div className="relative h-full w-full bg-white rounded-sm overflow-hidden border border-border/50">
+        <div className="p-3 space-y-2">
+          <div className="flex justify-between items-start">
+            <div className="h-1.5 w-10 rounded-sm bg-slate-800" />
+            <div className="h-2 w-12 rounded-sm bg-slate-800" />
+          </div>
+          <div className="space-y-1 pt-3">
+            {line("80%", 0.35)}
+            {line("65%", 0.35)}
+            {line("75%", 0.35)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // corporate
+  return (
+    <div className="relative h-full w-full bg-white rounded-sm overflow-hidden border border-border/50">
+      <div
+        className="absolute top-0 bottom-0 left-0 w-[8px]"
+        style={{ backgroundColor: primary }}
+      />
+      <div className="p-2 pl-3 space-y-1.5">
+        <div className="flex justify-between items-start">
+          <div className="h-1.5 w-8 rounded-sm bg-slate-800" />
+          <div className="h-1.5 w-10 rounded-sm" style={{ backgroundColor: primary }} />
+        </div>
+        <div className="h-px bg-slate-800 mt-1" />
+        <div className="space-y-1 pt-1">
+          <div className="flex items-center gap-1">
+            <div className="h-[6px] w-[2px]" style={{ backgroundColor: primary }} />
+            {line("70%", 0.4)}
+          </div>
+          {line("80%", 0.4)}
+          {line("65%", 0.4)}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ============================================================================
 // COLOR PICKER
@@ -102,6 +249,9 @@ export default function OrganizationSettingsPage() {
   const [form, setForm] = useState<UpdateOrganizationSettingsData>({});
   const [saved, setSaved] = useState(false);
 
+  // Aperçu de modèle de document (modal plein écran)
+  const [previewTemplate, setPreviewTemplate] = useState<DocumentTemplate | null>(null);
+
   // Populate form when settings arrive
   useEffect(() => {
     if (settings) {
@@ -118,6 +268,7 @@ export default function OrganizationSettingsPage() {
         invoice_footer: settings.invoice_footer,
         invoice_prefix: settings.invoice_prefix,
         receipt_prefix: settings.receipt_prefix,
+        document_template: settings.document_template,
       });
     }
   }, [settings]);
@@ -289,6 +440,84 @@ export default function OrganizationSettingsPage() {
         </div>
       </Card>
 
+      {/* Section: Modèle de document */}
+      <Card className="p-5 bg-muted/30 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <LayoutTemplate className="h-4 w-4 text-muted-foreground" />
+          Modèle de document
+        </div>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Mise en page appliquée à tous les documents PDF (factures, devis, reçus, contrats…).
+          Les couleurs et la police de la marque sont conservées.
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {DOCUMENT_TEMPLATES.map((tpl) => {
+            const selected = (form.document_template ?? "classic") === tpl.id;
+            return (
+              <div
+                key={tpl.id}
+                className={cn(
+                  "group relative rounded-lg border bg-background p-2 transition-all",
+                  selected
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/40"
+                )}
+              >
+                {/* Zone cliquable principale = sélection */}
+                <button
+                  type="button"
+                  onClick={() => updateField("document_template", tpl.id)}
+                  className="block w-full text-left"
+                  aria-label={`Choisir le modèle ${tpl.name}`}
+                >
+                  <div className="aspect-[210/297] w-full mb-2 bg-slate-50 rounded-sm overflow-hidden">
+                    <TemplatePreview
+                      template={tpl.id}
+                      primary={form.primary_color || "#ffd15d"}
+                      secondary={form.secondary_color || "#E5E7EB"}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-1 px-0.5">
+                    <span
+                      className={cn(
+                        "text-xs font-medium",
+                        selected ? "text-primary" : "text-foreground"
+                      )}
+                    >
+                      {tpl.name}
+                    </span>
+                    {selected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 px-0.5 leading-snug line-clamp-2">
+                    {tpl.description}
+                  </p>
+                </button>
+
+                {/* Bouton Aperçu — superposé en haut à droite de la carte */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewTemplate(tpl.id);
+                  }}
+                  className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-md bg-background/95 backdrop-blur-sm border border-border px-1.5 py-1 text-[10px] font-medium text-foreground shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:border-primary hover:text-primary"
+                  aria-label={`Prévisualiser le modèle ${tpl.name}`}
+                >
+                  <Eye className="h-3 w-3" />
+                  Vue
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-[11px] text-muted-foreground -mt-1">
+          Astuce : survolez une carte et cliquez sur <strong>Vue</strong> pour
+          voir un devis fictif rendu avec le modèle.
+        </p>
+      </Card>
+
       {/* Section: Coordonnées */}
       <Card className="p-5 bg-muted/30 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -447,6 +676,17 @@ export default function OrganizationSettingsPage() {
           Une erreur est survenue. Veuillez réessayer.
         </p>
       )}
+
+      {/* Aperçu plein écran d'un modèle de document */}
+      <TemplateSamplePreviewModal
+        open={previewTemplate !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewTemplate(null);
+        }}
+        orgId={orgId}
+        template={previewTemplate}
+        onSelect={(tpl) => updateField("document_template", tpl)}
+      />
     </div>
   );
 }

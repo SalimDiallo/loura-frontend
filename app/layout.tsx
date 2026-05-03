@@ -1,4 +1,5 @@
 "use client"
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 import { QueryProvider } from "@/components/providers";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
@@ -7,9 +8,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { FrontendErrorReporter } from "@/lib/monitoring/error-reporter";
 import { cn } from "@/lib/utils";
 import {
-    JetBrains_Mono,
-    Playfair_Display,
-    Space_Grotesk,
+  JetBrains_Mono,
+  Playfair_Display,
+  Space_Grotesk,
 } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
@@ -135,6 +136,7 @@ export default function RootLayout({
             <Toaster richColors position="top-center" />
             <PwaRegister />
             <InstallBanner />
+            <FeedbackWidget />
           </ThemeProvider>
         </QueryProvider>
       </body>

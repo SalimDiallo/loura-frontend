@@ -105,6 +105,8 @@ export interface UpdateOrganizationData {
 // ORGANIZATION SETTINGS
 // ============================================================================
 
+export type DocumentTemplate = 'classic' | 'modern' | 'minimal' | 'corporate';
+
 export interface OrganizationSettings {
   id: string;
   organization: string;
@@ -117,6 +119,7 @@ export interface OrganizationSettings {
   website: string;
   tax_id: string;
   tax_rate: string;
+  document_template: DocumentTemplate;
   invoice_footer: string;
   invoice_prefix: string;
   receipt_prefix: string;

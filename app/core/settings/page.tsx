@@ -1,8 +1,8 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { Bell, Building, ChevronRight, Lock, Palette, Shield, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { User, Lock, Building, Bell, Palette, Shield, ChevronRight } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
