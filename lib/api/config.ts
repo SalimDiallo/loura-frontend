@@ -61,6 +61,8 @@ export const API_ENDPOINTS = {
       SETTINGS: (id: string) => `/core/organizations/${id}/settings/`,
       DOCUMENT: (id: string, docType: string, objectId: string) =>
         `/core/organizations/${id}/documents/${docType}/${objectId}/`,
+      DOCUMENT_SAMPLE: (id: string) =>
+        `/core/organizations/${id}/documents/_sample/`,
     },
     // Catégories
     CATEGORIES: {
@@ -577,5 +579,12 @@ export const API_ENDPOINTS = {
       SUMMARY: (orgId: string) =>
         `/services/organizations/${orgId}/analytics/summary/`,
     },
+  },
+
+  // ── Feedback utilisateur ────────────────────────────────────────────────
+  FEEDBACK: {
+    CREATE: "/feedback/",
+    LIST: "/feedback/list/",
+    DETAIL: (id: number) => `/feedback/list/${id}/`,
   },
 } as const

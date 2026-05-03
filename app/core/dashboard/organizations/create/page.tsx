@@ -7,33 +7,34 @@ import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-sel
 import { getApiErrorMessage } from "@/lib/api";
 import { COUNTRIES, CURRENCIES } from "@/lib/constants/core";
 import {
-  useCategories,
-  useCreateOrganization,
-  useModulesCatalog,
-  useUploadOrganizationLogo,
+    useCategories,
+    useCreateOrganization,
+    useModulesCatalog,
+    useUploadOrganizationLogo,
 } from "@/lib/hooks/core";
 import type { ModuleCode } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Blocks,
-  Briefcase,
-  Building2,
-  Check,
-  Crown,
-  Globe,
-  ImagePlus,
-  Loader2,
-  Package,
-  PartyPopper,
-  Users,
-  X,
-  type LucideIcon,
+    ArrowLeft,
+    ArrowRight,
+    Blocks,
+    Briefcase,
+    Building2,
+    Check,
+    Crown,
+    Globe,
+    ImagePlus,
+    Loader2,
+    Package,
+    PartyPopper,
+    Sparkles,
+    Users,
+    X,
+    type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ============================================================================
 // STEP DEFINITIONS
@@ -59,6 +60,37 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   services: Briefcase,
 };
 
+/**
+ * Suggestions de modules par catégorie (clé = nom backend, cf.
+ * `core/management/commands/sync_categories.py`).
+ *
+ * L'idée : pré-sélectionner les modules qui ont du sens pour le métier
+ * dès qu'une catégorie est choisie. L'utilisateur reste libre de cocher
+ * / décocher manuellement à l'étape suivante.
+ *
+ * Important : ces clés doivent rester strictement alignées avec
+ * `DEFAULT_CATEGORIES[*]["name"]` côté backend. Si vous renommez une
+ * catégorie là-bas, mettez à jour cette table.
+ */
+const CATEGORY_SUGGESTED_MODULES: Record<string, ModuleCode[]> = {
+  Commerce: ["hr", "inventory"],
+  Restauration: ["hr", "inventory"],
+  Santé: ["hr", "inventory", "services"],
+  Services: ["hr", "services"],
+  Technologie: ["hr", "services"],
+  Éducation: ["hr", "services"],
+  Autre: ["hr"],
+};
+
+/**
+ * Compare deux ensembles de codes modules (ordre indépendant).
+ */
+function sameModuleSet(a: ModuleCode[], b: ModuleCode[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set<string>(a);
+  return b.every((c) => set.has(c));
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -79,6 +111,9 @@ function CreateOrganizationContent() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Indique que l'utilisateur a manuellement édité les modules. Une fois à
+  // true, on n'écrase plus sa sélection en cas de changement de catégorie.
+  const [modulesTouchedByUser, setModulesTouchedByUser] = useState(false);
 
   // API hooks
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
@@ -86,11 +121,43 @@ function CreateOrganizationContent() {
   const createMutation = useCreateOrganization();
   const logoMutation = useUploadOrganizationLogo();
 
+  // Catégorie sélectionnée → suggestion de modules (filtrée sur ce que le
+  // backend expose réellement dans le catalogue).
+  const selectedCategoryName = useMemo(() => {
+    if (!categoryId) return null;
+    return categories.find((c) => c.id === categoryId)?.name ?? null;
+  }, [categoryId, categories]);
+
+  const suggestedModules = useMemo<ModuleCode[]>(() => {
+    if (!selectedCategoryName) return [];
+    const raw = CATEGORY_SUGGESTED_MODULES[selectedCategoryName] ?? [];
+    const availableCodes = new Set(modules.map((m) => m.code));
+    return raw.filter((code) => availableCodes.has(code));
+  }, [selectedCategoryName, modules]);
+
+  // Pré-sélection automatique tant que l'utilisateur n'a pas dévié.
+  // Si la catégorie change et qu'aucune édition manuelle n'a eu lieu,
+  // on aligne `selectedModules` sur la suggestion.
+  useEffect(() => {
+    if (modulesTouchedByUser) return;
+    if (suggestedModules.length === 0) return;
+    setSelectedModules((prev) =>
+      sameModuleSet(prev, suggestedModules) ? prev : [...suggestedModules],
+    );
+  }, [suggestedModules, modulesTouchedByUser]);
+
   const toggleModule = useCallback((code: ModuleCode) => {
+    setModulesTouchedByUser(true);
     setSelectedModules((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
     );
   }, []);
+
+  // Restaure la suggestion après que l'utilisateur a dévié.
+  const restoreSuggestion = useCallback(() => {
+    setSelectedModules([...suggestedModules]);
+    setModulesTouchedByUser(false);
+  }, [suggestedModules]);
 
   // Map categories to SmartSelector format
   const categoryItems: SmartSelectorItem[] = useMemo(() => 
@@ -289,9 +356,58 @@ function CreateOrganizationContent() {
                 </label>
                 <p className="text-xs text-muted-foreground">
                   Sélectionnez les domaines métier que vous souhaitez utiliser. Vous pourrez en
-                  ajouter ou retirer plus tard depuis les paramètres de l'organisation.
+                  ajouter plus tard, mais{" "}
+                  <span className="font-medium text-foreground">
+                    une fois activé, un module ne peut plus être désactivé
+                  </span>
+                  .
                 </p>
               </div>
+
+              {/* Bandeau "suggestion intelligente" basé sur la catégorie */}
+              {selectedCategoryName && suggestedModules.length > 0 && (
+                <div
+                  className={cn(
+                    "rounded-xl border px-3 py-2.5 flex items-start gap-2.5 transition-colors",
+                    modulesTouchedByUser
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-primary/30 bg-primary/5",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
+                      modulesTouchedByUser
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-primary/15 text-primary",
+                    )}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="text-xs font-medium text-foreground">
+                      {modulesTouchedByUser
+                        ? "Sélection personnalisée"
+                        : `Recommandé pour ${selectedCategoryName}`}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      {modulesTouchedByUser
+                        ? "Vous avez modifié la sélection automatique. Vous pouvez la restaurer ci-dessous."
+                        : `Les modules les plus utiles pour cette activité ont été pré-sélectionnés.`}
+                    </p>
+                    {modulesTouchedByUser && (
+                      <button
+                        type="button"
+                        onClick={restoreSuggestion}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 hover:text-amber-900 transition-colors mt-0.5"
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        Restaurer la suggestion
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {modulesLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -306,6 +422,7 @@ function CreateOrganizationContent() {
                   {modules.map((m) => {
                     const Icon = MODULE_ICONS[m.code] ?? Blocks;
                     const isSelected = selectedModules.includes(m.code);
+                    const isSuggested = suggestedModules.includes(m.code);
                     return (
                       <button
                         key={m.id}
@@ -330,12 +447,20 @@ function CreateOrganizationContent() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium text-foreground truncate">
-                              {m.name}
-                            </span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm font-medium text-foreground truncate">
+                                {m.name}
+                              </span>
+                              {isSuggested && (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded text-[9px] font-mono uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shrink-0">
+                                  <Sparkles className="h-2.5 w-2.5" />
+                                  Suggéré
+                                </span>
+                              )}
+                            </div>
                             <span
                               className={cn(
-                                "h-4 w-4 rounded-md border flex items-center justify-center transition-colors",
+                                "h-4 w-4 rounded-md border flex items-center justify-center transition-colors shrink-0",
                                 isSelected
                                   ? "bg-primary border-primary text-primary-foreground"
                                   : "border-border bg-background",
@@ -561,6 +686,16 @@ function CreateOrganizationContent() {
 export default function CreateOrganizationPage() {
   return (
     <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center"><span className="text-sm text-muted-foreground">Chargement…</span></div>}>
+      <div className="mt-10 flex justify-center">
+        <Link
+          href="/core/dashboard"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Retour au dashboard
+        </Link>
+      </div>
+ 
       <CreateOrganizationContent />
     </Suspense>
   );

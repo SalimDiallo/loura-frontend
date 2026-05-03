@@ -1,21 +1,30 @@
 "use client";
 
 import { PermissionGuard } from "@/components/permissions";
+import { PeriodComparison } from "@/components/reports/PeriodComparison";
 import {
     PeriodFilter,
     defaultPeriod,
     type Period,
 } from "@/components/reports/PeriodFilter";
 import {
-    KPICard,
     ReportEmpty,
     ReportSection,
 } from "@/components/reports/ReportPrimitives";
 import {
-    QuickSelect,
-    type QuickSelectItem,
-} from "@/components/ui/quick-select";
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Tooltip as UITooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import { useServicesAnalyticsSummary } from "@/lib/hooks/services";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -24,6 +33,8 @@ import {
     AlertTriangle,
     BarChart3,
     DollarSign,
+    HelpCircle,
+    Info,
     PieChart as PieChartIcon,
     TrendingDown,
     TrendingUp,
@@ -48,10 +59,13 @@ import {
     YAxis,
 } from "recharts";
 
-const GRANULARITY_ITEMS: QuickSelectItem[] = [
-    { id: "day", name: "Jour" },
-    { id: "week", name: "Semaine" },
-    { id: "month", name: "Mois" },
+const GRANULARITY_OPTIONS: {
+    value: ServicesAnalyticsGranularity;
+    label: string;
+}[] = [
+    { value: "day", label: "Jour" },
+    { value: "week", label: "Semaine" },
+    { value: "month", label: "Mois" },
 ];
 
 const ENROLLMENT_STATUS_LABELS: Record<string, string> = {
@@ -98,6 +112,95 @@ function formatChartDate(
         });
     }
     return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+}
+
+/** Phrase humaine décrivant la période active. */
+function formatPeriodSentence(period: Period): string {
+    const fmt = (iso: string) =>
+        new Date(iso).toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        });
+    return `${fmt(period.from)} → ${fmt(period.to)}`;
+}
+
+/**
+ * Bulle d'aide affichée à côté d'un libellé technique.
+ * Au survol, affiche une définition courte et accessible.
+ */
+function InfoHint({ children }: { children: React.ReactNode }) {
+    return (
+        <UITooltip>
+            <TooltipTrigger asChild>
+                <button
+                    type="button"
+                    className="inline-flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
+                    aria-label="Définition"
+                >
+                    <Info className="h-3 w-3" />
+                </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[240px] text-[11px] leading-relaxed">
+                {children}
+            </TooltipContent>
+        </UITooltip>
+    );
+}
+
+/**
+ * Carte KPI enrichie d'un tooltip explicatif. Suit le même design que
+ * `KPICard` mais expose le label en `ReactNode` pour intégrer une
+ * `InfoHint` à côté.
+ */
+function ExplainedKpi({
+    label,
+    explanation,
+    value,
+    sublabel,
+    icon,
+    accentColor = "primary",
+}: {
+    label: string;
+    explanation: React.ReactNode;
+    value: string;
+    sublabel?: string;
+    icon: React.ReactNode;
+    accentColor?: "primary" | "emerald" | "amber" | "red";
+}) {
+    const accents: Record<string, string> = {
+        primary: "text-primary bg-primary/10",
+        emerald: "text-emerald-700 bg-emerald-100",
+        amber: "text-amber-700 bg-amber-100",
+        red: "text-red-700 bg-red-100",
+    };
+    return (
+        <div className="border bg-card rounded-md p-4">
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                            {label}
+                        </p>
+                        <InfoHint>{explanation}</InfoHint>
+                    </div>
+                    <p className="text-2xl font-bold mt-1 truncate tabular-nums">
+                        {value}
+                    </p>
+                    {sublabel && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {sublabel}
+                        </p>
+                    )}
+                </div>
+                <div
+                    className={`h-10 w-10 flex items-center justify-center rounded-md shrink-0 ${accents[accentColor]}`}
+                >
+                    {icon}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default function ServicesReportsPageWrapper() {
@@ -179,6 +282,7 @@ function ServicesReportsPage() {
     );
 
     return (
+        <TooltipProvider delayDuration={250}>
         <div className="container mx-auto p-6 space-y-6">
             {/* ── Header ───────────────────────────────────────────────── */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -191,28 +295,52 @@ function ServicesReportsPage() {
                             Rapports Services
                         </h1>
                         <p className="text-sm text-muted-foreground mt-0.5">
-                            Analyse de l&apos;activité, des encaissements et des
-                            dépenses du module Services.
+                            Suivez ce que vous gagnez, ce que vous dépensez,
+                            et où en sont vos clients.
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                    <div className="w-40">
-                        <QuickSelect
-                            label="Granularité"
-                            items={GRANULARITY_ITEMS}
-                            selectedId={granularity}
-                            onSelect={(id) =>
-                                setGranularity(
-                                    (id as ServicesAnalyticsGranularity) ||
-                                        "day"
-                                )
-                            }
-                            placeholder="Granularité"
-                            canCreate={false}
-                        />
-                    </div>
+                    <Select
+                        value={granularity}
+                        onValueChange={(v) =>
+                            setGranularity(v as ServicesAnalyticsGranularity)
+                        }
+                    >
+                        <SelectTrigger
+                            className="w-40 h-9"
+                            aria-label="Vue par"
+                        >
+                            <SelectValue placeholder="Vue par" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {GRANULARITY_OPTIONS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                    Vue par {o.label.toLowerCase()}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <PeriodFilter value={period} onChange={setPeriod} />
+                </div>
+            </div>
+
+            {/* ── Bandeau résumé contextuel : aide à comprendre quoi regarder ── */}
+            <div className="flex items-start gap-3 px-4 py-3 bg-muted/40 border rounded-md">
+                <div className="h-7 w-7 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0 text-xs leading-relaxed text-muted-foreground">
+                    <p>
+                        Cette page résume votre activité du{" "}
+                        <span className="font-medium text-foreground">
+                            {formatPeriodSentence(period)}
+                        </span>
+                        . Chaque indicateur affiche une{" "}
+                        <Info className="inline h-3 w-3 align-text-bottom" />
+                        {" "}au survol pour vous expliquer son calcul. Modifiez la période
+                        ou la vue (jour / semaine / mois) en haut à droite.
+                    </p>
                 </div>
             </div>
 
@@ -236,21 +364,38 @@ function ServicesReportsPage() {
                 />
             ) : (
                 <>
-                    {/* ── KPI cards ─────────────────────────────────── */}
+                    {/* ── KPI cards (chacune avec une définition au survol) ── */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <KPICard
-                            label="Encaissements"
+                        <ExplainedKpi
+                            label="Argent encaissé"
+                            explanation={
+                                <>
+                                    <span className="font-semibold text-foreground">
+                                        Total des paiements clients
+                                    </span>{" "}
+                                    réellement reçus sur la période.
+                                    N&apos;inclut pas les factures émises mais
+                                    pas encore payées.
+                                </>
+                            }
                             value={formatCurrency(Number(data.kpis.revenue))}
-                            sublabel={`${data.kpis.completed_enrollments} dossier(s) terminé(s)`}
+                            sublabel={`${data.kpis.completed_enrollments} dossier${data.kpis.completed_enrollments > 1 ? "s" : ""} terminé${data.kpis.completed_enrollments > 1 ? "s" : ""}`}
                             icon={<TrendingUp className="h-5 w-5" />}
                             accentColor="emerald"
                         />
-                        <KPICard
-                            label="Dépenses"
+                        <ExplainedKpi
+                            label="Argent sorti"
+                            explanation={
+                                <>
+                                    <span className="font-semibold text-foreground">
+                                        Total des sorties d&apos;argent
+                                    </span>{" "}
+                                    sur la période : dépenses internes (achats,
+                                    matériel…) + remboursements versés à des clients.
+                                </>
+                            }
                             value={formatCurrency(Number(data.kpis.expense))}
                             sublabel={(() => {
-                                // Détail des composantes : dépenses internes
-                                // + remboursements clients (= total).
                                 const internal = Number(
                                     data.kpis.internal_expense
                                 );
@@ -273,10 +418,23 @@ function ServicesReportsPage() {
                             icon={<TrendingDown className="h-5 w-5" />}
                             accentColor="red"
                         />
-                        <KPICard
-                            label="Marge nette"
+                        <ExplainedKpi
+                            label="Bénéfice"
+                            explanation={
+                                <>
+                                    <span className="font-semibold text-foreground">
+                                        Argent encaissé − argent sorti.
+                                    </span>{" "}
+                                    Une valeur positive signifie que vous
+                                    avez gagné plus que dépensé sur la période.
+                                </>
+                            }
                             value={formatCurrency(Number(data.kpis.net))}
-                            sublabel="Recettes − dépenses sur la période"
+                            sublabel={
+                                Number(data.kpis.net) >= 0
+                                    ? "Vous êtes en positif"
+                                    : "Vous êtes en négatif"
+                            }
                             icon={<DollarSign className="h-5 w-5" />}
                             accentColor={
                                 Number(data.kpis.net) >= 0
@@ -284,12 +442,22 @@ function ServicesReportsPage() {
                                     : "red"
                             }
                         />
-                        <KPICard
-                            label="Encours clients"
+                        <ExplainedKpi
+                            label="Reste à encaisser"
+                            explanation={
+                                <>
+                                    <span className="font-semibold text-foreground">
+                                        Argent que vos clients vous doivent
+                                    </span>{" "}
+                                    pour des prestations en cours ou en
+                                    attente — somme des factures non encore
+                                    réglées.
+                                </>
+                            }
                             value={formatCurrency(
                                 Number(data.kpis.outstanding)
                             )}
-                            sublabel={`${data.kpis.in_progress_enrollments} dossier(s) en cours`}
+                            sublabel={`${data.kpis.in_progress_enrollments} dossier${data.kpis.in_progress_enrollments > 1 ? "s" : ""} en cours`}
                             icon={<Wallet className="h-5 w-5" />}
                             accentColor="amber"
                         />
@@ -297,13 +465,13 @@ function ServicesReportsPage() {
 
                     {/* ── Tendance recettes / dépenses ─────────────────── */}
                     <ReportSection
-                        title="Tendance financière"
-                        description="Encaissements vs dépenses agrégés par période."
+                        title="Évolution dans le temps"
+                        description="Comment vos rentrées et sorties d'argent évoluent au fil des jours, semaines ou mois. La courbe pointillée bleue correspond à votre bénéfice (rentrées − sorties)."
                     >
                         {trendData.length === 0 ? (
                             <ReportEmpty
                                 icon={BarChart3}
-                                message="Aucune transaction confirmée sur la période."
+                                message="Aucune transaction validée sur cette période. Validez vos paiements en attente pour voir l'évolution apparaître ici."
                             />
                         ) : (
                             <ResponsiveContainer width="100%" height={300}>
@@ -341,7 +509,7 @@ function ServicesReportsPage() {
                                     <Line
                                         type="monotone"
                                         dataKey="revenue"
-                                        name="Encaissements"
+                                        name="Argent encaissé"
                                         stroke="#10b981"
                                         strokeWidth={2}
                                         dot={{ r: 3 }}
@@ -349,7 +517,7 @@ function ServicesReportsPage() {
                                     <Line
                                         type="monotone"
                                         dataKey="expense"
-                                        name="Dépenses"
+                                        name="Argent sorti"
                                         stroke="#ef4444"
                                         strokeWidth={2}
                                         dot={{ r: 3 }}
@@ -357,7 +525,7 @@ function ServicesReportsPage() {
                                     <Line
                                         type="monotone"
                                         dataKey="net"
-                                        name="Marge nette"
+                                        name="Bénéfice"
                                         stroke="#6366f1"
                                         strokeWidth={2}
                                         strokeDasharray="4 4"
@@ -368,11 +536,14 @@ function ServicesReportsPage() {
                         )}
                     </ReportSection>
 
+                    {/* ── Comparaison de périodes (an / mois / semaine / custom) ── */}
+                    <PeriodComparison orgId={orgId} />
+
                     {/* ── Top services + Statuts inscriptions ─────────── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <ReportSection
-                            title="Top services"
-                            description="Classement par chiffre d'affaires encaissé."
+                            title="Vos services qui rapportent le plus"
+                            description="Classement de vos services selon l'argent réellement encaissé sur la période."
                         >
                             {topServices.length === 0 ? (
                                 <ReportEmpty
@@ -431,8 +602,8 @@ function ServicesReportsPage() {
                         </ReportSection>
 
                         <ReportSection
-                            title="Répartition des dossiers"
-                            description="Inscriptions clients groupées par statut courant."
+                            title="État de vos dossiers clients"
+                            description="Combien de dossiers sont en attente, en cours, terminés ou annulés. Un dossier = une inscription d'un client à un service."
                             actions={<PieChartIcon className="h-4 w-4 text-muted-foreground" />}
                         >
                             {enrollmentPie.length === 0 ? (
@@ -474,7 +645,7 @@ function ServicesReportsPage() {
                     {/* ── Statuts modules ─────────────────────────────── */}
                     <ReportSection
                         title="Avancement des étapes"
-                        description="Distribution globale des modules clients par statut."
+                        description="Une étape = une phase à réaliser dans le dossier d'un client (rendez-vous, livraison, document à fournir…). Vous voyez ici combien d'étapes sont encore à faire, en cours ou terminées."
                     >
                         {modulePie.length === 0 ? (
                             <ReportEmpty
@@ -534,5 +705,6 @@ function ServicesReportsPage() {
                 </>
             )}
         </div>
+        </TooltipProvider>
     );
 }

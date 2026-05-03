@@ -12,13 +12,13 @@ export function CTASection() {
     >
       <div className="w-full max-w-6xl mx-auto">
         <div className="h-[450px] md:h-[400px] overflow-hidden w-full  bg-foreground relative z-20">
-            <Image
-              src={"/images/landing/cta.png"}
-              alt="Agent CTA Background"
-              className="absolute inset-0 w-full h-full object-cover object-right md:object-center opacity-30"
-              fill
-              priority
-            />
+          <Image
+            src={"/images/landing/cta.png"}
+            alt="Agent CTA Background"
+            className="absolute inset-0 w-full h-full object-cover object-right md:object-center opacity-30"
+            fill
+            priority
+          />
 
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/80 to-transparent"></div>
@@ -33,7 +33,7 @@ export function CTASection() {
             </h2>
 
             <p className="text-background/70 text-center max-w-md mb-8 text-sm md:text-base">
-            Annulez à tout moment, sans engagement
+              Annulez à tout moment, sans engagement
             </p>
 
             <Link

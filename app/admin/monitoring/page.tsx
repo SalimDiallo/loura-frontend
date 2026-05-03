@@ -1,26 +1,26 @@
 "use client"
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card"
 import {
-  useOrgsStats,
-  useSubscriptionsStats,
-  useVisitsSummary,
+    useOrgsStats,
+    useSubscriptionsStats,
+    useVisitsSummary,
 } from "@/lib/hooks/monitoring"
 import Link from "next/link"
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+    CartesianGrid,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from "recharts"
 
 function StatCard({
@@ -189,6 +189,13 @@ export default function MonitoringHomePage() {
               <CardTitle className="text-sm">
                 Erreurs (back + front) →
               </CardTitle>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/admin/feedback" className="contents">
+          <Card className="transition-colors hover:border-primary/50">
+            <CardHeader className="py-4">
+              <CardTitle className="text-sm">Feedback utilisateur →</CardTitle>
             </CardHeader>
           </Card>
         </Link>

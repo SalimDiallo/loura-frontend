@@ -4,7 +4,6 @@ import {
   ListPageLayout,
   ListPagination,
   ListSearchFilters,
-  ListStat,
   ListTable,
   ListTableColumn,
 } from "@/components/layout/ListPageLayout";
@@ -16,7 +15,9 @@ import {
   TransactionStatusBadge,
   TransactionTypeBadge,
 } from "@/components/services/services/ServiceStatusBadge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   QuickSelect,
   type QuickSelectItem,
@@ -27,13 +28,17 @@ import {
   useCancelServiceTransaction,
   useConfirmServiceTransaction,
   usePaginatedServiceTransactions,
+  useServicesAnalyticsSummary,
 } from "@/lib/hooks/services";
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
   ServiceTransaction,
+  ServiceTransactionDirection,
   ServiceTransactionStatus,
-  ServiceTransactionType
+  ServiceTransactionType,
 } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { X as XIcon } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
@@ -42,9 +47,11 @@ import {
   FaHandHoldingUsd,
   FaMoneyBillWave,
   FaPlus,
-  FaTimesCircle
+  FaTimesCircle,
 } from "react-icons/fa";
 import { toast } from "sonner";
+
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS: { value: ServiceTransactionStatus | ""; label: string }[] =
   [
@@ -62,6 +69,15 @@ const TYPE_OPTIONS: { value: ServiceTransactionType | ""; label: string }[] = [
   { value: "refund", label: "Remboursement" },
 ];
 
+const DIRECTION_OPTIONS: {
+  value: ServiceTransactionDirection | "";
+  label: string;
+}[] = [
+  { value: "", label: "Tous" },
+  { value: "in", label: "Entrées (revenus)" },
+  { value: "out", label: "Sorties (dépenses)" },
+];
+
 const TX_STATUS_ITEMS: QuickSelectItem[] = STATUS_OPTIONS.filter(
   (o) => o.value !== ""
 ).map((o) => ({ id: o.value, name: o.label }));
@@ -70,6 +86,67 @@ const TX_TYPE_ITEMS: QuickSelectItem[] = TYPE_OPTIONS.filter(
   (o) => o.value !== ""
 ).map((o) => ({ id: o.value, name: o.label }));
 
+const TX_DIRECTION_ITEMS: QuickSelectItem[] = DIRECTION_OPTIONS.filter(
+  (o) => o.value !== ""
+).map((o) => ({ id: o.value, name: o.label }));
+
+// ─── Date helpers : presets de période ───────────────────────────────────────
+
+type PeriodPreset = "today" | "7d" | "30d" | "month" | "year" | "all" | "custom";
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function rangeForPreset(preset: PeriodPreset): { from: string; to: string } {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const to = isoDate(today);
+  switch (preset) {
+    case "today":
+      return { from: to, to };
+    case "7d": {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 6);
+      return { from: isoDate(d), to };
+    }
+    case "30d": {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 29);
+      return { from: isoDate(d), to };
+    }
+    case "month": {
+      const d = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: isoDate(d), to };
+    }
+    case "year": {
+      const d = new Date(now.getFullYear(), 0, 1);
+      return { from: isoDate(d), to };
+    }
+    case "all": {
+      // Le backend a une fenêtre par défaut de 90 jours quand `from` est
+      // absent (cf. analytics_view.py). Pour réellement tout englober on
+      // envoie une borne très ancienne — couvre toute la durée de vie
+      // raisonnable d'une organisation.
+      return { from: "1970-01-01", to };
+    }
+    case "custom":
+    default:
+      return { from: "", to: "" };
+  }
+}
+
+const PERIOD_PRESETS: { value: PeriodPreset; label: string }[] = [
+  { value: "today", label: "Aujourd'hui" },
+  { value: "7d", label: "7 jours" },
+  { value: "30d", label: "30 jours" },
+  { value: "month", label: "Ce mois" },
+  { value: "year", label: "Cette année" },
+  { value: "all", label: "Toute la période" },
+];
+
+// ─── Wrapper ─────────────────────────────────────────────────────────────────
+
 export default function TransactionsPageWrapper() {
   return (
     <PermissionGuard permission={PERMISSIONS.SERVICE_TRANSACTIONS.VIEW}>
@@ -77,6 +154,8 @@ export default function TransactionsPageWrapper() {
     </PermissionGuard>
   );
 }
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 function TransactionsPage() {
   const params = useParams();
@@ -92,24 +171,60 @@ function TransactionsPage() {
 
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  // Initialisation depuis l'URL, sans resync sur changement (pas d'effet).
   const [status, setStatus] = useState<string>(initialStatus);
   const [type, setType] = useState<string>("");
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [direction, setDirection] = useState<string>("");
+  // Par défaut : toute la période. Sans cela, le backend applique sa
+  // fenêtre par défaut de 90 jours et les KPIs montrent 0 alors que la
+  // liste, elle, n'est pas filtrée — incohérence visible. La liste suit
+  // la même borne (transactions sans date <= aujourd'hui).
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("all");
+  const [dateFrom, setDateFrom] = useState<string>(rangeForPreset("all").from);
+  const [dateTo, setDateTo] = useState<string>(rangeForPreset("all").to);
   const [createOpen, setCreateOpen] = useState(false);
   const [pendingConfirmTx, setPendingConfirmTx] = useState<ServiceTransaction | null>(null);
   const [pendingCancelTx, setPendingCancelTx] = useState<ServiceTransaction | null>(null);
 
-  const filters = useMemo(
+  // Quand un preset est cliqué : on aligne dateFrom/dateTo automatiquement.
+  const applyPreset = (preset: PeriodPreset) => {
+    setPeriodPreset(preset);
+    const r = rangeForPreset(preset);
+    setDateFrom(r.from);
+    setDateTo(r.to);
+  };
+
+  // Quand l'utilisateur édite manuellement les dates : on bascule en "custom".
+  const onDateFromChange = (v: string) => {
+    setDateFrom(v);
+    setPeriodPreset("custom");
+  };
+  const onDateToChange = (v: string) => {
+    setDateTo(v);
+    setPeriodPreset("custom");
+  };
+
+  // Filtres pour la liste paginée.
+  const listFilters = useMemo(
     () => ({
       search: search || undefined,
       status: (status as ServiceTransactionStatus) || undefined,
       transaction_type: (type as ServiceTransactionType) || undefined,
+      direction: (direction as ServiceTransactionDirection) || undefined,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
     }),
-    [search, status, type, dateFrom, dateTo]
+    [search, status, type, direction, dateFrom, dateTo]
+  );
+
+  // Filtres pour les KPIs (analytics summary). On ne passe que la période :
+  // les KPIs reflètent l'agrégat global de la fenêtre temporelle, pas les
+  // filtres status/type qui sont propres à la liste.
+  const analyticsParams = useMemo(
+    () => ({
+      from: dateFrom || undefined,
+      to: dateTo || undefined,
+    }),
+    [dateFrom, dateTo]
   );
 
   const {
@@ -119,12 +234,49 @@ function TransactionsPage() {
     nextPage,
     prevPage,
     isLoading,
-  } = usePaginatedServiceTransactions(orgId, filters, { pageSize: 15 });
+  } = usePaginatedServiceTransactions(orgId, listFilters, { pageSize: 15 });
+
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+  } = useServicesAnalyticsSummary(orgId, analyticsParams);
 
   const confirm = useConfirmServiceTransaction(orgId);
   const cancel = useCancelServiceTransaction(orgId);
 
-  const filtersActive = !!status || !!type || !!dateFrom || !!dateTo;
+  const filtersActive =
+    !!status || !!type || !!direction || !!dateFrom || !!dateTo;
+  const periodLabel =
+    PERIOD_PRESETS.find((p) => p.value === periodPreset)?.label ??
+    (dateFrom && dateTo
+      ? `${dateFrom} → ${dateTo}`
+      : "Toute la période");
+
+  // Compteur de filtres "secondaires" (hors période) actifs — pour le bouton
+  // "Filtres" dans la barre.
+  const secondaryFilterCount =
+    (status ? 1 : 0) + (type ? 1 : 0) + (direction ? 1 : 0);
+
+  // ── KPIs ───────────────────────────────────────────────────────────────
+  const kpis = analytics?.kpis;
+  const totalRevenue = kpis ? Number(kpis.revenue) + Number(kpis.other_revenue) : 0;
+  const totalExpense = kpis ? Number(kpis.expense) : 0;
+  const net = kpis ? Number(kpis.net) : 0;
+  const isProfit = net >= 0;
+
+  // Détecte le cas où les KPIs sont à 0 alors que la liste contient des
+  // transactions : typiquement parce qu'aucune n'est encore *validée*
+  // (le backend agrège uniquement `status=confirmed`).
+  const allKpisZero =
+    kpis !== undefined &&
+    totalRevenue === 0 &&
+    totalExpense === 0 &&
+    net === 0;
+  const showPendingOnlyHint =
+    !analyticsLoading &&
+    !isLoading &&
+    allKpisZero &&
+    meta.totalItems > 0;
 
   return (
     <>
@@ -143,71 +295,206 @@ function TransactionsPage() {
               ]
             : []
         }
-        stats={[
-          <ListStat
-            key="total"
-            label="Transactions"
-            value={meta.totalItems}
-            icon={<FaMoneyBillWave className="h-4 w-4 text-muted-foreground" />}
-          />,
-        ]}
+        stats={[]}
         searchFilters={
-          <ListSearchFilters
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Référence, description, inscription..."
-            filtersOpen={filterOpen}
-            onFiltersOpenChange={setFilterOpen}
-            filtersAreActive={filtersActive}
-            filters={
-              <div className="grid sm:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="text-sm font-medium block mb-2">
-                    Statut
-                  </label>
-                  <QuickSelect
-                    label="Statut"
-                    items={TX_STATUS_ITEMS}
-                    selectedId={status}
-                    onSelect={setStatus}
-                    placeholder="Tous les statuts"
-                    canCreate={false}
-                  />
+          <div className="space-y-3">
+            {/* ── KPI cards (sobres, sans couleur) ───────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <KpiCard
+                label="Revenus"
+                hint={`Total des entrées · ${periodLabel.toLowerCase()}`}
+                value={formatCurrency(totalRevenue)}
+                sign="+"
+                isLoading={analyticsLoading}
+              />
+              <KpiCard
+                label="Dépenses"
+                hint={`Sorties + remboursements · ${periodLabel.toLowerCase()}`}
+                value={formatCurrency(totalExpense)}
+                sign="−"
+                isLoading={analyticsLoading}
+              />
+              <KpiCard
+                label={isProfit ? "Bénéfice" : "Déficit"}
+                hint={`Revenus − dépenses · ${periodLabel.toLowerCase()}`}
+                value={formatCurrency(Math.abs(net))}
+                sign={isProfit ? undefined : "−"}
+                emphasis
+                isLoading={analyticsLoading}
+              />
+            </div>
+
+            {/* Hint : explique pourquoi les KPIs peuvent rester à 0 */}
+            {showPendingOnlyHint && (
+              <p className="text-[11px] text-muted-foreground bg-muted/40 border border-border rounded-md px-3 py-2 leading-snug">
+                Les totaux ci-dessus ne comptent que les transactions{" "}
+                <span className="font-medium text-foreground">validées</span>.
+                Vos {meta.totalItems} transaction{meta.totalItems > 1 ? "s" : ""}{" "}
+                semble{meta.totalItems > 1 ? "nt" : ""} encore en attente de
+                validation — utilisez le bouton{" "}
+                <span className="inline-flex items-center gap-1 px-1 rounded bg-background border border-border text-foreground font-medium">
+                  ✓
+                </span>{" "}
+                sur chaque ligne pour les valider et les inclure aux KPIs.
+              </p>
+            )}
+
+            {/* ── Presets de période (toujours visibles, accès rapide) ── */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mr-1">
+                Période
+              </span>
+              {PERIOD_PRESETS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => applyPreset(p.value)}
+                  className={cn(
+                    "h-7 px-2.5 rounded-full text-[11px] font-medium transition-colors border",
+                    periodPreset === p.value
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+              {periodPreset === "custom" && (
+                <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+                  Personnalisée
+                </span>
+              )}
+            </div>
+
+            {/* ── Search + filter trigger ─────────────────────────────── */}
+            <ListSearchFilters
+              searchValue={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Référence, description, inscription..."
+              filtersOpen={filterOpen}
+              onFiltersOpenChange={setFilterOpen}
+              filtersAreActive={secondaryFilterCount > 0}
+              filters={
+                <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="text-sm font-medium block mb-2">
+                      Statut
+                    </label>
+                    <QuickSelect
+                      label="Statut"
+                      items={TX_STATUS_ITEMS}
+                      selectedId={status}
+                      onSelect={setStatus}
+                      placeholder="Tous les statuts"
+                      canCreate={false}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">
+                      Type
+                    </label>
+                    <QuickSelect
+                      label="Type"
+                      items={TX_TYPE_ITEMS}
+                      selectedId={type}
+                      onSelect={setType}
+                      placeholder="Tous les types"
+                      canCreate={false}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">
+                      Sens
+                    </label>
+                    <QuickSelect
+                      label="Sens"
+                      items={TX_DIRECTION_ITEMS}
+                      selectedId={direction}
+                      onSelect={setDirection}
+                      placeholder="Tous les sens"
+                      canCreate={false}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:col-span-1">
+                    <div>
+                      <label className="text-sm font-medium block mb-2">
+                        Du
+                      </label>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => onDateFromChange(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium block mb-2">
+                        Au
+                      </label>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => onDateToChange(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {filtersActive && (
+                    <div className="sm:col-span-2 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setStatus("");
+                          setType("");
+                          setDirection("");
+                          applyPreset("all");
+                        }}
+                        className="text-xs"
+                      >
+                        <XIcon className="h-3.5 w-3.5 mr-1.5" />
+                        Tout réinitialiser
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium block mb-2">
-                    Type
-                  </label>
-                  <QuickSelect
-                    label="Type"
-                    items={TX_TYPE_ITEMS}
-                    selectedId={type}
-                    onSelect={setType}
-                    placeholder="Tous les types"
-                    canCreate={false}
+              }
+            />
+
+            {/* ── Chips des filtres actifs (hors période, déjà visible) ── */}
+            {(status || type || direction) && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mr-1">
+                  Filtres actifs
+                </span>
+                {status && (
+                  <FilterChip
+                    label={
+                      STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status
+                    }
+                    onRemove={() => setStatus("")}
                   />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-2">Du</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                )}
+                {type && (
+                  <FilterChip
+                    label={
+                      TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type
+                    }
+                    onRemove={() => setType("")}
                   />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-2">Au</label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                )}
+                {direction && (
+                  <FilterChip
+                    label={
+                      DIRECTION_OPTIONS.find((o) => o.value === direction)?.label ??
+                      direction
+                    }
+                    onRemove={() => setDirection("")}
                   />
-                </div>
+                )}
               </div>
-            }
-          />
+            )}
+          </div>
         }
         content={
           isLoading ? (
@@ -221,8 +508,27 @@ function TransactionsPage() {
               <FaMoneyBillWave className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-50" />
               <p className="font-medium">Aucune transaction</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Les paiements et dépenses des services apparaîtront ici.
+                {filtersActive
+                  ? "Aucune transaction ne correspond à vos filtres."
+                  : "Les paiements et dépenses des services apparaîtront ici."}
               </p>
+              {filtersActive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearch("");
+                    setStatus("");
+                    setType("");
+                    setDirection("");
+                    applyPreset("all");
+                  }}
+                  className="mt-3 text-xs"
+                >
+                  <XIcon className="h-3.5 w-3.5 mr-1.5" />
+                  Effacer les filtres
+                </Button>
+              )}
             </div>
           ) : (
             <>
@@ -462,5 +768,80 @@ function TransactionsPage() {
         }}
       />
     </>
+  );
+}
+
+// ─── KPI Card (sobre, mono-couleur) ──────────────────────────────────────────
+
+function KpiCard({
+  label,
+  hint,
+  value,
+  sign,
+  emphasis = false,
+  isLoading,
+}: {
+  label: string;
+  hint: string;
+  value: string;
+  /** Signe préfixé devant la valeur (+ / −). Optionnel pour les valeurs neutres. */
+  sign?: "+" | "−";
+  /** Met la card légèrement en avant — réservé au KPI principal (bénéfice/déficit). */
+  emphasis?: boolean;
+  isLoading?: boolean;
+}) {
+  return (
+    <Card
+      className={cn(
+        "p-4 transition-shadow hover:shadow-sm",
+        emphasis && "bg-muted/30",
+      )}
+    >
+      <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
+      {isLoading ? (
+        <Skeleton className="h-7 w-32 mt-2" />
+      ) : (
+        <p className="text-xl sm:text-2xl font-bold mt-2 leading-tight tabular-nums text-foreground">
+          {sign && (
+            <span className="text-muted-foreground/70 mr-0.5 font-medium">
+              {sign}
+            </span>
+          )}
+          {value}
+        </p>
+      )}
+      <p className="text-[11px] text-muted-foreground mt-1 leading-snug truncate">
+        {hint}
+      </p>
+    </Card>
+  );
+}
+
+// ─── Filter chip ─────────────────────────────────────────────────────────────
+
+function FilterChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <Badge
+      variant="secondary"
+      className="h-6 pl-2 pr-1 gap-1 text-[10px] font-medium"
+    >
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Retirer le filtre ${label}`}
+        className="h-4 w-4 rounded-full inline-flex items-center justify-center hover:bg-foreground/10"
+      >
+        <XIcon className="h-2.5 w-2.5" />
+      </button>
+    </Badge>
   );
 }
