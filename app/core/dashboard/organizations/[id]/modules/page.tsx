@@ -1,15 +1,5 @@
 "use client";
 
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +9,16 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     Tooltip,
     TooltipContent,
@@ -47,7 +47,6 @@ import {
     Package,
     Plus,
     Power,
-    PowerOff,
     ShieldCheck,
     Sparkles,
     Users,
@@ -84,31 +83,34 @@ function isModuleAllowedByPlan(
 }
 
 /**
- * Fenêtre (en millisecondes) après la création d'une organisation pendant
- * laquelle un module installé est considéré comme « choisi à la création »
- * et donc non désactivable.
+ * Tout module installé et activé est désormais verrouillé : une fois en
+ * production sur une organisation, il ne peut plus être désactivé pour
+ * préserver la cohérence des données métier engagées (références FK,
+ * historique, configurations, droits attribués…).
  *
- * 2 minutes : large pour absorber les latences (upload de logo, redirections,
- * etc.) sans risquer un faux positif sur un module ajouté manuellement plus
- * tard depuis cette même page.
+ * Conséquence : seule l'activation initiale est révocable — pas la
+ * désactivation. Cela évite aussi les bascules accidentelles qui masquent
+ * les données existantes aux utilisateurs.
  */
-const CREATION_LOCK_WINDOW_MS = 2 * 60 * 1000;
+function isInstallationLocked(installation: OrganizationModule): boolean {
+    return installation.is_enabled;
+}
 
 /**
- * Un module installé est verrouillé si son `installed_at` tombe dans la
- * fenêtre suivant `org.created_at`. L'utilisateur a délibérément choisi ces
- * modules au moment de créer l'organisation : on l'empêche de revenir
- * dessus pour préserver la cohérence des données métier déjà engagées.
+ * Normalise une chaîne pour comparaison « tolérante » :
+ * - retire les accents (NFD + suppression des marques diacritiques)
+ * - met en minuscules
+ * - trim
+ *
+ * Permet à l'utilisateur de saisir « stocks », « STOCKS », « Stocks » ou
+ * même « SERVICES » sans buter sur la casse ou un accent oublié.
  */
-function isInstallationLocked(
-    installation: OrganizationModule,
-    orgCreatedAt: string | undefined,
-): boolean {
-    if (!orgCreatedAt) return false;
-    const orgTs = new Date(orgCreatedAt).getTime();
-    const installTs = new Date(installation.installed_at).getTime();
-    if (!Number.isFinite(orgTs) || !Number.isFinite(installTs)) return false;
-    return installTs - orgTs <= CREATION_LOCK_WINDOW_MS;
+function normalizeForCompare(value: string): string {
+    return value
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .trim();
 }
 
 // ─── Page ───────────────────────────────────────────────────────────────────
@@ -127,12 +129,10 @@ export default function OrganizationSettingsPage() {
     const installMutation = useInstallOrganizationModule(orgId);
     const toggleMutation = useToggleOrganizationModule(orgId);
 
-    // Cible de la confirmation de désactivation. Stocke l'installation
-    // visée + son module pour pouvoir afficher le contexte dans le dialog.
-    const [pendingDisable, setPendingDisable] = useState<{
-        installation: OrganizationModule;
-        module: Module;
-    } | null>(null);
+    // Module dont l'activation est en attente de confirmation explicite
+    // (saisie du nom). null = pas de dialog ouvert.
+    const [pendingInstall, setPendingInstall] = useState<Module | null>(null);
+    const [confirmText, setConfirmText] = useState("");
 
     const installationsByCode = new Map(
         installed.map((i) => [i.module.code, i] as const),
@@ -149,10 +149,26 @@ export default function OrganizationSettingsPage() {
     const orgCount = orgsListPaged.meta?.totalItems ?? orgsListPaged.data?.length ?? 0;
     const maxOrgs = plan?.max_organizations ?? null;
 
-    const handleInstall = async (code: ModuleCode) => {
+    /**
+     * Étape 1 : ouvrir le dialog de confirmation. L'utilisateur devra saisir
+     * le nom exact du module pour valider — geste volontaire qui rappelle
+     * que l'activation est définitive et consomme un crédit du forfait.
+     */
+    const requestInstall = (m: Module) => {
+        setConfirmText("");
+        setPendingInstall(m);
+    };
+
+    /**
+     * Étape 2 : déclenchée depuis le dialog une fois la saisie validée.
+     */
+    const confirmInstall = async () => {
+        if (!pendingInstall) return;
         try {
-            await installMutation.mutateAsync(code);
-            toast.success("Module activé.");
+            await installMutation.mutateAsync(pendingInstall.code as ModuleCode);
+            toast.success(`${pendingInstall.name} activé.`);
+            setPendingInstall(null);
+            setConfirmText("");
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : "Activation impossible.";
@@ -160,39 +176,28 @@ export default function OrganizationSettingsPage() {
         }
     };
 
-    const performToggle = async (installationId: string, isEnabled: boolean) => {
+    // Saisie correcte (insensible à la casse et aux accents).
+    const isConfirmValid =
+        pendingInstall !== null &&
+        normalizeForCompare(confirmText) ===
+            normalizeForCompare(pendingInstall.name);
+
+    /**
+     * Désormais la seule transition autorisée est la **réactivation** d'un
+     * module historiquement désactivé (cas legacy). Tout module actif est
+     * verrouillé : la désactivation n'est plus exposée dans l'UI.
+     */
+    const handleReactivate = async (installation: OrganizationModule) => {
+        if (installation.is_enabled) return;
         try {
-            await toggleMutation.mutateAsync({ installationId, isEnabled });
-            toast.success(isEnabled ? "Module activé." : "Module désactivé.");
+            await toggleMutation.mutateAsync({
+                installationId: installation.id,
+                isEnabled: true,
+            });
+            toast.success("Module réactivé.");
         } catch {
             toast.error("Mise à jour impossible.");
         }
-    };
-
-    /**
-     * Réactivation : pas de confirmation nécessaire (action sans risque).
-     * Désactivation : on bloque si le module est verrouillé, sinon on ouvre
-     * le dialog de confirmation pour avertir des conséquences.
-     */
-    const handleToggleClick = (installation: OrganizationModule) => {
-        const isEnabled = installation.is_enabled;
-        if (!isEnabled) {
-            void performToggle(installation.id, true);
-            return;
-        }
-        if (isInstallationLocked(installation, org?.created_at)) {
-            toast.error(
-                "Ce module a été activé à la création de l'organisation et ne peut plus être désactivé.",
-            );
-            return;
-        }
-        setPendingDisable({ installation, module: installation.module });
-    };
-
-    const confirmDisable = async () => {
-        if (!pendingDisable) return;
-        await performToggle(pendingDisable.installation.id, false);
-        setPendingDisable(null);
     };
 
     const isLoading = catalogLoading || installedLoading;
@@ -265,9 +270,10 @@ export default function OrganizationSettingsPage() {
                         <div>
                             <CardTitle className="text-base">Modules</CardTitle>
                             <CardDescription>
-                                Activez ou désactivez les domaines métier disponibles
-                                sur cette organisation. Les modules sont limités par
-                                votre forfait.
+                                Activez les domaines métier disponibles pour cette
+                                organisation. Une fois activé, un module est verrouillé
+                                pour protéger les données déjà engagées. Les modules
+                                sont limités par votre forfait.
                             </CardDescription>
                         </div>
                     </div>
@@ -301,11 +307,11 @@ export default function OrganizationSettingsPage() {
                                 !isInstalled;
                             const isBlockedByPlan = !isInstalled && (!moduleAllowed || quotaReached);
 
-                            // Module installé à la création → non désactivable.
+                            // Tout module installé et activé est verrouillé : la
+                            // désactivation n'est plus exposée dans l'UI.
                             const isLocked =
                                 installation !== undefined &&
-                                installation.is_enabled &&
-                                isInstallationLocked(installation, org?.created_at);
+                                isInstallationLocked(installation);
 
                             return (
                                 <div
@@ -361,14 +367,15 @@ export default function OrganizationSettingsPage() {
                                                     </TooltipTrigger>
                                                     <TooltipContent side="top" className="max-w-xs">
                                                         <p className="font-semibold mb-1">
-                                                            Module choisi à la création
+                                                            Module installé
                                                         </p>
                                                         <p className="text-xs">
-                                                            Ce module a été activé au moment de la
-                                                            création de l&apos;organisation. Il ne peut
-                                                            plus être désactivé pour préserver la
-                                                            cohérence des données métier déjà
-                                                            engagées.
+                                                            Une fois activé, un module ne peut plus
+                                                            être désactivé : cela préserve la
+                                                            cohérence des données métier (historique,
+                                                            transactions, droits attribués…). Vous
+                                                            pouvez en revanche restreindre son accès
+                                                            via les rôles et permissions.
                                                         </p>
                                                     </TooltipContent>
                                                 </Tooltip>
@@ -405,7 +412,7 @@ export default function OrganizationSettingsPage() {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    onClick={() => handleInstall(m.code)}
+                                                    onClick={() => requestInstall(m)}
                                                     disabled={installMutation.isPending}
                                                 >
                                                     {installMutation.isPending &&
@@ -433,27 +440,29 @@ export default function OrganizationSettingsPage() {
                                                     </span>
                                                 </TooltipTrigger>
                                                 <TooltipContent side="left" className="max-w-xs">
-                                                    Module choisi à la création de l&apos;organisation —
-                                                    désactivation impossible.
+                                                    Une fois activé, un module ne peut plus être
+                                                    désactivé. Cela protège l&apos;historique et les
+                                                    données déjà engagées.
                                                 </TooltipContent>
                                             </Tooltip>
                                         ) : (
+                                            // Cas legacy : module installé puis désactivé avant
+                                            // l'introduction du verrouillage. On autorise une
+                                            // réactivation simple, sans confirmation.
                                             <Button
                                                 size="sm"
-                                                variant={isEnabled ? "outline" : "default"}
-                                                onClick={() => handleToggleClick(installation!)}
+                                                variant="default"
+                                                onClick={() => handleReactivate(installation!)}
                                                 disabled={toggleMutation.isPending}
                                             >
                                                 {toggleMutation.isPending &&
                                                 toggleMutation.variables?.installationId ===
                                                     installation!.id ? (
                                                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                                ) : isEnabled ? (
-                                                    <PowerOff className="h-3.5 w-3.5 mr-1.5" />
                                                 ) : (
                                                     <Power className="h-3.5 w-3.5 mr-1.5" />
                                                 )}
-                                                {isEnabled ? "Désactiver" : "Réactiver"}
+                                                Réactiver
                                             </Button>
                                         )}
                                     </div>
@@ -465,75 +474,161 @@ export default function OrganizationSettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* ── Dialog de confirmation : désactivation d'un module ─────── */}
-            <AlertDialog
-                open={!!pendingDisable}
+            {/* ── Dialog : confirmation d'activation par saisie du nom ───── */}
+            <Dialog
+                open={!!pendingInstall}
                 onOpenChange={(open) => {
-                    if (!open && !toggleMutation.isPending) setPendingDisable(null);
+                    if (installMutation.isPending) return;
+                    if (!open) {
+                        setPendingInstall(null);
+                        setConfirmText("");
+                    }
                 }}
             >
-                <AlertDialogContent>
-                    <AlertDialogHeader>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
                         <div className="flex items-start gap-3">
                             <div className="h-9 w-9 shrink-0 rounded-full bg-amber-100 flex items-center justify-center">
                                 <AlertTriangle className="h-4.5 w-4.5 text-amber-600" />
                             </div>
-                            <div className="space-y-1.5 flex-1">
-                                <AlertDialogTitle>
-                                    Désactiver{" "}
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                                <DialogTitle>
+                                    Activer{" "}
                                     <span className="font-semibold">
-                                        {pendingDisable?.module.name}
+                                        {pendingInstall?.name}
                                     </span>{" "}
                                     ?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription asChild>
-                                    <div className="space-y-2">
-                                        <p>
-                                            Les utilisateurs n&apos;auront plus accès à ce
-                                            module sur cette organisation. Les données
-                                            métier (historique, transactions, configurations)
-                                            sont conservées et redeviendront accessibles
-                                            si vous réactivez le module plus tard.
-                                        </p>
-                                        <p className="text-xs">
-                                            Cette action est{" "}
-                                            <span className="font-medium text-foreground">
-                                                réversible
-                                            </span>{" "}
-                                            — vous pourrez réactiver le module à tout moment.
-                                        </p>
-                                    </div>
-                                </AlertDialogDescription>
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Cette action est{" "}
+                                    <span className="font-medium text-foreground">
+                                        définitive
+                                    </span>
+                                    . Veuillez lire les conséquences avant de confirmer.
+                                </DialogDescription>
                             </div>
                         </div>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={toggleMutation.isPending}>
-                            Annuler
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault();
-                                void confirmDisable();
+                    </DialogHeader>
+
+                    <div className="space-y-3">
+                        {/* Conséquences */}
+                        <ul className="space-y-2 text-sm">
+                            <li className="flex items-start gap-2.5">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold mt-0.5">
+                                    1
+                                </span>
+                                <span className="flex-1 leading-snug">
+                                    Une fois activé,{" "}
+                                    <span className="font-medium text-foreground">
+                                        ce module ne pourra plus être désactivé
+                                    </span>{" "}
+                                    sur cette organisation. Cela protège
+                                    l&apos;historique et les données métier déjà
+                                    engagées.
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold mt-0.5">
+                                    2
+                                </span>
+                                <span className="flex-1 leading-snug">
+                                    L&apos;activation{" "}
+                                    <span className="font-medium text-foreground">
+                                        consomme un crédit module
+                                    </span>{" "}
+                                    de votre forfait{" "}
+                                    {plan && (
+                                        <span className="font-medium text-foreground">
+                                            {plan.name}
+                                        </span>
+                                    )}{" "}
+                                    {maxModules !== null && (
+                                        <span className="text-muted-foreground">
+                                            ({installedCount}/{maxModules}
+                                            {" → "}
+                                            {installedCount + 1}/{maxModules} après
+                                            activation)
+                                        </span>
+                                    )}
+                                    .
+                                </span>
+                            </li>
+                        </ul>
+
+                        {/* Saisie de confirmation */}
+                        <div className="space-y-1.5 pt-1">
+                            <Label
+                                htmlFor="confirm-module-name"
+                                className="text-xs font-medium text-foreground"
+                            >
+                                Pour confirmer, saisissez{" "}
+                                <span className="font-mono px-1 py-0.5 rounded bg-muted text-foreground">
+                                    {pendingInstall?.name}
+                                </span>
+                            </Label>
+                            <Input
+                                id="confirm-module-name"
+                                value={confirmText}
+                                onChange={(e) => setConfirmText(e.target.value)}
+                                placeholder={pendingInstall?.name ?? ""}
+                                autoComplete="off"
+                                autoFocus
+                                disabled={installMutation.isPending}
+                                onKeyDown={(e) => {
+                                    if (
+                                        e.key === "Enter" &&
+                                        isConfirmValid &&
+                                        !installMutation.isPending
+                                    ) {
+                                        e.preventDefault();
+                                        void confirmInstall();
+                                    }
+                                }}
+                                className={cn(
+                                    "h-10 transition-colors",
+                                    isConfirmValid &&
+                                        "border-emerald-500 focus-visible:ring-emerald-500/30",
+                                )}
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                                {isConfirmValid
+                                    ? "✓ Saisie validée — vous pouvez activer."
+                                    : "La casse et les accents sont ignorés."}
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setPendingInstall(null);
+                                setConfirmText("");
                             }}
-                            disabled={toggleMutation.isPending}
-                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                            disabled={installMutation.isPending}
                         >
-                            {toggleMutation.isPending ? (
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={() => void confirmInstall()}
+                            disabled={installMutation.isPending || !isConfirmValid}
+                            className="bg-amber-600 hover:bg-amber-700 text-white disabled:bg-amber-600/50"
+                        >
+                            {installMutation.isPending ? (
                                 <>
                                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                    Désactivation…
+                                    Activation…
                                 </>
                             ) : (
                                 <>
-                                    <PowerOff className="h-3.5 w-3.5 mr-1.5" />
-                                    Désactiver
+                                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                    Activer définitivement
                                 </>
                             )}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

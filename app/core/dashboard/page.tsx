@@ -14,6 +14,8 @@ import type { Invitation, MyMembership } from "@/lib/types";
 import type { Organization } from "@/lib/types/core";
 import { cn } from "@/lib/utils";
 import {
+  ArrowRight,
+  Blocks,
   Building2,
   Check,
   Compass,
@@ -22,12 +24,14 @@ import {
   Palette,
   Plus,
   Shield,
+  Sparkles,
   UserPlus,
   Users,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // ============================================================================
@@ -43,18 +47,95 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+/**
+ * Salutation contextuelle selon l'heure locale de l'utilisateur.
+ * Pas d'emoji ni de symbole bruyant — juste le mot juste.
+ */
+function getGreeting(now: Date = new Date()): string {
+  const h = now.getHours();
+  if (h < 6) return "Bonsoir";
+  if (h < 12) return "Bonjour";
+  if (h < 18) return "Bon après-midi";
+  return "Bonsoir";
+}
+
+/**
+ * Distance temporelle relative en français (« il y a 3 jours »).
+ * Uniformise le rendu des dates dans les cards.
+ */
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return "—";
+  const diffMs = Date.now() - then;
+  const days = Math.floor(diffMs / 86_400_000);
+  if (days < 1) return "aujourd'hui";
+  if (days < 2) return "hier";
+  if (days < 30) return `il y a ${days} j`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `il y a ${months} mois`;
+  const years = Math.floor(months / 12);
+  return `il y a ${years} an${years > 1 ? "s" : ""}`;
+}
+
+// ============================================================================
+// KPI PILL — métrique compacte affichée dans le hero
+// ============================================================================
+
+function KpiPill({
+  icon: Icon,
+  label,
+  value,
+  tone = "primary",
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number | string;
+  tone?: "primary" | "violet" | "emerald" | "amber";
+}) {
+  const tones = {
+    primary: "bg-primary/10 text-primary",
+    violet: "bg-violet-500/10 text-violet-600",
+    emerald: "bg-emerald-500/10 text-emerald-600",
+    amber: "bg-amber-500/10 text-amber-600",
+  } as const;
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/60 bg-background/50">
+      <div className={cn("h-7 w-7 rounded-md flex items-center justify-center shrink-0", tones[tone])}>
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground leading-none">
+          {label}
+        </p>
+        <p className="text-base font-semibold text-foreground leading-tight mt-0.5">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================================
 // ORGANIZATION CARD (OWNED)
 // ============================================================================
 
 function OwnedOrgCard({ org, onClick }: { org: Organization; onClick: () => void }) {
+  const moduleCount = org.module_codes?.length ?? 0;
   return (
     <Card
       onClick={onClick}
-      className="group cursor-pointer transition-shadow hover:shadow-lg p-0 overflow-hidden flex flex-col border border-muted hover:border-primary"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group relative cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 p-0 overflow-hidden flex flex-col border border-border hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
     >
       <div className="flex items-center gap-3 p-4">
-        <div className="h-12 w-12 shrink-0 rounded-lg bg-primary/8 flex items-center justify-center overflow-hidden transition-colors group-hover:bg-primary/12">
+        <div className="h-12 w-12 shrink-0 rounded-lg bg-primary/8 flex items-center justify-center overflow-hidden transition-colors group-hover:bg-primary/15 ring-1 ring-primary/10">
           {org.logo ? (
             <img src={org.logo} alt={org.name} className="h-full w-full object-cover" />
           ) : (
@@ -65,40 +146,41 @@ function OwnedOrgCard({ org, onClick }: { org: Organization; onClick: () => void
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-base text-foreground truncate group-hover:text-primary transition-colors">
+            <h3 className="font-medium text-sm text-foreground truncate group-hover:text-primary transition-colors">
               {org.name}
             </h3>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 px-1.5 py-px text-[9px] uppercase font-bold tracking-wider shrink-0",
-                org.is_active
-                  ? "bg-emerald-500/10 text-emerald-600"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              <span
-                className={cn(
-                  "h-1 w-1 rounded-full",
-                  org.is_active ? "bg-emerald-500" : "bg-muted-foreground/50"
-                )}
-              />
-              {org.is_active ? "Actif" : "Inactif"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {org.category && (
-              <span className="text-[10px] text-muted-foreground font-medium">
-                {org.category.name}
+            {!org.is_active && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-px text-[9px] uppercase font-bold tracking-wider bg-muted text-muted-foreground rounded shrink-0">
+                Inactif
               </span>
             )}
-            {org.category && org.country && (
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground">
+            {org.category?.name && (
+              <span className="font-medium truncate">{org.category.name}</span>
+            )}
+            {org.category?.name && org.country && (
               <span className="text-muted-foreground/40">·</span>
             )}
-            {org.country && (
-              <span className="text-[10px] text-muted-foreground">{org.country}</span>
-            )}
+            {org.country && <span className="truncate">{org.country}</span>}
           </div>
         </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+      </div>
+      {/* Footer compact : modules + indicateur d'état actif */}
+      <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-border/50 bg-muted/20">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <Blocks className="h-3 w-3" />
+          <span>
+            {moduleCount} module{moduleCount > 1 ? "s" : ""}
+          </span>
+        </div>
+        {org.is_active && (
+          <div className="flex items-center gap-1 text-[10px] text-emerald-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Actif
+          </div>
+        )}
       </div>
     </Card>
   );
@@ -118,10 +200,18 @@ function MemberOrgCard({
   return (
     <Card
       onClick={onClick}
-      className="group cursor-pointer transition-shadow hover:shadow-lg p-0 overflow-hidden flex flex-col border border-muted hover:border-violet-500"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group relative cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 p-0 overflow-hidden flex flex-col border border-border hover:border-violet-500/40 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:outline-none"
     >
       <div className="flex items-center gap-3 p-4">
-        <div className="h-12 w-12 shrink-0 rounded-lg bg-violet-500/8 flex items-center justify-center overflow-hidden transition-colors group-hover:bg-violet-500/12">
+        <div className="h-12 w-12 shrink-0 rounded-lg bg-violet-500/8 flex items-center justify-center overflow-hidden transition-colors group-hover:bg-violet-500/15 ring-1 ring-violet-500/10">
           {membership.organization.logo ? (
             <img src={membership.organization.logo} alt={membership.organization.name} className="h-full w-full object-cover" />
           ) : (
@@ -131,24 +221,21 @@ function MemberOrgCard({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-medium text-base text-foreground truncate group-hover:text-violet-600 transition-colors">
-              {membership.organization.name}
-            </h3>
-            {membership.role && (
-              <span className="inline-flex items-center px-1.5 py-px text-[9px] font-semibold tracking-wide bg-violet-500/10 text-violet-600 shrink-0">
-                {membership.role.name}
-              </span>
-            )}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Rejoint le {new Date(membership.joined_at).toLocaleDateString("fr-FR", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
-          </p>
+          <h3 className="font-medium text-sm text-foreground truncate group-hover:text-violet-600 transition-colors">
+            {membership.organization.name}
+          </h3>
+          {membership.role && (
+            <div className="flex items-center gap-1 mt-1 text-[10px] text-violet-600 font-medium">
+              <Shield className="h-2.5 w-2.5" />
+              {membership.role.name}
+            </div>
+          )}
         </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-violet-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+      </div>
+      <div className="flex items-center gap-1.5 px-4 py-2 border-t border-border/50 bg-muted/20 text-[10px] text-muted-foreground">
+        <UserPlus className="h-3 w-3" />
+        Rejoint {formatRelative(membership.joined_at)}
       </div>
     </Card>
   );
@@ -158,7 +245,7 @@ function MemberOrgCard({
 // INVITATION ROW WITH DIALOG CONFIRMATION (Pas touché, reste ligne basée)
 // ============================================================================
 
-function InvitationRowWithConfirmDialog({
+function InvitationRow({
   invitation,
   onAccept,
   onDecline,
@@ -171,113 +258,74 @@ function InvitationRowWithConfirmDialog({
   isAccepting: boolean;
   isDeclining: boolean;
 }) {
-  const [openAcceptDialog, setOpenAcceptDialog] = useState(false);
   const [openDeclineDialog, setOpenDeclineDialog] = useState(false);
   const isProcessing = isAccepting || isDeclining;
 
   return (
-    <div className="flex items-center justify-between p-3.5 hover:bg-muted/30 transition-colors group">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="h-9 w-9 shrink-0 rounded-lg bg-blue-500/8 flex items-center justify-center overflow-hidden">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 hover:bg-muted/30 transition-colors group">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="h-10 w-10 shrink-0 rounded-lg bg-blue-500/10 flex items-center justify-center overflow-hidden ring-1 ring-blue-500/15">
           <Mail className="h-4 w-4 text-blue-600" />
         </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-medium text-sm text-foreground truncate">
               {invitation.organization?.name || "Organisation"}
             </h3>
             {invitation.role && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-px text-[9px] font-semibold tracking-wide bg-blue-500/10 text-blue-600 shrink-0">
+              <span className="inline-flex items-center gap-1 px-1.5 py-px text-[9px] font-semibold tracking-wide bg-blue-500/10 text-blue-600 rounded shrink-0">
                 <Shield className="h-2.5 w-2.5" />
                 {invitation.role.name}
               </span>
             )}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Invitation reçue le{" "}
-            {new Date(invitation.created_at).toLocaleDateString("fr-FR", {
-              day: "numeric",
-              month: "short",
-            })}
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Invitation reçue {formatRelative(invitation.created_at)}
           </p>
         </div>
       </div>
-      <div className="flex gap-1 shrink-0">
-        {/* Accept Button + Dialog */}
-        <Dialog open={openAcceptDialog} onOpenChange={setOpenAcceptDialog}>
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => setOpenAcceptDialog(true)}
-              disabled={isProcessing}
-              size="sm"
-              variant="default"
-              className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700"
-            >
-              {isAccepting ? (
-                <>Acceptation...</>
-              ) : (
-                <>
-                  <Check className="h-3 w-3 mr-1" />
-                  Accepter
-                </>
-              )}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmer l'acceptation</DialogTitle>
-              <DialogDescription>
-                Êtes-vous sûr de vouloir accepter l'invitation pour <span className="font-medium">{invitation.organization?.name}</span> ?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setOpenAcceptDialog(false)}
-                className="mr-2"
-              >
-                Annuler
-              </Button>
-              <Button
-                disabled={isProcessing}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => {
-                  onAccept();
-                  setOpenAcceptDialog(false);
-                }}
-              >
-                Confirmer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        {/* Decline Button + Dialog */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Accept en un clic — action positive, pas besoin de confirmation */}
+        <Button
+          onClick={onAccept}
+          disabled={isProcessing}
+          size="sm"
+          className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+        >
+          {isAccepting ? (
+            <>
+              <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
+              …
+            </>
+          ) : (
+            <>
+              <Check className="h-3 w-3 mr-1" />
+              Accepter
+            </>
+          )}
+        </Button>
+        {/* Refuser : confirmation simple (action négative) */}
         <Dialog open={openDeclineDialog} onOpenChange={setOpenDeclineDialog}>
           <DialogTrigger asChild>
             <Button
-              onClick={() => setOpenDeclineDialog(true)}
               disabled={isProcessing}
               size="sm"
-              variant="outline"
-              className="h-7 px-2 text-xs"
+              variant="ghost"
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
             >
-              {isDeclining ? (
-                <>Refus...</>
-              ) : (
-                <>
-                  <X className="h-3 w-3 mr-1" />
-                  Refuser
-                </>
-              )}
+              <X className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:ml-1">Refuser</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirmer le refus</DialogTitle>
+              <DialogTitle>Refuser l&apos;invitation ?</DialogTitle>
               <DialogDescription>
-                Êtes-vous sûr de vouloir refuser l'invitation pour <span className="font-medium">{invitation.organization?.name}</span> ?
+                Vous ne rejoindrez pas{" "}
+                <span className="font-medium text-foreground">
+                  {invitation.organization?.name}
+                </span>
+                . Vous pourrez recevoir une nouvelle invitation plus tard si l&apos;administrateur la renvoie.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -285,20 +333,19 @@ function InvitationRowWithConfirmDialog({
                 variant="outline"
                 size="sm"
                 onClick={() => setOpenDeclineDialog(false)}
-                className="mr-2"
               >
                 Annuler
               </Button>
               <Button
                 disabled={isProcessing}
                 size="sm"
-                className="bg-red-600 hover:bg-red-700 text-white"
+                variant="destructive"
                 onClick={() => {
                   onDecline();
                   setOpenDeclineDialog(false);
                 }}
               >
-                Confirmer
+                Refuser
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -393,6 +440,29 @@ function DashboardPageContent() {
   const { data: myMemberships = [], isLoading: isMembershipsLoading } = useMyMemberships();
 
   const isLoading = isUserLoading || isOrgsLoading;
+
+  // ── KPIs hero — calculés AVANT tout early return pour respecter les
+  // Rules of Hooks (l'ordre des hooks doit être stable entre les renders).
+  // `organizations` peut être `undefined` pendant le chargement, on
+  // sécurise avec un fallback `[]`.
+  const greeting = useMemo(() => getGreeting(), []);
+  const totalModules = useMemo(
+    () =>
+      (organizations ?? []).reduce(
+        (acc, o) => acc + (o.module_codes?.length ?? 0),
+        0,
+      ),
+    [organizations],
+  );
+  const todayLabel = useMemo(
+    () =>
+      new Date().toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }),
+    [],
+  );
 
   // Onboarding: actif si ?onboarding=1, si bouton manuel, ou aucune donnée utilisateur
   const onboardingFlag = searchParams.get("onboarding") === "1";
@@ -542,40 +612,86 @@ function DashboardPageContent() {
   const totalOrgs = meta.totalItems;
   const totalAll = totalOrgs + myMemberships.length;
 
+  // Prénom uniquement pour la salutation (plus naturel que nom complet)
+  const firstName = user?.first_name?.trim() || userName.split(" ")[0];
+
   // ========================================================================
   // RENDER
   // ========================================================================
 
   return (
-    <div className="px-4 py-8 max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="pb-5 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Bonjour, {userName}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {totalAll} organisation{totalAll !== 1 ? "s" : ""} au total
-            {totalOrgs > 0 && myMemberships.length > 0 && (
-              <span className="text-muted-foreground/60">
-                {" "}— {totalOrgs} créée{totalOrgs !== 1 ? "s" : ""}, {myMemberships.length} en tant que membre
-              </span>
-            )}
-          </p>
+    <div className="px-4 py-6 sm:py-8 max-w-5xl mx-auto space-y-6 sm:space-y-8">
+      {/* ─── HERO HEADER ─── */}
+      <header className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+                {todayLabel}
+              </p>
+              <SubscriptionSummaryCard />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mt-1">
+              {greeting},{" "}
+              <span className="text-primary">{firstName}</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1.5">
+              Voici un aperçu de votre activité aujourd&apos;hui.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              onClick={handleStartOnboarding}
+              variant="ghost"
+              size="sm"
+              className="h-9 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <Compass className="h-3.5 w-3.5 mr-1.5" />
+              <span className="hidden xs:inline">Visite</span>
+              <span className="inline xs:hidden">Aide</span>
+            </Button>
+            <Button
+              data-tour="create-org"
+              onClick={() => router.push("/core/dashboard/organizations/create")}
+              size="sm"
+              className="h-9 px-3 text-xs font-medium"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Nouvelle organisation
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={handleStartOnboarding}
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs font-semibold shrink-0"
-        >
-          <Compass className="h-3.5 w-3.5 mr-1.5" />
-          Onboarding
-        </Button>
-      </div>
 
-      {/* Aperçu abonnement courant + lien upgrade */}
-      <SubscriptionSummaryCard />
+        {/* KPI pills — visible quand l'utilisateur a au moins une donnée */}
+        {totalAll > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <KpiPill
+              icon={Crown}
+              label="Mes orgs"
+              value={totalOrgs}
+              tone="primary"
+            />
+            <KpiPill
+              icon={Users}
+              label="Membre de"
+              value={myMemberships.length}
+              tone="violet"
+            />
+            <KpiPill
+              icon={Blocks}
+              label="Modules"
+              value={totalModules}
+              tone="emerald"
+            />
+            <KpiPill
+              icon={Mail}
+              label="Invitations"
+              value={invitations.length}
+              tone={invitations.length > 0 ? "amber" : "primary"}
+            />
+          </div>
+        )}
+      </header>
 
       {/* Onboarding — visite guidée (spotlight + blur) */}
       {showOnboarding && (
@@ -618,82 +734,7 @@ function DashboardPageContent() {
         />
       )}
 
-      {/* Section 1: Mes organisations (owned) */}
-      <div className="space-y-3">
-        <SectionHeader
-          icon={Crown}
-          label="Mes organisations"
-          count={totalOrgs}
-          action={
-            <div className="flex gap-2">
-              <Button
-                data-tour="manage-orgs"
-                onClick={() => router.push("/core/dashboard/organizations")}
-                size="sm"
-                className="h-7 px-2 text-xs font-semibold hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                Gérer vos organisations
-                
-              </Button>
-              <Button
-                data-tour="create-org"
-                onClick={() => router.push("/core/dashboard/organizations/create")}
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs font-semibold hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Créer
-              </Button>
-            </div>
-          }
-        />
-        {displayOrgs.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {displayOrgs.map((org) => (
-                <OwnedOrgCard
-                  key={org.id}
-                  org={org}
-                  onClick={() => router.push(`/organisation/${org.id}/dashboard`)}
-                />
-              ))}
-            </div>
-            {/* "View all" */}
-            {totalOrgs > 5 && (
-              <div
-                className="p-3 flex justify-center hover:bg-muted/20 transition-colors cursor-pointer rounded"
-                onClick={() => router.push("/core/dashboard/organizations")}
-              >
-                <span className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors">
-                  Afficher tout ({totalOrgs}) &rarr;
-                </span>
-              </div>
-            )}
-          </>
-        ) : (
-          <Card className="overflow-hidden bg-muted/30">
-            <EmptyState
-              icon={Building2}
-              title="Aucune organisation"
-              description="Créez votre premier espace de travail pour commencer."
-              action={
-                <Button
-                  onClick={() => router.push("/core/dashboard/organizations/create")}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs font-medium"
-                >
-                  <Plus className="h-3 w-3 mr-1.5" />
-                  Créer une organisation
-                </Button>
-              }
-            />
-          </Card>
-        )}
-      </div>
-
-      {/* Section 2: Invitations en attente */}
+      {/* Section : Invitations en attente (PRIORITÉ — placée en premier) */}
       {!isInvitationsLoading && invitations.length > 0 && (
         <div className="space-y-3">
           <SectionHeader
@@ -702,65 +743,120 @@ function DashboardPageContent() {
             count={invitations.length}
           />
 
-          <Card className="overflow-hidden bg-muted/30">
-            <div>
-              {invitations.map((invitation) => (
-                <InvitationRowWithConfirmDialog
-                  key={invitation.id}
-                  invitation={invitation}
-                  onAccept={() => handleAcceptInvitation(invitation.id)}
-                  onDecline={() => handleDeclineInvitation(invitation.id)}
-                  isAccepting={acceptInvitation.isPending}
-                  isDeclining={declineInvitation.isPending}
-                />
-              ))}
-            </div>
+          <Card className="overflow-hidden border-amber-200/60 bg-amber-50/30 divide-y divide-amber-200/40">
+            {invitations.map((invitation) => (
+              <InvitationRow
+                key={invitation.id}
+                invitation={invitation}
+                onAccept={() => handleAcceptInvitation(invitation.id)}
+                onDecline={() => handleDeclineInvitation(invitation.id)}
+                isAccepting={acceptInvitation.isPending}
+                isDeclining={declineInvitation.isPending}
+              />
+            ))}
           </Card>
         </div>
       )}
 
-      {/* Section 3: Organisations membre */}
-      <div className="space-y-3" data-tour="memberships-section">
+      {/* Section : Mes organisations (owned) */}
+      <div className="space-y-3">
         <SectionHeader
-          icon={Users}
-          label="Organisations membre"
-          count={myMemberships.length}
+          icon={Crown}
+          label="Mes organisations"
+          count={totalOrgs}
+          action={
+            totalOrgs > 0 && (
+              <Button
+                data-tour="manage-orgs"
+                onClick={() => router.push("/core/dashboard/organizations")}
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-primary"
+              >
+                Tout gérer
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            )
+          }
         />
-
-        {isMembershipsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 shrink-0 rounded-lg bg-muted animate-pulse" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-4 w-28 bg-muted animate-pulse rounded" />
-                    <div className="h-3 w-20 bg-muted animate-pulse rounded" />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : myMemberships.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {myMemberships.map((membership) => (
-              <MemberOrgCard
-                key={membership.id}
-                membership={membership}
-                onClick={() => router.push(`/organisation/${membership.organization.id}/dashboard`)}
-              />
-            ))}
-          </div>
+        {displayOrgs.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {displayOrgs.map((org) => (
+                <OwnedOrgCard
+                  key={org.id}
+                  org={org}
+                  onClick={() => router.push(`/organisation/${org.id}/dashboard`)}
+                />
+              ))}
+            </div>
+            {totalOrgs > 5 && (
+              <button
+                onClick={() => router.push("/core/dashboard/organizations")}
+                className="w-full p-3 flex items-center justify-center gap-1.5 hover:bg-muted/40 transition-colors rounded-lg border border-dashed border-border text-xs font-medium text-muted-foreground hover:text-primary"
+              >
+                Afficher les {totalOrgs} organisations
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            )}
+          </>
         ) : (
-          <Card className="overflow-hidden bg-muted/30">
+          <Card className="overflow-hidden bg-muted/20 border-dashed">
             <EmptyState
-              icon={Users}
-              title="Aucune organisation"
-              description="Vous n'êtes membre d'aucune organisation pour le moment."
+              icon={Building2}
+              title="Démarrez avec votre premier espace"
+              description="Une organisation, c'est l'espace de travail principal de votre équipe : RH, stocks, services."
+              action={
+                <Button
+                  onClick={() => router.push("/core/dashboard/organizations/create")}
+                  size="sm"
+                  className="h-9 text-xs font-medium"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Créer une organisation
+                </Button>
+              }
             />
           </Card>
         )}
       </div>
+
+      {/* Section : Organisations membre — masquée si vide (réduit le bruit) */}
+      {(isMembershipsLoading || myMemberships.length > 0) && (
+        <div className="space-y-3" data-tour="memberships-section">
+          <SectionHeader
+            icon={Users}
+            label="Organisations membre"
+            count={myMemberships.length}
+          />
+
+          {isMembershipsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 shrink-0 rounded-lg bg-muted animate-pulse" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 w-28 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {myMemberships.map((membership) => (
+                <MemberOrgCard
+                  key={membership.id}
+                  membership={membership}
+                  onClick={() => router.push(`/organisation/${membership.organization.id}/dashboard`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

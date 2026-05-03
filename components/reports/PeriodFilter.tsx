@@ -74,6 +74,26 @@ const PRESETS: Array<() => Period> = [
         to: toISO(new Date()),
         label: "Année en cours",
     }),
+    () => {
+        // Année calendaire précédente complète (1er janvier → 31 décembre).
+        const y = new Date().getFullYear() - 1;
+        return {
+            from: toISO(new Date(y, 0, 1)),
+            to: toISO(new Date(y, 11, 31)),
+            label: "Année précédente",
+        };
+    },
+    () => {
+        // 5 dernières années calendaires complètes, année en cours incluse :
+        // du 1er janvier (année − 4) jusqu'à aujourd'hui.
+        const today = new Date();
+        const from = new Date(today.getFullYear() - 4, 0, 1);
+        return {
+            from: toISO(from),
+            to: toISO(today),
+            label: "5 dernières années",
+        };
+    },
 ];
 
 interface PeriodFilterProps {
