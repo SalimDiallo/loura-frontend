@@ -8,14 +8,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { BillingToggle } from "@/landing/components/sections/pricing";
 import {
-    useBillingEvents,
-    useCancelSubscription,
-    useMySubscription,
-    usePlans,
-    useSetAutoRenew,
+  useBillingEvents,
+  useCancelSubscription,
+  useMySubscription,
+  usePlans,
+  useSetAutoRenew,
 } from "@/lib/hooks/core";
 import type { Plan, SubscriptionCycle } from "@/lib/types/core";
-import { AlertTriangle, Crown, History, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Crown, History, RefreshCw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
