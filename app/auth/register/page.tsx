@@ -9,7 +9,6 @@ import {
     PasswordFieldWithToggle,
 } from '@/components/ui';
 import Logo from '@/components/ui/Logo';
-import { ApiError } from '@/lib/api/client';
 import { siteConfig } from '@/lib/config';
 import { useRegister, useUser, useZodForm } from '@/lib/hooks';
 import {
@@ -17,9 +16,8 @@ import {
     ArrowRight,
     BarChart3,
     Building2,
-    Check,
     Shield,
-    Users,
+    Users
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -161,7 +159,7 @@ function RegisterContent() {
       </Link>
 
       {/* ─── Panneau gauche ─── */}
-      <aside className="hidden lg:flex lg:w-1/2 xl:w-[48%] bg-neutral-50 dark:bg-neutral-950 relative items-center justify-center transition-colors">
+      {/* <aside className="hidden lg:flex lg:w-1/2 xl:w-[48%] bg-neutral-50 dark:bg-neutral-950 relative items-center justify-center transition-colors">
         <div className="w-full max-w-lg px-12 xl:px-16 flex flex-col justify-center py-16">
           <div className="mb-12">
             <Logo showTitle className="[&_h1]:text-black dark:[&_h1]:text-white" />
@@ -199,7 +197,7 @@ function RegisterContent() {
             </span>
           </div>
         </div>
-      </aside>
+      </aside> */}
 
       {/* ─── Panneau droit — Formulaire ─── */}
       <div className="flex-1 flex items-center justify-center px-6 py-16 lg:px-12 bg-white dark:bg-black transition-colors">
@@ -227,9 +225,8 @@ function RegisterContent() {
             <form onSubmit={onSubmit} className="space-y-5">
               {registerError && (
                 <Alert variant="destructive">
-                  {registerError instanceof ApiError
-                    ? registerError.message
-                    : "Une erreur est survenue lors de l'inscription"}
+                  {
+                     "Une erreur est survenue lors de l'inscription"}
                 </Alert>
               )}
 
