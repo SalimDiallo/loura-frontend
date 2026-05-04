@@ -96,8 +96,11 @@ function CurrentSubscriptionBanner() {
     });
   };
 
+  const isAutoRenewActive = !!subscription.auto_renew && canAutoRenew;
+
   return (
     <div className="border border-border bg-background">
+      {/* Bandeau principal : plan + badges d'état */}
       <div className="px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="h-10 w-10 bg-primary/10 flex items-center justify-center shrink-0">
@@ -115,6 +118,26 @@ function CurrentSubscriptionBanner() {
                 >
                   Annulé
                 </Badge>
+              )}
+              {/* Badge auto-renouvellement en évidence dès le haut */}
+              {!isFree && !isCancelled && (
+                isAutoRenewActive ? (
+                  <Badge
+                    variant="outline"
+                    className="text-emerald-700 border-emerald-300 bg-emerald-50 text-[10px] gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    Renouvellement auto actif
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-muted-foreground border-border text-[10px] gap-1"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Sans renouvellement
+                  </Badge>
+                )
               )}
             </div>
             <h3 className="font-semibold text-lg leading-tight">
@@ -147,14 +170,41 @@ function CurrentSubscriptionBanner() {
         )}
       </div>
 
-      {/* Bloc auto-renouvellement — visible uniquement pour les plans payants non annulés */}
+      {/* Bloc auto-renouvellement — mis en avant pour les plans payants */}
       {!isFree && !isCancelled && (
-        <div className="px-6 py-4 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div
+          className={`px-6 py-4 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+            isAutoRenewActive
+              ? "bg-emerald-50/40"
+              : "bg-muted/30"
+          }`}
+        >
           <div className="flex items-start gap-3 min-w-0">
-            <RefreshCw className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div
+              className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                isAutoRenewActive
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium">Renouvellement automatique</p>
-              <p className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">
+                  Renouvellement automatique
+                </p>
+                <span
+                  className={`text-[10px] font-semibold uppercase tracking-wider ${
+                    isAutoRenewActive
+                      ? "text-emerald-700"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {isAutoRenewActive ? "Activé" : "Désactivé"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {renewalDescription}
               </p>
               {hasRenewalError && subscription.last_renewal_error && (
