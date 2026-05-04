@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useMySubscription, useRenewNow } from "@/lib/hooks/core";
-import { AlertTriangle, Loader2, X, Zap } from "lucide-react";
+import { AlertTriangle, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -145,14 +145,14 @@ export function ExpirationAlert() {
           >
             <Link href="/core/billing">Gérer</Link>
           </Button>
-          <button
+          {/* <button
             type="button"
             onClick={handleDismiss}
             aria-label="Masquer l'alerte"
             className={`h-8 w-8 flex items-center justify-center hover:bg-black/5 rounded transition-colors ${palette.icon}`}
           >
             <X className="h-4 w-4" />
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

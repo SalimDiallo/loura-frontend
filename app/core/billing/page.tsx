@@ -12,10 +12,11 @@ import {
   useCancelSubscription,
   useMySubscription,
   usePlans,
+  useRenewNow,
   useSetAutoRenew,
 } from "@/lib/hooks/core";
 import type { Plan, SubscriptionCycle } from "@/lib/types/core";
-import { AlertTriangle, CheckCircle2, Crown, History, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Crown, History, Loader2, RefreshCw, X, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -81,6 +82,23 @@ function CurrentSubscriptionBanner() {
     cancelMutation.mutate(undefined, {
       onSuccess: () => toast.success("Abonnement annulé."),
       onError: (err: Error) => toast.error(err.message),
+    });
+  };
+
+  const handleRenewNow = () => {
+    renewNowMutation.mutate(undefined, {
+      onSuccess: (res) => {
+        if (res.redirect_url) {
+          toast.info("Redirection vers le portail de paiement…");
+          window.location.href = res.redirect_url;
+          return;
+        }
+        toast.success(
+          "Renouvellement lancé. Confirmez la notification sur votre téléphone."
+        );
+      },
+      onError: (err: Error) =>
+        toast.error(err.message || "Erreur lors du renouvellement."),
     });
   };
 
@@ -159,14 +177,33 @@ function CurrentSubscriptionBanner() {
           </div>
         </div>
         {!isFree && !isCancelled && (
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={cancelMutation.isPending}
-          >
-            <X className="h-4 w-4 mr-2" />
-            Annuler l&apos;abonnement
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={handleRenewNow}
+              disabled={renewNowMutation.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {renewNowMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Traitement…
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Renouveler maintenant
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={cancelMutation.isPending}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Annuler l&apos;abonnement
+            </Button>
+          </div>
         )}
       </div>
 
@@ -405,4 +442,5 @@ export default function BillingPage() {
       </section>
     </div>
   );
+}
 }
