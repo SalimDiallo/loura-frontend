@@ -12,8 +12,7 @@ import {
   useCancelSubscription,
   useMySubscription,
   usePlans,
-  useRenewNow,
-  useSetAutoRenew,
+  useSetAutoRenew
 } from "@/lib/hooks/core";
 import type { Plan, SubscriptionCycle } from "@/lib/types/core";
 import { AlertTriangle, CheckCircle2, Crown, History, Loader2, RefreshCw, X, Zap } from "lucide-react";
@@ -27,6 +26,7 @@ function CurrentSubscriptionBanner() {
   const { data: subscription, isLoading } = useMySubscription();
   const cancelMutation = useCancelSubscription();
   const autoRenewMutation = useSetAutoRenew();
+  const renewNowMutation = useRenewNow();
 
   if (isLoading) {
     return <Skeleton className="h-20 w-full" />;
@@ -442,5 +442,4 @@ export default function BillingPage() {
       </section>
     </div>
   );
-}
 }
