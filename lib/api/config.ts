@@ -88,6 +88,7 @@ export const API_ENDPOINTS = {
       CHANGE_PLAN: "/core/billing/subscription/change-plan/",
       CANCEL: "/core/billing/subscription/cancel/",
       AUTO_RENEW: "/core/billing/subscription/auto-renew/",
+      RENEW_NOW: "/core/billing/subscription/renew-now/",
       EVENTS: "/core/billing/events/",
       TRANSACTION_STATUS: (reference: string) =>
         `/core/billing/transactions/${reference}/status/`,

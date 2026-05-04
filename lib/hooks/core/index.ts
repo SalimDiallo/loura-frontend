@@ -317,6 +317,27 @@ export function useSetAutoRenew() {
   });
 }
 
+/**
+ * Mutation : déclenche un renouvellement immédiat (sans attendre J-1).
+ *
+ * - Mode direct (OM/MOMO) : le payeur reçoit un SMS de confirmation.
+ * - Mode gateway (carte/PayCard) : la réponse contient ``redirect_url`` ;
+ *   le composant appelant doit rediriger l'utilisateur vers cette URL.
+ *
+ * Au succès, la période sera prolongée **à partir de la fin actuelle**
+ * et non du moment du paiement — aucun jour déjà payé n'est perdu.
+ */
+export function useRenewNow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => billingService.renewNow(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.mySubscription });
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.events });
+    },
+  });
+}
+
 /** Historique des événements de facturation de l'utilisateur. */
 export function useBillingEvents() {
   return useQuery({

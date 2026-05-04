@@ -1,6 +1,7 @@
 "use client";
 
 import AppHeader from '@/components/AppHeader';
+import { ExpirationAlert } from '@/components/billing/ExpirationAlert';
 import { useCurrentUser } from '@/lib/hooks/auth/useCurrentUser';
 import { useLogout } from '@/lib/hooks/auth/useLogout';
 import React from 'react';
@@ -30,7 +31,8 @@ export default function RootLayout({
 
   return (
     <>
-    <AppHeader />
+      <AppHeader />
+      <ExpirationAlert />
       {children}
     </>
   );

@@ -51,6 +51,20 @@ export const billingService = {
     );
   },
 
+  /**
+   * Déclenche un renouvellement immédiat sans attendre le job J-1.
+   * En mode direct (OM/MOMO) : charge via SMS sur le téléphone du payeur.
+   * En mode gateway (carte/PayCard) : renvoie une ``redirect_url`` à suivre.
+   */
+  async renewNow() {
+    return apiClient.post<{
+      transaction_reference: string;
+      status: string;
+      mode: "direct" | "gateway";
+      redirect_url?: string;
+    }>(API_ENDPOINTS.CORE.BILLING.RENEW_NOW, {});
+  },
+
   async listEvents() {
     return apiClient.get<BillingEvent[]>(API_ENDPOINTS.CORE.BILLING.EVENTS);
   },
