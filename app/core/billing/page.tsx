@@ -12,7 +12,8 @@ import {
   useCancelSubscription,
   useMySubscription,
   usePlans,
-  useSetAutoRenew
+  useRenewNow,
+  useSetAutoRenew,
 } from "@/lib/hooks/core";
 import type { Plan, SubscriptionCycle } from "@/lib/types/core";
 import { AlertTriangle, CheckCircle2, Crown, History, Loader2, RefreshCw, X, Zap } from "lucide-react";
