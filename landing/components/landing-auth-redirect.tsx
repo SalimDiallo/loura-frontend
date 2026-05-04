@@ -2,16 +2,22 @@
 
 import { tokenManager } from "@/lib/api/client";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export function LandingAuthRedirect() {
+export function LandingAuthRedirect({ children }: { children?: React.ReactNode }) {
   const router = useRouter();
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     if (tokenManager.getAccessToken()) {
       router.replace("/core/dashboard");
+      // no need to show landing content while redirecting
+      return;
     }
+    setChecking(false);
   }, [router]);
 
-  return null;
+  if (checking) return null;
+
+  return <>{children}</>;
 }

@@ -5,15 +5,17 @@ import { PlanCard } from "@/components/billing/PlanCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { BillingToggle } from "@/landing/components/sections/pricing";
 import {
     useBillingEvents,
     useCancelSubscription,
     useMySubscription,
-    usePlans
+    usePlans,
+    useSetAutoRenew,
 } from "@/lib/hooks/core";
 import type { Plan, SubscriptionCycle } from "@/lib/types/core";
-import { Crown, History, X } from "lucide-react";
+import { AlertTriangle, Crown, History, RefreshCw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +25,7 @@ import { toast } from "sonner";
 function CurrentSubscriptionBanner() {
   const { data: subscription, isLoading } = useMySubscription();
   const cancelMutation = useCancelSubscription();
+  const autoRenewMutation = useSetAutoRenew();
 
   if (isLoading) {
     return <Skeleton className="h-20 w-full" />;
@@ -31,6 +34,42 @@ function CurrentSubscriptionBanner() {
 
   const isFree = subscription.plan.code === "free";
   const isCancelled = subscription.status === "cancelled";
+  const DIRECT_METHODS = ["OM", "MOMO"];
+  const GATEWAY_METHODS = [
+    "CARD",
+    "VISA",
+    "MC",
+    "PAYCARD",
+    "KULU",
+    "SOUTRA_MONEY",
+    "YMO",
+  ];
+  const isDirectMethod = DIRECT_METHODS.includes(subscription.payment_method);
+  const isGatewayMethod = GATEWAY_METHODS.includes(subscription.payment_method);
+  const canAutoRenew =
+    !isFree && !isCancelled && (isDirectMethod || isGatewayMethod);
+  const hasRenewalError = subscription.renewal_attempts > 0;
+
+  const methodLabel: Record<string, string> = {
+    OM: "Orange Money",
+    MOMO: "MTN MoMo",
+    CARD: "carte bancaire",
+    VISA: "carte VISA",
+    MC: "carte MasterCard",
+    PAYCARD: "PayCard",
+    KULU: "KULU",
+    SOUTRA_MONEY: "Soutra Money",
+    YMO: "YMO",
+  };
+  const renewalDescription = canAutoRenew
+    ? isDirectMethod
+      ? `Nous relancerons un paiement ${
+          methodLabel[subscription.payment_method]
+        } 24 h avant l'échéance. Vous recevrez une notification sur votre téléphone pour confirmer.`
+      : `24 h avant l'échéance, nous vous enverrons un email avec un lien Djomy sécurisé pour renouveler en un clic par ${
+          methodLabel[subscription.payment_method] ?? "votre moyen de paiement"
+        }.`
+    : "Non disponible — souscrivez à nouveau via un moyen de paiement supporté pour activer cette option.";
 
   const handleCancel = () => {
     if (
@@ -45,50 +84,98 @@ function CurrentSubscriptionBanner() {
     });
   };
 
+  const handleToggleAutoRenew = (checked: boolean) => {
+    autoRenewMutation.mutate(checked, {
+      onSuccess: () =>
+        toast.success(
+          checked
+            ? "Auto-renouvellement activé."
+            : "Auto-renouvellement désactivé."
+        ),
+      onError: (err: Error) => toast.error(err.message),
+    });
+  };
+
   return (
-    <div className="border border-border bg-background px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="h-10 w-10 bg-primary/10 flex items-center justify-center shrink-0">
-          <Crown className="h-5 w-5 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60">
-              Forfait actuel
-            </p>
-            {isCancelled && (
-              <Badge variant="outline" className="text-amber-600 border-amber-300 text-[10px]">
-                Annulé
-              </Badge>
-            )}
+    <div className="border border-border bg-background">
+      <div className="px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 bg-primary/10 flex items-center justify-center shrink-0">
+            <Crown className="h-5 w-5 text-primary" />
           </div>
-          <h3 className="font-semibold text-lg leading-tight">
-            {subscription.plan.name}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Cycle {subscription.cycle === "yearly" ? "annuel" : "mensuel"}
-            {!isFree && (
-              <>
-                {" · "}
-                {subscription.days_remaining > 0
-                  ? `${subscription.days_remaining} jour${
-                      subscription.days_remaining > 1 ? "s" : ""
-                    } restant`
-                  : "Période terminée"}
-              </>
-            )}
-          </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-primary/60">
+                Forfait actuel
+              </p>
+              {isCancelled && (
+                <Badge
+                  variant="outline"
+                  className="text-amber-600 border-amber-300 text-[10px]"
+                >
+                  Annulé
+                </Badge>
+              )}
+            </div>
+            <h3 className="font-semibold text-lg leading-tight">
+              {subscription.plan.name}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Cycle {subscription.cycle === "yearly" ? "annuel" : "mensuel"}
+              {!isFree && (
+                <>
+                  {" · "}
+                  {subscription.days_remaining > 0
+                    ? `${subscription.days_remaining} jour${
+                        subscription.days_remaining > 1 ? "s" : ""
+                      } restant`
+                    : "Période terminée"}
+                </>
+              )}
+            </p>
+          </div>
         </div>
+        {!isFree && !isCancelled && (
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={cancelMutation.isPending}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Annuler l&apos;abonnement
+          </Button>
+        )}
       </div>
+
+      {/* Bloc auto-renouvellement — visible uniquement pour les plans payants non annulés */}
       {!isFree && !isCancelled && (
-        <Button
-          variant="outline"
-          onClick={handleCancel}
-          disabled={cancelMutation.isPending}
-        >
-          <X className="h-4 w-4 mr-2" />
-          Annuler l'abonnement
-        </Button>
+        <div className="px-6 py-4 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <RefreshCw className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Renouvellement automatique</p>
+              <p className="text-xs text-muted-foreground">
+                {renewalDescription}
+              </p>
+              {hasRenewalError && subscription.last_renewal_error && (
+                <p className="mt-1.5 text-xs text-amber-700 flex items-start gap-1">
+                  <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>
+                    Dernière tentative échouée (
+                    {subscription.renewal_attempts}/3) :{" "}
+                    {subscription.last_renewal_error}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+          <Switch
+            checked={subscription.auto_renew}
+            onCheckedChange={handleToggleAutoRenew}
+            disabled={!canAutoRenew || autoRenewMutation.isPending}
+            aria-label="Renouvellement automatique"
+          />
+        </div>
       )}
     </div>
   );
@@ -103,6 +190,9 @@ const EVENT_LABELS: Record<string, string> = {
   renewed: "Renouvellement",
   cancelled: "Annulation",
   expired: "Expiration",
+  expiry_reminder: "Rappel d'expiration",
+  renewal_attempt: "Tentative de renouvellement",
+  renewal_failed: "Renouvellement échoué",
   payment_success: "Paiement réussi",
   payment_failed: "Paiement échoué",
   limit_reached: "Limite atteinte",

@@ -1,9 +1,23 @@
-import { withSentryConfig } from "@sentry/nextjs"
+import { withSentryConfig } from "@sentry/nextjs";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["randomuser.me", "api.louratech.org"],
+    // Migration: "images.domains" is deprecated. Use "images.remotePatterns" as recommended.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "randomuser.me",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.louratech.org",
+        port: "",
+        pathname: "/**",
+      },
+    ],
   },
   async headers() {
     return [

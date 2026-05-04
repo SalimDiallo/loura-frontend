@@ -170,6 +170,10 @@ export interface Subscription {
   current_period_end: string;
   cancelled_at: string | null;
   auto_renew: boolean;
+  /** Méthode de paiement mémorisée pour les renouvellements auto. */
+  payment_method: "OM" | "MOMO" | "KULU" | "" | string;
+  renewal_attempts: number;
+  last_renewal_error: string;
   is_active: boolean;
   days_remaining: number;
   /** Statistiques d'utilisation pour l'affichage des limites */

@@ -299,6 +299,24 @@ export function useCancelSubscription() {
   });
 }
 
+/**
+ * Mutation : active ou désactive l'auto-renouvellement.
+ *
+ * Le backend refuse l'activation pour un plan Free ou une sub sans
+ * infos de paiement mémorisées (dans ce cas l'utilisateur doit
+ * repasser par le flux `changePlan` pour les enregistrer).
+ */
+export function useSetAutoRenew() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => billingService.setAutoRenew(enabled),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.mySubscription });
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.events });
+    },
+  });
+}
+
 /** Historique des événements de facturation de l'utilisateur. */
 export function useBillingEvents() {
   return useQuery({

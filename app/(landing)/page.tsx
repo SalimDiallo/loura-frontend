@@ -15,8 +15,9 @@ import TestimonialsCarousel from "@/landing/components/sections/testimonials-car
 export default function Home() {
   return (
     <main>
-      <LandingAuthRedirect />
-      <Header />
+      <LandingAuthRedirect >
+     <>
+     <Header />
       <Hero />
       <Logos />
       <Problem />
@@ -30,6 +31,8 @@ export default function Home() {
       {/* <Blog /> */}
       <CTASection />
       <FooterSection />
+     </>
+      </LandingAuthRedirect>
     </main>
   );
 }
