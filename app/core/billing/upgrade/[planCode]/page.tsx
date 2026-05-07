@@ -187,6 +187,21 @@ export default function UpgradePage() {
                         window.location.href = data.redirect_url;
                         return;
                     }
+                    // Downgrade différé : le passage prend effet à la
+                    // fin de la période en cours, pas immédiatement.
+                    if (data.scheduled && data.effective_at) {
+                        const date = new Date(data.effective_at).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                        });
+                        toast.success(
+                            `Passage à ${plan.name} programmé pour le ${date}.`,
+                            { description: "Vous gardez votre forfait actuel jusque-là." }
+                        );
+                        router.push("/core/billing");
+                        return;
+                    }
                     toast.success(`Abonnement ${plan.name} activé.`);
                     router.push("/core/billing");
                 },

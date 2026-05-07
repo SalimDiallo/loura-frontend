@@ -174,6 +174,13 @@ export interface Subscription {
   payment_method: "OM" | "MOMO" | "KULU" | "" | string;
   renewal_attempts: number;
   last_renewal_error: string;
+  /**
+   * Plan vers lequel la sub bascule à ``current_period_end``. Posé
+   * lorsqu'on annule (cible Free) ou qu'on planifie un downgrade vers
+   * un autre plan payant. ``null`` = aucun changement planifié.
+   */
+  scheduled_plan: Plan | null;
+  scheduled_cycle: SubscriptionCycle | '';
   is_active: boolean;
   days_remaining: number;
   /** Statistiques d'utilisation pour l'affichage des limites */
@@ -253,6 +260,10 @@ export interface ChangePlanResponse {
     subscription?: Subscription;
     requires_payment: boolean;
     redirect_url?: string;
+    /** Vrai pour un downgrade différé (la sub courante reste, schedule posé). */
+    scheduled?: boolean;
+    /** Date à laquelle le changement planifié prendra effet (ISO 8601). */
+    effective_at?: string;
   };
 }
 

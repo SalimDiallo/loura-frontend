@@ -40,6 +40,17 @@ export const billingService = {
   },
 
   /**
+   * Annule un changement de plan planifié (downgrade différé ou annulation
+   * en attente). La sub courante continue normalement.
+   */
+  async cancelScheduledChange() {
+    return apiClient.post<Subscription>(
+      API_ENDPOINTS.CORE.BILLING.CANCEL_SCHEDULED_CHANGE,
+      {}
+    );
+  },
+
+  /**
    * Active ou désactive l'auto-renouvellement sur l'abonnement courant.
    * Le backend refuse l'activation pour un plan Free ou une sub sans
    * infos de paiement mémorisées (il faut alors repasser par `changePlan`).

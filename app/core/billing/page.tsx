@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { BillingToggle } from "@/landing/components/sections/pricing";
 import {
   useBillingEvents,
+  useCancelScheduledChange,
   useCancelSubscription,
   useMySubscription,
   usePlans,
@@ -16,7 +17,7 @@ import {
   useSetAutoRenew,
 } from "@/lib/hooks/core";
 import type { Plan, SubscriptionCycle } from "@/lib/types/core";
-import { AlertTriangle, CheckCircle2, Crown, History, Loader2, RefreshCw, X, Zap } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, Crown, History, Loader2, RefreshCw, X, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ import { toast } from "sonner";
 function CurrentSubscriptionBanner() {
   const { data: subscription, isLoading } = useMySubscription();
   const cancelMutation = useCancelSubscription();
+  const cancelScheduledMutation = useCancelScheduledChange();
   const autoRenewMutation = useSetAutoRenew();
   const renewNowMutation = useRenewNow();
 
@@ -116,6 +118,28 @@ function CurrentSubscriptionBanner() {
   };
 
   const isAutoRenewActive = !!subscription.auto_renew && canAutoRenew;
+  const hasScheduledChange = !!subscription.scheduled_plan;
+  const scheduledTargetIsFree =
+    subscription.scheduled_plan?.code === "free";
+  const formattedEndDate = new Date(
+    subscription.current_period_end
+  ).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  const handleCancelScheduledChange = () => {
+    cancelScheduledMutation.mutate(undefined, {
+      onSuccess: () =>
+        toast.success(
+          scheduledTargetIsFree
+            ? "Annulation supprimée — votre abonnement continue."
+            : "Changement de forfait annulé."
+        ),
+      onError: (err: Error) => toast.error(err.message),
+    });
+  };
 
   return (
     <div className="border border-border bg-background">
@@ -207,6 +231,44 @@ function CurrentSubscriptionBanner() {
           </div>
         )}
       </div>
+
+      {/* Bandeau "changement planifié" — affiché si un downgrade ou
+          une annulation a été programmée pour la fin de période. */}
+      {hasScheduledChange && !isFree && (
+        <div className="px-6 py-4 border-t border-border bg-amber-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+              <CalendarClock className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-amber-900">
+                {scheduledTargetIsFree
+                  ? "Annulation programmée"
+                  : `Passage à ${subscription.scheduled_plan?.name} programmé`}
+              </p>
+              <p className="text-xs text-amber-800/80 mt-0.5">
+                {scheduledTargetIsFree
+                  ? `Vous garderez votre forfait ${subscription.plan.name} jusqu'au ${formattedEndDate}, puis vous basculerez sur Free.`
+                  : `Votre forfait ${subscription.plan.name} reste actif jusqu'au ${formattedEndDate}. Le passage à ${subscription.scheduled_plan?.name} prendra effet ensuite.`}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCancelScheduledChange}
+            disabled={cancelScheduledMutation.isPending}
+            className="border-amber-300 text-amber-900 hover:bg-amber-100"
+          >
+            {cancelScheduledMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <X className="h-4 w-4 mr-2" />
+            )}
+            Annuler le changement
+          </Button>
+        </div>
+      )}
 
       {/* Bloc auto-renouvellement — mis en avant pour les plans payants */}
       {!isFree && !isCancelled && (

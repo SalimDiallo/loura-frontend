@@ -300,6 +300,22 @@ export function useCancelSubscription() {
 }
 
 /**
+ * Mutation : annule un changement de plan planifié (l'utilisateur change
+ * d'avis sur son annulation ou son downgrade). La sub courante continue
+ * normalement et sera renouvelée si l'auto-renouvellement est actif.
+ */
+export function useCancelScheduledChange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => billingService.cancelScheduledChange(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.mySubscription });
+      queryClient.invalidateQueries({ queryKey: billingQueryKeys.events });
+    },
+  });
+}
+
+/**
  * Mutation : active ou désactive l'auto-renouvellement.
  *
  * Le backend refuse l'activation pour un plan Free ou une sub sans
