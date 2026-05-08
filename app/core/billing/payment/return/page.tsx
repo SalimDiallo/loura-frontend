@@ -48,6 +48,11 @@ function PaymentReturnClient() {
     const isSuccess = tx ? SUCCESS_STATUSES.has(tx.status) : false;
     const isFailure = tx ? FAILURE_STATUSES.has(tx.status) : false;
     const isTerminal = isSuccess || isFailure;
+    // 404 → transaction non reconnue côté Loura (référence ancienne,
+    // mauvais user, paiement initié sur un autre environnement…). On
+    // évite de boucler "Difficulté de connexion" indéfiniment.
+    const isNotFound =
+        (error as { status?: number } | undefined)?.status === 404;
 
     // Cap sur la durée de polling : on coupe au bout de POLL_TIMEOUT_MS pour
     // ne pas bloquer le user indéfiniment si le webhook tarde anormalement.
@@ -106,6 +111,36 @@ function PaymentReturnClient() {
                         </Button>
                         <Button asChild variant="outline">
                             <Link href="/core/billing">Voir mon abonnement</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (isNotFound) {
+        return (
+            <div className="container mx-auto p-6 max-w-2xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Transaction introuvable</CardTitle>
+                        <CardDescription>
+                            Aucune transaction ne correspond à cette
+                            référence sur votre compte. Si vous venez d&apos;être
+                            débité, le paiement sera traité automatiquement
+                            dans quelques minutes.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex gap-3">
+                        <Button asChild>
+                            <Link href="/core/billing">
+                                Voir mon abonnement
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href="/core/dashboard">
+                                Retour au tableau de bord
+                            </Link>
                         </Button>
                     </CardContent>
                 </Card>

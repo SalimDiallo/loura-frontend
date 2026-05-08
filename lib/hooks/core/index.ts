@@ -373,9 +373,21 @@ export function useTransactionStatus(reference: string | null) {
     queryKey: ['billing', 'transactions', reference],
     queryFn: () => billingService.getTransactionStatus(reference!),
     enabled: !!reference,
+    // 404 = transaction inconnue côté Loura. Pas la peine de retry, on
+    // laisse la page de retour afficher l'état d'erreur. Les autres
+    // erreurs (5xx, réseau) bénéficient du retry par défaut de RQ.
+    retry: (failureCount, error) => {
+      const status = (error as { status?: number } | undefined)?.status;
+      if (status === 404) return false;
+      return failureCount < 2;
+    },
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data?.is_terminal) return false;
+      // Si la dernière requête a échoué en 404, on arrête de poller
+      // (sinon on boucle à l'infini en affichant "difficulté de connexion").
+      const err = query.state.error as { status?: number } | undefined;
+      if (err?.status === 404) return false;
       return 2000;
     },
     refetchIntervalInBackground: false,
