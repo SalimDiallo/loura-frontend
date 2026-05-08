@@ -316,13 +316,9 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
 // ROUTE MATCHING
 // ============================================================================
 
-const EXACT_ROUTES = new Set(["/dashboard", "/inventory", "/hr", "/services"]);
-
+// Nouvelle logique pour "is active": juste un "pathname.includes(url)"
 function isRouteActive(pathname: string, url: string, base: string): boolean {
-  if (pathname === url) return true;
-  const relative = url.replace(base, "");
-  if (EXACT_ROUTES.has(relative)) return false;
-  return pathname.startsWith(url + "/");
+  return pathname.includes(url);
 }
 
 // ============================================================================
@@ -391,7 +387,7 @@ function NavGroup({
               {filteredItems.map((item) => {
                 const active = isRouteActive(pathname, item.url, base);
                 const ItemIcon = item.icon;
-                // MODIF: Ajout du bg-primary si active
+                // Couleur d'item actif: couleur bg-primary (voir @app/globals.css: bg-primary et text-white)
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
@@ -401,8 +397,9 @@ function NavGroup({
                       size="sm"
                       className={cn(
                         "ml-1 text-sidebar-foreground/60",
-                        active && "text-sidebar-foreground font-medium bg-primary/90 hover:bg-primary",
-                        // Ajoute bg-primary pour l'item sélectionné, hover pour effet lors du survol
+                        active &&
+                          "text-white font-semibold bg-primary hover:bg-primary/90",
+                        // hover, focus styles en dehors de l'actif
                         !active && "hover:bg-sidebar-accent/60"
                       )}
                     >
