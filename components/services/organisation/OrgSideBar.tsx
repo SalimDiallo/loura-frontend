@@ -318,7 +318,13 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
 
 // Nouvelle logique pour "is active": juste un "pathname.includes(url)"
 function isRouteActive(pathname: string, url: string, base: string): boolean {
-  return pathname.includes(url);
+  // On veut que le matching soit strict de path sur la partie "après orgId"
+  // Ex: url="/organisation/ORGID/hr/roles", on veut matcher "hr/roles" dans pathname
+  // On extrait le "sublink" de url après /organisation/ORGID/, et vérifie que ce sublink existe dans pathname
+  const orgBase = `/organisation/${base.split('/').pop()}/`;
+  const relUrl = url.startsWith(orgBase) ? url.slice(orgBase.length) : url;
+  // On cherche un segment "/hr/roles", "/services/transactions", etc. dans le pathname
+  return pathname.includes(`/${relUrl}`);
 }
 
 // ============================================================================
