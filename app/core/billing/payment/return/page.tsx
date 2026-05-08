@@ -36,9 +36,11 @@ function PaymentReturnClient() {
     const params = useSearchParams();
     const reference = useMemo(
         () =>
+            // Priorité au nom natif Djomy si jamais le retour bypass le
+            // bridge backend ; sinon ``ref`` normalisé par le bridge.
+            params.get("merchantPaymentReference") ||
             params.get("ref") ||
             params.get("reference") ||
-            params.get("merchantPaymentReference") ||
             null,
         [params]
     );
