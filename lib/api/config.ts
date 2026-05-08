@@ -63,6 +63,9 @@ export const API_ENDPOINTS = {
         `/core/organizations/${id}/documents/${docType}/${objectId}/`,
       DOCUMENT_SAMPLE: (id: string) =>
         `/core/organizations/${id}/documents/_sample/`,
+      // Outils rapides du dashboard (factures ad-hoc non persistées).
+      QUICK_INVOICE: (id: string) =>
+        `/core/organizations/${id}/tools/quick-invoice/`,
     },
     // Catégories
     CATEGORIES: {

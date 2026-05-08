@@ -91,6 +91,13 @@ function sameModuleSet(a: ModuleCode[], b: ModuleCode[]): boolean {
   return b.every((c) => set.has(c));
 }
 
+/**
+ * Modules toujours actifs et non décochables. ``hr`` porte les rôles et
+ * permissions de l'organisation : sans lui, plus aucune autre fonction
+ * métier n'est exploitable. On le verrouille donc côté UI.
+ */
+const LOCKED_MODULES: ReadonlySet<ModuleCode> = new Set<ModuleCode>(["hr"]);
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -107,7 +114,10 @@ function CreateOrganizationContent() {
   const [categoryId, setCategoryId] = useState("");
   const [country, setCountry] = useState("Guinée");
   const [currency, setCurrency] = useState("GNF");
-  const [selectedModules, setSelectedModules] = useState<ModuleCode[]>([]);
+  // HR est toujours sélectionné par défaut et non décochable (cf. ``LOCKED_MODULES``).
+  const [selectedModules, setSelectedModules] = useState<ModuleCode[]>(() =>
+    Array.from(LOCKED_MODULES),
+  );
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -137,25 +147,32 @@ function CreateOrganizationContent() {
 
   // Pré-sélection automatique tant que l'utilisateur n'a pas dévié.
   // Si la catégorie change et qu'aucune édition manuelle n'a eu lieu,
-  // on aligne `selectedModules` sur la suggestion.
+  // on aligne `selectedModules` sur la suggestion — en garantissant
+  // que les modules verrouillés (HR) restent toujours présents.
   useEffect(() => {
     if (modulesTouchedByUser) return;
     if (suggestedModules.length === 0) return;
-    setSelectedModules((prev) =>
-      sameModuleSet(prev, suggestedModules) ? prev : [...suggestedModules],
+    const merged = Array.from(
+      new Set<ModuleCode>([...LOCKED_MODULES, ...suggestedModules]),
     );
+    setSelectedModules((prev) => (sameModuleSet(prev, merged) ? prev : merged));
   }, [suggestedModules, modulesTouchedByUser]);
 
   const toggleModule = useCallback((code: ModuleCode) => {
+    // Modules verrouillés (HR) : on ignore le toggle.
+    if (LOCKED_MODULES.has(code)) return;
     setModulesTouchedByUser(true);
     setSelectedModules((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
     );
   }, []);
 
-  // Restaure la suggestion après que l'utilisateur a dévié.
+  // Restaure la suggestion après que l'utilisateur a dévié. On
+  // réinjecte les modules verrouillés pour qu'ils restent actifs.
   const restoreSuggestion = useCallback(() => {
-    setSelectedModules([...suggestedModules]);
+    setSelectedModules(
+      Array.from(new Set<ModuleCode>([...LOCKED_MODULES, ...suggestedModules])),
+    );
     setModulesTouchedByUser(false);
   }, [suggestedModules]);
 
@@ -423,16 +440,25 @@ function CreateOrganizationContent() {
                     const Icon = MODULE_ICONS[m.code] ?? Blocks;
                     const isSelected = selectedModules.includes(m.code);
                     const isSuggested = suggestedModules.includes(m.code);
+                    const isLocked = LOCKED_MODULES.has(m.code);
                     return (
                       <button
                         key={m.id}
                         type="button"
                         onClick={() => toggleModule(m.code)}
+                        disabled={isLocked}
+                        aria-disabled={isLocked || undefined}
+                        title={
+                          isLocked
+                            ? "Module requis — ne peut pas être désactivé."
+                            : undefined
+                        }
                         className={cn(
                           "w-full flex items-start gap-3 rounded-xl border p-3 text-left transition-all",
                           isSelected
                             ? "border-primary/60 bg-primary/5"
                             : "border-border/60 bg-background hover:border-border hover:bg-muted/40",
+                          isLocked && "cursor-not-allowed opacity-95",
                         )}
                       >
                         <div
@@ -451,11 +477,17 @@ function CreateOrganizationContent() {
                               <span className="text-sm font-medium text-foreground truncate">
                                 {m.name}
                               </span>
-                              {isSuggested && (
-                                <span className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded text-[9px] font-mono uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shrink-0">
-                                  <Sparkles className="h-2.5 w-2.5" />
-                                  Suggéré
+                              {isLocked ? (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded text-[9px] font-mono uppercase tracking-wider bg-muted text-muted-foreground border border-border shrink-0">
+                                  Requis
                                 </span>
+                              ) : (
+                                isSuggested && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded text-[9px] font-mono uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shrink-0">
+                                    <Sparkles className="h-2.5 w-2.5" />
+                                    Suggéré
+                                  </span>
+                                )
                               )}
                             </div>
                             <span

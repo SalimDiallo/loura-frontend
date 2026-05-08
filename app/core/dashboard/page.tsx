@@ -651,6 +651,16 @@ function DashboardPageContent() {
               <span className="inline xs:hidden">Aide</span>
             </Button>
             <Button
+              onClick={() => router.push("/core/dashboard/tools")}
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 text-xs font-medium border-primary/40 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/60"
+              aria-label="Outils rapides"
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+              Outils
+            </Button>
+            <Button
               data-tour="create-org"
               onClick={() => router.push("/core/dashboard/organizations/create")}
               size="sm"
