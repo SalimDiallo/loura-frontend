@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { BillingToggle } from "@/landing/components/sections/pricing";
+import { ApiError } from "@/lib/api";
 import {
   useBillingEvents,
   useCancelScheduledChange,
@@ -100,8 +101,31 @@ function CurrentSubscriptionBanner() {
           "Renouvellement lancé. Confirmez la notification sur votre téléphone."
         );
       },
-      onError: (err: Error) =>
-        toast.error(err.message || "Erreur lors du renouvellement."),
+      onError: (err: Error) => {
+        // Le backend renvoie un ``reason`` qui qualifie l'erreur. Pour les
+        // cas actionnables, on guide l'utilisateur plutôt que d'afficher
+        // un toast d'erreur sec.
+        const reason =
+          err instanceof ApiError
+            ? (err.data as { reason?: string } | undefined)?.reason
+            : undefined;
+
+        if (reason === "missing_payer_number") {
+          toast.warning(err.message, {
+            description:
+              "Cliquez sur « Changer de plan » pour ressaisir vos coordonnées de paiement.",
+            duration: 8000,
+          });
+          return;
+        }
+        if (reason === "djomy_not_configured") {
+          toast.error(
+            "Service de paiement indisponible. Réessayez dans quelques instants."
+          );
+          return;
+        }
+        toast.error(err.message || "Erreur lors du renouvellement.");
+      },
     });
   };
 
