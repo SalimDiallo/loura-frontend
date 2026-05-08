@@ -46,7 +46,6 @@ import {
     FaChevronDown,
     FaClipboardCheck,
     FaClipboardList,
-    FaCog,
     FaCoins,
     FaConciergeBell,
     FaCreditCard,
@@ -392,6 +391,7 @@ function NavGroup({
               {filteredItems.map((item) => {
                 const active = isRouteActive(pathname, item.url, base);
                 const ItemIcon = item.icon;
+                // MODIF: Ajout du bg-primary si active
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
@@ -401,7 +401,9 @@ function NavGroup({
                       size="sm"
                       className={cn(
                         "ml-1 text-sidebar-foreground/60",
-                        active && "text-sidebar-foreground font-medium"
+                        active && "text-sidebar-foreground font-medium bg-primary/90 hover:bg-primary",
+                        // Ajoute bg-primary pour l'item sélectionné, hover pour effet lors du survol
+                        !active && "hover:bg-sidebar-accent/60"
                       )}
                     >
                       <Link
