@@ -15,6 +15,7 @@ import {
     SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
+    SidebarMenuAction,
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarProvider,
@@ -55,9 +56,12 @@ import {
     FaMoneyBillWave,
     FaProjectDiagram,
     FaReceipt,
+    FaRegClock,
+    FaRegStar,
     FaSearch,
     FaShoppingCart,
     FaSitemap,
+    FaStar,
     FaTachometerAlt,
     FaTags,
     FaTimes,
@@ -77,9 +81,116 @@ const SIDEBAR_MIN_WIDTH = 200;
 const SIDEBAR_MAX_WIDTH = 480;
 const SIDEBAR_DEFAULT_WIDTH = 256; // 16rem
 const SIDEBAR_WIDTH_STORAGE_KEY = "org-sidebar-width";
+const SIDEBAR_FAVORITES_KEY = "org-sidebar-favorites";
+const SIDEBAR_RECENTS_KEY = "org-sidebar-recents";
+const SIDEBAR_GROUPS_OPEN_KEY = "org-sidebar-groups-open";
+const RECENTS_LIMIT = 5;
 
 const clampWidth = (w: number) =>
   Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, w));
+
+function readJSON<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJSON<T>(key: string, value: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* ignore */
+  }
+}
+
+// ============================================================================
+// SMART SIDEBAR HOOK — favorites, recents, group state (per-org)
+// ============================================================================
+
+interface SmartSidebarState {
+  favorites: string[];
+  recents: string[];
+  groupsOpen: Record<string, boolean>;
+  toggleFavorite: (url: string) => void;
+  isFavorite: (url: string) => boolean;
+  trackVisit: (url: string) => void;
+  setGroupOpen: (id: string, open: boolean) => void;
+}
+
+function useSmartSidebar(orgId: string): SmartSidebarState {
+  const favKey = `${SIDEBAR_FAVORITES_KEY}:${orgId}`;
+  const recKey = `${SIDEBAR_RECENTS_KEY}:${orgId}`;
+  const grpKey = `${SIDEBAR_GROUPS_OPEN_KEY}:${orgId}`;
+
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [recents, setRecents] = useState<string[]>([]);
+  const [groupsOpen, setGroupsOpen] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setFavorites(readJSON<string[]>(favKey, []));
+    setRecents(readJSON<string[]>(recKey, []));
+    setGroupsOpen(readJSON<Record<string, boolean>>(grpKey, {}));
+  }, [favKey, recKey, grpKey]);
+
+  const toggleFavorite = useCallback(
+    (url: string) => {
+      setFavorites((prev) => {
+        const next = prev.includes(url)
+          ? prev.filter((u) => u !== url)
+          : [...prev, url];
+        writeJSON(favKey, next);
+        return next;
+      });
+    },
+    [favKey]
+  );
+
+  const isFavorite = useCallback(
+    (url: string) => favorites.includes(url),
+    [favorites]
+  );
+
+  const trackVisit = useCallback(
+    (url: string) => {
+      setRecents((prev) => {
+        const next = [url, ...prev.filter((u) => u !== url)].slice(
+          0,
+          RECENTS_LIMIT
+        );
+        writeJSON(recKey, next);
+        return next;
+      });
+    },
+    [recKey]
+  );
+
+  const setGroupOpen = useCallback(
+    (id: string, open: boolean) => {
+      setGroupsOpen((prev) => {
+        const next = { ...prev, [id]: open };
+        writeJSON(grpKey, next);
+        return next;
+      });
+    },
+    [grpKey]
+  );
+
+  return {
+    favorites,
+    recents,
+    groupsOpen,
+    toggleFavorite,
+    isFavorite,
+    trackVisit,
+    setGroupOpen,
+  };
+}
 
 // ============================================================================
 // TYPES
@@ -109,7 +220,7 @@ interface MenuGroup {
 // MENU CONFIG
 // ============================================================================
 
-function buildMenuGroups(orgId: string, pathname: string): MenuGroup[] {
+function buildMenuGroups(orgId: string): MenuGroup[] {
   const b = `/organisation/${orgId}`;
 
   return [
@@ -401,20 +512,98 @@ function isRouteActive(pathname: string, itemActive: string): boolean {
 // COLLAPSIBLE NAV GROUP
 // ============================================================================
 
+interface SmartItemProps {
+  item: MenuItem;
+  active: boolean;
+  isFavorite: boolean;
+  onToggleFavorite: (url: string) => void;
+  onLinkClick: (url: string) => void;
+  showFavoriteToggle?: boolean;
+}
+
+function SmartMenuItem({
+  item,
+  active,
+  isFavorite,
+  onToggleFavorite,
+  onLinkClick,
+  showFavoriteToggle = true,
+}: SmartItemProps) {
+  const ItemIcon = item.icon;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        isActive={active}
+        tooltip={item.title}
+        size="sm"
+        className={cn(
+          "ml-1 rounded-md text-sidebar-foreground/60 transition-all duration-150",
+          active && [
+            "bg-primary! text-white! font-semibold shadow-sm",
+            "hover:bg-primary/90! hover:text-white!",
+            "data-[active=true]:bg-primary! data-[active=true]:text-white!",
+          ],
+          !active && "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        )}
+      >
+        <Link href={item.url} onClick={() => onLinkClick(item.url)} passHref>
+          <ItemIcon
+            className={cn(
+              "opacity-50 transition-opacity",
+              active && "opacity-100 text-white!"
+            )}
+          />
+          <span>{item.title}</span>
+        </Link>
+      </SidebarMenuButton>
+      {showFavoriteToggle && (
+        <SidebarMenuAction
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleFavorite(item.url);
+          }}
+          aria-label={
+            isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"
+          }
+          title={isFavorite ? "Retirer des favoris" : "Épingler"}
+          showOnHover={!isFavorite}
+          className={cn(
+            "transition-colors",
+            isFavorite
+              ? "text-amber-400 hover:text-amber-300"
+              : "text-sidebar-foreground/40 hover:text-amber-400"
+          )}
+        >
+          {isFavorite ? (
+            <FaStar className="size-3" />
+          ) : (
+            <FaRegStar className="size-3" />
+          )}
+        </SidebarMenuAction>
+      )}
+    </SidebarMenuItem>
+  );
+}
+
 function NavGroup({
   group,
-  orgId,
   pathname,
   query,
-  onMenuLinkClick
+  isOpen,
+  onOpenChange,
+  smart,
+  onLinkClick,
 }: {
   group: MenuGroup;
-  orgId: string;
   pathname: string;
   query: string;
-  onMenuLinkClick?: () => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  smart: SmartSidebarState;
+  onLinkClick: (url: string) => void;
 }) {
-
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return group.items;
@@ -426,16 +615,15 @@ function NavGroup({
     [group.items, pathname]
   );
 
-  const [open, setOpen] = useState(group.defaultOpen ?? true);
-  // Auto-open when searching so matches are visible
-  const isOpen = open || hasActiveItem || query.trim().length > 0;
+  // Auto-open when searching, when group has active item, or when explicitly opened.
+  const effectiveOpen = isOpen || hasActiveItem || query.trim().length > 0;
 
   if (filteredItems.length === 0) return null;
 
   const GroupIcon = group.icon;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setOpen}>
+    <Collapsible open={effectiveOpen} onOpenChange={onOpenChange}>
       <SidebarGroup className="py-0.5" data-tour={`sidebar-group-${group.id}`}>
         <CollapsibleTrigger asChild>
           <SidebarGroupLabel
@@ -445,11 +633,82 @@ function NavGroup({
               hasActiveItem && "text-sidebar-foreground/70"
             )}
           >
-            <GroupIcon className="!size-3.5 opacity-50" />
+            <GroupIcon className="size-3.5! opacity-50" />
             <span className="flex-1">{group.title}</span>
             <FaChevronDown
               className={cn(
-                "!size-3 opacity-40 transition-transform duration-200",
+                "size-3! opacity-40 transition-transform duration-200",
+                !effectiveOpen && "-rotate-90"
+              )}
+            />
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent className="transition-all duration-200 ease-out data-[state=closed]:animate-none">
+          <SidebarGroupContent className="mt-0.5">
+            <SidebarMenu>
+              {filteredItems.map((item) => (
+                <SmartMenuItem
+                  key={item.url}
+                  item={item}
+                  active={isRouteActive(pathname, item.active)}
+                  isFavorite={smart.isFavorite(item.url)}
+                  onToggleFavorite={smart.toggleFavorite}
+                  onLinkClick={onLinkClick}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  );
+}
+
+// ============================================================================
+// SPECIAL GROUPS — Favorites + Recents
+// ============================================================================
+
+function SpecialGroup({
+  id,
+  title,
+  Icon,
+  items,
+  pathname,
+  isOpen,
+  onOpenChange,
+  smart,
+  onLinkClick,
+  emptyHint,
+}: {
+  id: string;
+  title: string;
+  Icon: React.ElementType;
+  items: MenuItem[];
+  pathname: string;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  smart: SmartSidebarState;
+  onLinkClick: (url: string) => void;
+  emptyHint?: string;
+}) {
+  if (items.length === 0 && !emptyHint) return null;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={onOpenChange}>
+      <SidebarGroup className="py-0.5" data-tour={`sidebar-group-${id}`}>
+        <CollapsibleTrigger asChild>
+          <SidebarGroupLabel
+            className={cn(
+              "cursor-pointer select-none h-8 gap-1.5 px-2",
+              "hover:text-sidebar-foreground transition-colors duration-150"
+            )}
+          >
+            <Icon className="size-3.5! opacity-50" />
+            <span className="flex-1">{title}</span>
+            <FaChevronDown
+              className={cn(
+                "size-3! opacity-40 transition-transform duration-200",
                 !isOpen && "-rotate-90"
               )}
             />
@@ -459,40 +718,22 @@ function NavGroup({
         <CollapsibleContent className="transition-all duration-200 ease-out data-[state=closed]:animate-none">
           <SidebarGroupContent className="mt-0.5">
             <SidebarMenu>
-              {filteredItems.map((item) => {
-                const active = isRouteActive(pathname, item.active);
-                const ItemIcon = item.icon;
-                // Couleur d'item actif: couleur bg-primary (voir @app/globals.css: bg-primary et text-white)
-                return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.title}
-                      size="sm"
-                      className={cn(
-                        "ml-1 text-sidebar-foreground/60",
-                        active &&
-                          "!bg-primary !text-white font-semibold hover:!bg-primary/90 data-[active=true]:!bg-primary data-[active=true]:!text-white",
-                        // hover, focus styles en dehors de l'actif
-                        !active && "hover:bg-sidebar-accent/60"
-                      )}
-                    >
-                      <Link
-                        href={item.url}
-                        onClick={onMenuLinkClick}
-                        passHref
-                      >
-                        <ItemIcon className={cn(
-                          "opacity-50",
-                          active && "opacity-80"
-                        )} />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {items.map((item) => (
+                <SmartMenuItem
+                  key={`${id}-${item.url}`}
+                  item={item}
+                  active={isRouteActive(pathname, item.active)}
+                  isFavorite={smart.isFavorite(item.url)}
+                  onToggleFavorite={smart.toggleFavorite}
+                  onLinkClick={onLinkClick}
+                  showFavoriteToggle={id === "favorites"}
+                />
+              ))}
+              {items.length === 0 && emptyHint && (
+                <li className="px-3 py-1.5 text-[11px] text-sidebar-foreground/40">
+                  {emptyHint}
+                </li>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </CollapsibleContent>
@@ -637,30 +878,22 @@ function OrgSideBarInner({
 
   const [query, setQuery] = useState("");
 
-  const {
-    state,
-    open,
-    setOpen,
-    openMobile,
-    setOpenMobile,
-    isMobile,
-    toggleSidebar,
-  } = useSidebar() as {
-    state: "expanded" | "collapsed";
-    open: boolean;
-    setOpen: (open: boolean) => void;
-    openMobile: boolean;
+  const { setOpenMobile, isMobile } = useSidebar() as {
     setOpenMobile: (open: boolean) => void;
     isMobile: boolean;
-    toggleSidebar: () => void;
   };
 
+  const smart = useSmartSidebar(orgId);
+
   // Handler to automatically collapse sidebar on mobile after link click
-  const handleMenuLinkClick = useCallback(() => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
-  }, [isMobile, setOpenMobile]);
+  // and track recent visits.
+  const handleMenuLinkClick = useCallback(
+    (url: string) => {
+      smart.trackVisit(url);
+      if (isMobile) setOpenMobile(false);
+    },
+    [isMobile, setOpenMobile, smart]
+  );
 
   const installedModules = useMemo<Set<string>>(
     () => new Set(org?.module_codes ?? []),
@@ -668,7 +901,7 @@ function OrgSideBarInner({
   );
 
   const menuGroups = useMemo(() => {
-    const allGroups = buildMenuGroups(orgId, pathname);
+    const allGroups = buildMenuGroups(orgId);
     if (permsLoading) return allGroups;
 
     return allGroups
@@ -694,6 +927,71 @@ function OrgSideBarInner({
       }))
       .filter((group) => group.items.length > 0);
   }, [orgId, canAny, isOwner, permsLoading, org, installedModules]);
+
+  // URL → item lookup, only over visible items.
+  const itemsByUrl = useMemo(() => {
+    const map = new Map<string, MenuItem>();
+    for (const g of menuGroups) for (const i of g.items) map.set(i.url, i);
+    return map;
+  }, [menuGroups]);
+
+  const favoriteItems = useMemo(
+    () =>
+      smart.favorites
+        .map((url) => itemsByUrl.get(url))
+        .filter((i): i is MenuItem => Boolean(i)),
+    [smart.favorites, itemsByUrl]
+  );
+
+  const recentItems = useMemo(
+    () =>
+      smart.recents
+        .map((url) => itemsByUrl.get(url))
+        .filter((i): i is MenuItem => Boolean(i)),
+    [smart.recents, itemsByUrl]
+  );
+
+  // Filter favorites/recents by search query as well.
+  const filteredFavorites = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return favoriteItems;
+    return favoriteItems.filter((i) => i.title.toLowerCase().includes(q));
+  }, [favoriteItems, query]);
+
+  const filteredRecents = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return recentItems;
+    return recentItems.filter((i) => i.title.toLowerCase().includes(q));
+  }, [recentItems, query]);
+
+  // Auto-collapse intelligent: when pathname changes, ensure the group
+  // containing the active route is open and others are closed (unless the
+  // user explicitly opened them in this session). We treat persisted state
+  // as the source of truth, but re-align it on navigation.
+  const lastPathnameRef = useRef<string>("");
+  useEffect(() => {
+    if (!pathname || pathname === lastPathnameRef.current) return;
+    lastPathnameRef.current = pathname;
+    const activeGroupId = menuGroups.find((g) =>
+      g.items.some((i) => isRouteActive(pathname, i.active))
+    )?.id;
+    if (!activeGroupId) return;
+    // Open the active group, close other business groups (keep "general" + favorites/recents user state).
+    for (const g of menuGroups) {
+      const shouldOpen = g.id === activeGroupId || g.id === "general";
+      if (smart.groupsOpen[g.id] !== shouldOpen) {
+        smart.setGroupOpen(g.id, shouldOpen);
+      }
+    }
+  }, [pathname, menuGroups, smart]);
+
+  const isGroupOpen = useCallback(
+    (g: MenuGroup) => {
+      const stored = smart.groupsOpen[g.id];
+      return stored ?? (g.defaultOpen ?? false);
+    },
+    [smart.groupsOpen]
+  );
 
   const orgName = org?.name || "Organisation";
   const orgInitials = orgName
@@ -777,17 +1075,50 @@ function OrgSideBarInner({
 
       {/* ── Navigation ──────────────────────────────────── */}
       <SidebarContent className="pt-1">
+        {/* Favoris (épinglés par l'utilisateur) */}
+        {filteredFavorites.length > 0 && (
+          <SpecialGroup
+            id="favorites"
+            title="Favoris"
+            Icon={FaStar}
+            items={filteredFavorites}
+            pathname={pathname}
+            isOpen={smart.groupsOpen.favorites ?? true}
+            onOpenChange={(o) => smart.setGroupOpen("favorites", o)}
+            smart={smart}
+            onLinkClick={handleMenuLinkClick}
+          />
+        )}
+
+        {/* Récents (auto, masqué quand vide) */}
+        {filteredRecents.length > 0 && !query.trim() && (
+          <SpecialGroup
+            id="recents"
+            title="Récents"
+            Icon={FaRegClock}
+            items={filteredRecents}
+            pathname={pathname}
+            isOpen={smart.groupsOpen.recents ?? false}
+            onOpenChange={(o) => smart.setGroupOpen("recents", o)}
+            smart={smart}
+            onLinkClick={handleMenuLinkClick}
+          />
+        )}
+
         {menuGroups.map((group) => (
           <NavGroup
             key={group.id}
             group={group}
-            orgId={orgId}
             pathname={pathname}
             query={query}
-            onMenuLinkClick={handleMenuLinkClick}
+            isOpen={isGroupOpen(group)}
+            onOpenChange={(o) => smart.setGroupOpen(group.id, o)}
+            smart={smart}
+            onLinkClick={handleMenuLinkClick}
           />
         ))}
         {query.trim() &&
+          filteredFavorites.length === 0 &&
           menuGroups.every(
             (g) =>
               !g.items.some((i) =>
@@ -815,7 +1146,7 @@ function OrgSideBarInner({
             >
               <Link
                 href="/core/dashboard"
-                onClick={handleMenuLinkClick}
+                onClick={() => handleMenuLinkClick("/core/dashboard")}
                 passHref
               >
                 <FaArrowLeft className="opacity-60" />
