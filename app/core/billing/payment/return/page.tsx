@@ -18,7 +18,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { useTransactionStatus } from "@/lib/hooks/core";
+import { billingQueryKeys, useTransactionStatus } from "@/lib/hooks/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -34,11 +35,15 @@ const POLL_TIMEOUT_MS = 60_000;
 function PaymentReturnClient() {
     const router = useRouter();
     const params = useSearchParams();
+    const queryClient = useQueryClient();
     const reference = useMemo(
         () =>
             // Priorité au nom natif Djomy si jamais le retour bypass le
             // bridge backend ; sinon ``ref`` normalisé par le bridge.
+            // ``transactionId`` couvre le cas où Djomy ajoute lui-même
+            // l'UUID transactionId à l'URL de retour.
             params.get("merchantPaymentReference") ||
+            params.get("transactionId") ||
             params.get("ref") ||
             params.get("reference") ||
             null,
@@ -55,6 +60,21 @@ function PaymentReturnClient() {
     // évite de boucler "Difficulté de connexion" indéfiniment.
     const isNotFound =
         (error as { status?: number } | undefined)?.status === 404;
+
+    // Sur 404, le webhook Djomy a peut-être déjà appliqué l'effet sur
+    // l'abonnement (succès ou échec) avant qu'on accède à la tx. On
+    // invalide la query subscription pour forcer un refetch et redirige
+    // après 4s vers /core/billing où l'utilisateur verra l'état réel.
+    useEffect(() => {
+        if (!isNotFound) return;
+        queryClient.invalidateQueries({
+            queryKey: billingQueryKeys.mySubscription,
+        });
+        const timer = setTimeout(() => {
+            router.replace("/core/billing");
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, [isNotFound, queryClient, router]);
 
     // Cap sur la durée de polling : on coupe au bout de POLL_TIMEOUT_MS pour
     // ne pas bloquer le user indéfiniment si le webhook tarde anormalement.
@@ -95,24 +115,28 @@ function PaymentReturnClient() {
             <div className="container mx-auto p-6 max-w-2xl">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-emerald-600">
-                            <CheckCircle2 className="h-6 w-6" />
-                            Paiement confirmé
+                        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
+                            <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                        </div>
+                        <CardTitle className="text-2xl">
+                            Félicitations, votre abonnement est actif
                         </CardTitle>
-                        <CardDescription>
-                            Votre abonnement a bien été activé. Vous pouvez
-                            commencer à utiliser votre nouveau forfait dès
-                            maintenant.
+                        <CardDescription className="pt-1 text-base">
+                            Merci pour votre confiance. Votre paiement a bien
+                            été reçu et toutes les fonctionnalités de votre
+                            nouveau forfait sont disponibles dès maintenant.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex gap-3">
+                    <CardContent className="flex flex-wrap gap-3">
                         <Button asChild>
                             <Link href="/core/dashboard">
-                                Aller au tableau de bord
+                                Accéder au tableau de bord
                             </Link>
                         </Button>
                         <Button asChild variant="outline">
-                            <Link href="/core/billing">Voir mon abonnement</Link>
+                            <Link href="/core/billing">
+                                Voir mon abonnement
+                            </Link>
                         </Button>
                     </CardContent>
                 </Card>
@@ -125,18 +149,23 @@ function PaymentReturnClient() {
             <div className="container mx-auto p-6 max-w-2xl">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Transaction introuvable</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                            Finalisation du paiement
+                        </CardTitle>
                         <CardDescription>
-                            Aucune transaction ne correspond à cette
-                            référence sur votre compte. Si vous venez d&apos;être
-                            débité, le paiement sera traité automatiquement
-                            dans quelques minutes.
+                            Nous n&apos;avons pas pu retrouver immédiatement
+                            le détail de cette transaction sur votre compte,
+                            mais le paiement est traité en arrière-plan.
+                            Vous allez être redirigé vers votre espace
+                            facturation pour voir l&apos;état actuel de votre
+                            abonnement.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="flex gap-3">
                         <Button asChild>
                             <Link href="/core/billing">
-                                Voir mon abonnement
+                                Voir mon abonnement maintenant
                             </Link>
                         </Button>
                         <Button asChild variant="outline">
