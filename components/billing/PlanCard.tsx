@@ -21,14 +21,12 @@ import { ArrowRight, Check } from "lucide-react";
 // ─── Helpers prix ───────────────────────────────────────────────────────────
 
 function formatFng(price: number) {
-    return price
-        ? price
-              .toLocaleString("fr-GN", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-              })
-              .replace(/,/g, " ") + " FNG"
-        : "Gratuit";
+    if (!price) return "Gratuit";
+    // GNF entier : ``fr-FR`` garantit l'espace insécable comme séparateur
+    // de milliers et aucune décimale.
+    return `${new Intl.NumberFormat("fr-FR", {
+        maximumFractionDigits: 0,
+    }).format(Math.round(price))} FNG`;
 }
 
 /**
@@ -37,12 +35,14 @@ function formatFng(price: number) {
  * prix mensuel "tel que facturé" même en mode annuel.
  */
 function getDisplayPrice(plan: Plan, cycle: SubscriptionCycle): number {
+    // GNF entier strict : on arrondit systématiquement même quand l'API
+    // retourne un ``DecimalField`` à 2 décimales (ex: ``199000.00``).
     if (cycle === "yearly") {
         const yearly = parseFloat(plan.price_yearly);
         return Number.isFinite(yearly) && yearly > 0 ? Math.round(yearly / 12) : 0;
     }
     const monthly = parseFloat(plan.price_monthly);
-    return Number.isFinite(monthly) ? monthly : 0;
+    return Number.isFinite(monthly) ? Math.round(monthly) : 0;
 }
 
 /**

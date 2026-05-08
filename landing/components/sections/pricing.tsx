@@ -133,8 +133,9 @@ const BUTTON_LINK_BY_CODE: Record<string, { link: string; type: "internal" | "ex
 };
 
 function planToPricingItem(plan: Plan): PricingItem {
-  const monthly = parseFloat(plan.price_monthly) || 0;
-  const yearly = parseFloat(plan.price_yearly) || 0;
+  // GNF entier strict, même si l'API retourne un Decimal à 2 décimales.
+  const monthly = Math.round(parseFloat(plan.price_monthly) || 0);
+  const yearly = Math.round(parseFloat(plan.price_yearly) || 0);
   const yearlyPerMonth = yearly > 0 ? Math.round(yearly / 12) : 0;
   const cta = BUTTON_LINK_BY_CODE[plan.code] ?? {
     link: "/auth/register",
@@ -221,14 +222,11 @@ export function BillingToggle({
 // ─── Helpers prix ───────────────────────────────────────────────────────────
 
 export function formatFng(price: number) {
-  return price
-    ? price
-        .toLocaleString("fr-GN", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        })
-        .replace(/,/g, " ") + " FNG"
-    : "Gratuit";
+  if (!price) return "Gratuit";
+  // GNF entier : ``fr-FR`` garantit espace insécable / pas de décimale.
+  return `${new Intl.NumberFormat("fr-FR", {
+    maximumFractionDigits: 0,
+  }).format(Math.round(price))} FNG`;
 }
 
 export function AnimatedPrice({

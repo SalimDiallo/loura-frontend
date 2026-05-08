@@ -96,9 +96,15 @@ export function formatUsdWithGnfSubtitle(
     usdToGnf: number,
 ): { usd: string; gnf: string } {
     const usd = formatUsd(gnfToUsd(gnfAmount, usdToGnf));
+    // GNF n'a pas de subdivision : on arrondit avant formatage pour éviter
+    // qu'une décimale soit lue comme un chiffre supplémentaire en fr-GN
+    // (où le séparateur des milliers est un espace).
+    const rounded = Math.round(gnfAmount);
     const gnf =
-        gnfAmount > 0
-            ? `${gnfAmount.toLocaleString("fr-GN").replace(/,/g, " ")} FNG`
+        rounded > 0
+            ? `${new Intl.NumberFormat("fr-FR", {
+                  maximumFractionDigits: 0,
+              }).format(rounded)} FNG`
             : "Gratuit";
     return { usd, gnf };
 }
