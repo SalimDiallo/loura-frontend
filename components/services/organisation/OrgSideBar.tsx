@@ -87,6 +87,7 @@ const clampWidth = (w: number) =>
 
 interface MenuItem {
   title: string;
+  active: string;
   url: string;
   icon: React.ElementType;
   requiredPermission?: string | string[];
@@ -108,7 +109,7 @@ interface MenuGroup {
 // MENU CONFIG
 // ============================================================================
 
-function buildMenuGroups(orgId: string): MenuGroup[] {
+function buildMenuGroups(orgId: string, pathname: string): MenuGroup[] {
   const b = `/organisation/${orgId}`;
 
   return [
@@ -118,7 +119,12 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
       icon: FaTachometerAlt,
       defaultOpen: true,
       items: [
-        { title: "Tableau de bord", url: `${b}/dashboard`, icon: FaTachometerAlt },
+        { 
+          title: "Tableau de bord", 
+          url: `${b}/dashboard`, 
+          icon: FaTachometerAlt,
+          active: "/dashboard"
+        },
       ],
     },
     {
@@ -128,19 +134,64 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
       defaultOpen: false,
       requiredModule: "hr",
       items: [
-        { title: "Vue d'ensemble", url: `${b}/hr`, icon: FaClipboardList },
-        { title: "Départements", url: `${b}/hr/departments`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
-        { title: "Postes", url: `${b}/hr/positions`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
-        { title: "Employés", url: `${b}/hr/employees`, icon: FaUserCheck, requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES },
-        { title: "Rôles & Permissions", url: `${b}/hr/roles`, icon: FaBriefcase, requiredPermission: PERMISSIONS.HR.MANAGE_ROLES },
-        { title: "Paie", url: `${b}/hr/payroll`, icon: FaCreditCard},
-        { title: "Contrats", url: `${b}/hr/contracts`, icon: FaClipboardList },
-        { title: "Congés", url: `${b}/hr/leaves`, icon: FaUmbrellaBeach },
+        { 
+          title: "Vue d'ensemble", 
+          url: `${b}/hr`, 
+          icon: FaClipboardList, 
+          active: "/hr"
+        },
+        { 
+          title: "Départements", 
+          url: `${b}/hr/departments`, 
+          icon: FaBriefcase, 
+          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
+          active: "/hr/departments"
+        },
+        { 
+          title: "Postes", 
+          url: `${b}/hr/positions`, 
+          icon: FaBriefcase, 
+          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
+          active: "/hr/positions"
+        },
+        { 
+          title: "Employés", 
+          url: `${b}/hr/employees`, 
+          icon: FaUserCheck, 
+          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
+          active: "/hr/employees"
+        },
+        { 
+          title: "Rôles & Permissions", 
+          url: `${b}/hr/roles`, 
+          icon: FaBriefcase, 
+          requiredPermission: PERMISSIONS.HR.MANAGE_ROLES,
+          active: "/hr/roles"
+        },
+        { 
+          title: "Paie", 
+          url: `${b}/hr/payroll`, 
+          icon: FaCreditCard,
+          active: "/hr/payroll"
+        },
+        { 
+          title: "Contrats", 
+          url: `${b}/hr/contracts`, 
+          icon: FaClipboardList,
+          active: "/hr/contracts"
+        },
+        { 
+          title: "Congés", 
+          url: `${b}/hr/leaves`, 
+          icon: FaUmbrellaBeach,
+          active: "/hr/leaves"
+        },
         {
           title: "Clients",
           url: `${b}/hr/clients`,
           icon: FaUserCheck,
           requiredPermission: PERMISSIONS.CUSTOMERS.VIEW,
+          active: "/hr/clients"
         },
         // { title: "Pointage", url: `${b}/hr/attendance`, icon: FaClock },
       ],
@@ -156,31 +207,36 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           title: "Vue d'ensemble", 
           url: `${b}/inventory`, 
           icon: FaClipboardList, 
-          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW 
+          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW,
+          active: "/inventory"
         },
         { 
           title: "Caisse", 
           url: `${b}/inventory/pos`, 
           icon: FaShoppingCart, 
-          requiredPermission: PERMISSIONS.SALES.VIEW 
+          requiredPermission: PERMISSIONS.SALES.VIEW,
+          active: "/inventory/pos"
         },
         { 
           title: "Ventes", 
           url: `${b}/inventory/sales`, 
           icon: FaReceipt, 
-          requiredPermission: PERMISSIONS.SALES.VIEW 
+          requiredPermission: PERMISSIONS.SALES.VIEW,
+          active: "/inventory/sales"
         },
         { 
           title: "Créances", 
           url: `${b}/inventory/credit-sales`, 
           icon: FaCreditCard,
-          requiredPermission: PERMISSIONS.SALES.VIEW 
+          requiredPermission: PERMISSIONS.SALES.VIEW,
+          active: "/inventory/credit-sales"
         },
         { 
           title: "Approvisionnements", 
           url: `${b}/inventory/purchase-orders`, 
           icon: FaTruck,
-          requiredPermission: PERMISSIONS.PURCHASE_ORDERS.VIEW 
+          requiredPermission: PERMISSIONS.PURCHASE_ORDERS.VIEW,
+          active: "/inventory/purchase-orders"
         },
         // { 
         //   title: "Dépenses", 
@@ -192,63 +248,72 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           title: "Produits", 
           url: `${b}/inventory/products`, 
           icon: FaBox, 
-          requiredPermission: PERMISSIONS.PRODUCTS.VIEW 
+          requiredPermission: PERMISSIONS.PRODUCTS.VIEW,
+          active: "/inventory/products"
         },
         { 
           title: "Catégories", 
           url: `${b}/inventory/categories`, 
           icon: FaTags,
-          requiredPermission: PERMISSIONS.PRODUCT_CATEGORIES.VIEW 
+          requiredPermission: PERMISSIONS.PRODUCT_CATEGORIES.VIEW,
+          active: "/inventory/categories"
         },
         { 
           title: "Fournisseurs", 
           url: `${b}/inventory/suppliers`, 
           icon: FaUserCheck,
-          requiredPermission: PERMISSIONS.SUPPLIERS.VIEW 
+          requiredPermission: PERMISSIONS.SUPPLIERS.VIEW,
+          active: "/inventory/suppliers"
         },
         { 
           title: "Devis & Pro Forma", 
           url: `${b}/inventory/quotes`, 
           icon: FaDochub,
-          requiredPermission: PERMISSIONS.SALES.VIEW 
+          requiredPermission: PERMISSIONS.SALES.VIEW,
+          active: "/inventory/quotes"
         },
         {
           title: "Entrepôts",
           url: `${b}/inventory/warehouses`, 
           icon: FaWarehouse,
-          requiredPermission: PERMISSIONS.WAREHOUSES.VIEW 
+          requiredPermission: PERMISSIONS.WAREHOUSES.VIEW,
+          active: "/inventory/warehouses"
         },
         { 
           title: "Inventaires (Stock)", 
           url: `${b}/inventory/inventories`, 
           icon: FaBoxOpen,
-          requiredPermission: PERMISSIONS.STOCK.VIEW 
+          requiredPermission: PERMISSIONS.STOCK.VIEW,
+          active: "/inventory/inventories"
         },
         { 
           title: "Inventaires physiques", 
           url: `${b}/inventory/physical-inventories`, 
           icon: FaClipboardCheck, 
-          requiredPermission: PERMISSIONS.STOCK.VIEW 
+          requiredPermission: PERMISSIONS.STOCK.VIEW,
+          active: "/inventory/physical-inventories"
         },
         { 
           title: "Alertes", 
           url: `${b}/inventory/alerts`, 
           icon: FaExclamationTriangle,
-          requiredPermission: PERMISSIONS.STOCK.VIEW 
+          requiredPermission: PERMISSIONS.STOCK.VIEW,
+          active: "/inventory/alerts"
         },
         {
           title: "Dépenses",
           url: `${b}/inventory/expenses`,
           icon: FaCoins,
-          requiredPermission: PERMISSIONS.EXPENSES.VIEW
+          requiredPermission: PERMISSIONS.EXPENSES.VIEW,
+          active: "/inventory/expenses"
         },
         {
           title: "Rapports",
           url: `${b}/inventory/reports`,
           icon: FaChartBar,
-          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW
+          requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW,
+          active: "/inventory/reports"
         },
-
       ],
 
     },
@@ -264,48 +329,56 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           url: `${b}/services`,
           icon: FaClipboardList,
           requiredPermission: PERMISSIONS.SERVICES.VIEW,
+          active: "/services"
         },
         {
           title: "Catalogue",
           url: `${b}/services/catalog`,
           icon: FaConciergeBell,
           requiredPermission: PERMISSIONS.SERVICES.VIEW,
+          active: "/services/catalog"
         },
         {
           title: "Catégories",
           url: `${b}/services/categories`,
           icon: FaSitemap,
           requiredPermission: PERMISSIONS.SERVICE_CATEGORIES.VIEW,
+          active: "/services/categories"
         },
         {
           title: "Dossiers clients",
           url: `${b}/services/enrollments`,
           icon: FaUserPlus,
           requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
+          active: "/services/enrollments"
         },
         {
           title: "Workflow modules",
           url: `${b}/services/workflow`,
           icon: FaProjectDiagram,
           requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
+          active: "/services/workflow"
         },
         {
           title: "Transactions",
           url: `${b}/services/transactions`,
           icon: FaMoneyBillWave,
           requiredPermission: PERMISSIONS.SERVICE_TRANSACTIONS.VIEW,
+          active: "/services/transactions"
         },
         {
           title: "Journal d'activité",
           url: `${b}/services/activity`,
           icon: FaHistory,
           requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
+          active: "/services/activity"
         },
         {
           title: "Rapports",
           url: `${b}/services/reports`,
           icon: FaChartBar,
           requiredPermission: PERMISSIONS.SERVICE_REPORTS.VIEW,
+          active: "/services/reports"
         },
       ],
     },
@@ -316,15 +389,12 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
 // ROUTE MATCHING
 // ============================================================================
 
-// Nouvelle logique pour "is active": juste un "pathname.includes(url)"
-function isRouteActive(pathname: string, url: string, base: string): boolean {
-  // On veut que le matching soit strict de path sur la partie "après orgId"
-  // Ex: url="/organisation/ORGID/hr/roles", on veut matcher "hr/roles" dans pathname
-  // On extrait le "sublink" de url après /organisation/ORGID/, et vérifie que ce sublink existe dans pathname
-  const orgBase = `/organisation/${base.split('/').pop()}/`;
-  const relUrl = url.startsWith(orgBase) ? url.slice(orgBase.length) : url;
-  // On cherche un segment "/hr/roles", "/services/transactions", etc. dans le pathname
-  return pathname.includes(`/${relUrl}`);
+// ACTIVE: vérifie que pathname contient le champ "active" de l'item pour déterminer si c'est actif.
+function isRouteActive(pathname: string, itemActive: string): boolean {
+  // On considère l'item actif si "pathname" contient exactement le segment "active"
+  // (ex: /inventory/products ou /hr/employees)
+  if (!itemActive) return false;
+  return pathname.includes(itemActive);
 }
 
 // ============================================================================
@@ -344,7 +414,6 @@ function NavGroup({
   query: string;
   onMenuLinkClick?: () => void;
 }) {
-  const base = `/organisation/${orgId}`;
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -353,8 +422,8 @@ function NavGroup({
   }, [group.items, query]);
 
   const hasActiveItem = useMemo(
-    () => group.items.some((item) => isRouteActive(pathname, item.url, base)),
-    [group.items, pathname, base]
+    () => group.items.some((item) => isRouteActive(pathname, item.active)),
+    [group.items, pathname]
   );
 
   const [open, setOpen] = useState(group.defaultOpen ?? true);
@@ -391,7 +460,7 @@ function NavGroup({
           <SidebarGroupContent className="mt-0.5">
             <SidebarMenu>
               {filteredItems.map((item) => {
-                const active = isRouteActive(pathname, item.url, base);
+                const active = isRouteActive(pathname, item.active);
                 const ItemIcon = item.icon;
                 // Couleur d'item actif: couleur bg-primary (voir @app/globals.css: bg-primary et text-white)
                 return (
@@ -404,7 +473,7 @@ function NavGroup({
                       className={cn(
                         "ml-1 text-sidebar-foreground/60",
                         active &&
-                          "text-white font-semibold bg-primary hover:bg-primary/90",
+                          "!bg-primary !text-white font-semibold hover:!bg-primary/90 data-[active=true]:!bg-primary data-[active=true]:!text-white",
                         // hover, focus styles en dehors de l'actif
                         !active && "hover:bg-sidebar-accent/60"
                       )}
@@ -599,7 +668,7 @@ function OrgSideBarInner({
   );
 
   const menuGroups = useMemo(() => {
-    const allGroups = buildMenuGroups(orgId);
+    const allGroups = buildMenuGroups(orgId, pathname);
     if (permsLoading) return allGroups;
 
     return allGroups
