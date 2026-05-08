@@ -1,7 +1,7 @@
 "use client";
 
 import { BadgeStatus } from "@/components/BadgeStatus";
-import { GenerateDocumentButton } from "@/components/documents";
+import { GenerateDocumentButton, GroupedInvoiceModal } from "@/components/documents";
 import {
     ListPageLayout,
     ListPagination,
@@ -21,11 +21,14 @@ import { useCurrencyFormatter } from "@/lib/hooks";
 import { useCustomers } from "@/lib/hooks/hr";
 import {
     usePaginatedSales,
+    useProducts,
+    useSalesSummary,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
     Customer,
+    Product,
     SaleOrdering,
     SalePaymentStatus,
     SaleStatus,
@@ -37,6 +40,7 @@ import { useMemo, useState } from "react";
 import {
     FaCreditCard,
     FaEye,
+    FaFileInvoiceDollar,
     FaMoneyBillWave,
     FaPlus,
     FaReceipt,
@@ -147,12 +151,14 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
     const [typeFilter, setTypeFilter] = useState<string>("");
     const [customerFilter, setCustomerFilter] = useState<string>("");
     const [warehouseFilter, setWarehouseFilter] = useState<string>("");
+    const [productFilter, setProductFilter] = useState<string>("");
     const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("");
     const [customFrom, setCustomFrom] = useState<string>("");
     const [customTo, setCustomTo] = useState<string>("");
     const [minTotal, setMinTotal] = useState<string>("");
     const [maxTotal, setMaxTotal] = useState<string>("");
     const [ordering, setOrdering] = useState<SaleOrdering>("-sale_date");
+    const [groupedInvoiceOpen, setGroupedInvoiceOpen] = useState(false);
 
     const { data: customersList = [] } = useCustomers(orgId, {
         page_size: "all",
@@ -165,6 +171,13 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         is_active: true,
     });
     const warehouses = (warehousesList as unknown as Warehouse[]) ?? [];
+
+    // Produits actifs uniquement, pour filtrer les ventes par produit.
+    const { data: productsList = [] } = useProducts(orgId, {
+        page_size: "all",
+        is_active: true,
+    });
+    const products = (productsList as unknown as Product[]) ?? [];
 
     // Période effective : preset ou personnalisée
     const period = useMemo(() => {
@@ -188,6 +201,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
             payment_status: (paymentFilter as SalePaymentStatus) || undefined,
             customer: customerFilter || undefined,
             warehouse: warehouseFilter || undefined,
+            product: productFilter || undefined,
             sale_type: effectiveTypeFilter,
             from: period.from,
             to: period.to,
@@ -201,6 +215,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
             paymentFilter,
             customerFilter,
             warehouseFilter,
+            productFilter,
             effectiveTypeFilter,
             period.from,
             period.to,
@@ -220,10 +235,20 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         error,
     } = usePaginatedSales(orgId, stableFilters, { pageSize: 15 });
 
+    // Agrégats CA / payé / dû — partagent EXACTEMENT les mêmes filtres
+    // que la liste pour rester cohérents. Le backend exclut par défaut
+    // les brouillons / annulées du calcul (CA réalisé uniquement).
+    const { data: summary, isLoading: summaryLoading } = useSalesSummary(
+        orgId,
+        stableFilters
+    );
+
     const customerName = (id: string) =>
         customers.find((c) => c.id === id)?.name ?? id;
     const warehouseName = (id: string) =>
         warehouses.find((w) => w.id === id)?.name ?? id;
+    const productName = (id: string) =>
+        products.find((p) => p.id === id)?.name ?? id;
 
     const activeFilterChips = useMemo(() => {
         const chips: { key: string; label: string; clear: () => void }[] = [];
@@ -256,6 +281,12 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                 key: "warehouse",
                 label: `Entrepôt : ${warehouseName(warehouseFilter)}`,
                 clear: () => setWarehouseFilter(""),
+            });
+        if (productFilter)
+            chips.push({
+                key: "product",
+                label: `Produit : ${productName(productFilter)}`,
+                clear: () => setProductFilter(""),
             });
         if (periodPreset && periodPreset !== "custom")
             chips.push({
@@ -298,6 +329,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         typeFilter,
         customerFilter,
         warehouseFilter,
+        productFilter,
         periodPreset,
         customFrom,
         customTo,
@@ -307,6 +339,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         creditOnly,
         customers,
         warehouses,
+        products,
         formatCurrency,
     ]);
 
@@ -319,6 +352,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         setTypeFilter("");
         setCustomerFilter("");
         setWarehouseFilter("");
+        setProductFilter("");
         setPeriodPreset("");
         setCustomFrom("");
         setCustomTo("");
@@ -339,7 +373,78 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         );
     }
 
+    // Sous-titre humain décrivant les filtres actifs ; sert de rappel
+    // dans l'en-tête du modal "Facture groupée".
+    const groupedInvoiceSubtitle = useMemo(() => {
+        const parts: string[] = [];
+        if (customerFilter)
+            parts.push(`Client : ${customerName(customerFilter)}`);
+        if (productFilter)
+            parts.push(`Produit : ${productName(productFilter)}`);
+        if (period.from && period.to)
+            parts.push(`Du ${period.from} au ${period.to}`);
+        else if (period.from) parts.push(`À partir du ${period.from}`);
+        else if (period.to) parts.push(`Jusqu'au ${period.to}`);
+        return parts.length > 0
+            ? parts.join(" · ")
+            : "Toutes les ventes finalisées";
+    }, [customerFilter, productFilter, period.from, period.to, customers, products]);
+    // ``customers``/``products`` ajoutés en deps car ``customerName``/``productName``
+    // les capturent (dépendances dynamiques pour resolver les labels).
+
+    // Filtres injectés dans la facture groupée : on **ne propage pas**
+    // ``status`` ni ``payment_status`` ; le backend exclut déjà les
+    // brouillons et le récap a vocation à inclure toutes les ventes
+    // finalisées sur la période/client/produit. Si l'utilisateur veut
+    // restreindre par statut, on peut passer ``status: statusFilter``
+    // mais il faut être conscient qu'un filtre ``draft`` côté liste
+    // ne correspond à aucune vente ici (déjà exclues côté backend).
+    const groupedInvoiceFilters = useMemo(
+        () => ({
+            customer: customerFilter || undefined,
+            product: productFilter || undefined,
+            warehouse: warehouseFilter || undefined,
+            from: period.from,
+            to: period.to,
+            sale_type: effectiveTypeFilter,
+            payment_status:
+                (paymentFilter as SalePaymentStatus) || undefined,
+        }),
+        [
+            customerFilter,
+            productFilter,
+            warehouseFilter,
+            period.from,
+            period.to,
+            effectiveTypeFilter,
+            paymentFilter,
+        ]
+    );
+
+    const headerActionsList = useMemo(() => {
+        if (!canManage) return [];
+        return [
+            {
+                label: "Facture groupée",
+                icon: FaFileInvoiceDollar,
+                variant: "outline" as const,
+                onClick: () => setGroupedInvoiceOpen(true),
+                // Désactive si aucune vente n'a été chargée (évite un PDF vide).
+                disabled: !sales || sales.length === 0,
+            },
+            {
+                label: "Nouvelle vente",
+                icon: FaPlus,
+                onClick: () =>
+                    router.push(
+                        `/organisation/${orgId}/inventory/sales/create${creditOnly ? "?mode=credit" : ""}`
+                    ),
+            },
+        ];
+    }, [canManage, sales, router, orgId, creditOnly]);
+
     return (
+        <>
         <ListPageLayout
             title={creditOnly ? "Créances clients" : "Ventes"}
             icon={creditOnly ? FaCreditCard : FaReceipt}
@@ -348,26 +453,56 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                     ? "Ventes à crédit et encours clients"
                     : "Ventes au comptant et à crédit"
             }
-            headerActions={
-                canManage
-                    ? [
-                          {
-                              label: "Nouvelle vente",
-                              icon: FaPlus,
-                              onClick: () =>
-                                  router.push(
-                                      `/organisation/${orgId}/inventory/sales/create${creditOnly ? "?mode=credit" : ""}`
-                                  ),
-                          },
-                      ]
-                    : []
-            }
+            headerActions={headerActionsList}
             stats={[
                 <ListStat
-                    key="total"
+                    key="count"
                     label={creditOnly ? "Créances" : "Ventes"}
                     value={meta.totalItems}
                     icon={<FaReceipt className="h-4 w-4 text-muted-foreground" />}
+                />,
+                <ListStat
+                    key="revenue"
+                    label="CA total"
+                    value={
+                        summaryLoading ? (
+                            <Skeleton className="h-7 w-28" />
+                        ) : (
+                            <span title="Chiffre d'affaires des ventes finalisées correspondant aux filtres">
+                                {formatCurrency(
+                                    Number(summary?.total ?? 0)
+                                )}
+                            </span>
+                        )
+                    }
+                    icon={
+                        <FaMoneyBillWave className="h-4 w-4 text-emerald-600" />
+                    }
+                />,
+                <ListStat
+                    key="outstanding"
+                    label="Reste dû"
+                    value={
+                        summaryLoading ? (
+                            <Skeleton className="h-7 w-28" />
+                        ) : (
+                            <span
+                                className={
+                                    Number(summary?.outstanding ?? 0) > 0
+                                        ? "text-amber-600"
+                                        : ""
+                                }
+                                title="Total non encore encaissé sur les ventes filtrées"
+                            >
+                                {formatCurrency(
+                                    Number(summary?.outstanding ?? 0)
+                                )}
+                            </span>
+                        )
+                    }
+                    icon={
+                        <FaCreditCard className="h-4 w-4 text-muted-foreground" />
+                    }
                 />,
             ]}
             searchFilters={
@@ -594,6 +729,30 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                             ))}
                                         </select>
                                     </div>
+                                </div>
+
+                                {/* Produit — filtre les ventes contenant
+                                    au moins une ligne avec ce produit. */}
+                                <div>
+                                    <Label className="text-xs font-medium mb-1 block">
+                                        Produit
+                                    </Label>
+                                    <select
+                                        value={productFilter}
+                                        onChange={(e) =>
+                                            setProductFilter(e.target.value)
+                                        }
+                                        className="flex h-8 w-full border border-input bg-background px-2 text-xs"
+                                        style={{ borderRadius: 0 }}
+                                    >
+                                        <option value="">Tous les produits</option>
+                                        {products.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.name}
+                                                {p.sku ? ` (${p.sku})` : ""}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {/* Montants */}
@@ -897,5 +1056,13 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                 </>
             }
         />
+        <GroupedInvoiceModal
+            open={groupedInvoiceOpen}
+            onOpenChange={setGroupedInvoiceOpen}
+            orgId={orgId}
+            filters={groupedInvoiceFilters}
+            subtitle={groupedInvoiceSubtitle}
+        />
+        </>
     );
 }

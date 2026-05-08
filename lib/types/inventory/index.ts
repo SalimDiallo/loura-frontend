@@ -832,6 +832,12 @@ export interface ListSalesParams {
   payment_status?: SalePaymentStatus;
   customer?: string;
   warehouse?: string;
+  /**
+   * UUID de produit : ne retourne que les ventes ayant au moins une
+   * ligne avec ce produit (utile pour les rapports "ventes du produit X
+   * pour le client Y entre 2 dates").
+   */
+  product?: string;
   from?: string;
   to?: string;
   min_total?: string | number;
@@ -839,6 +845,20 @@ export interface ListSalesParams {
   ordering?: SaleOrdering;
   page?: number;
   page_size?: number | string;
+}
+
+export interface SalesSummary {
+  /** Nombre de ventes incluses dans l'agrégat. */
+  count: number;
+  subtotal: string;
+  discount_amount: string;
+  tax_amount: string;
+  /** Chiffre d'affaires (somme des totaux TTC). */
+  total: string;
+  paid_amount: string;
+  /** Reste dû = total − paid_amount. */
+  outstanding: string;
+  currency: string;
 }
 
 export const SALE_PAYMENT_METHODS: {

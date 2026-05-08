@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   QuickSelect,
   type QuickSelectItem,
@@ -288,18 +289,15 @@ function CreateServicePage() {
 
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="base_price">Prix de base (optionnel)</Label>
-              <Input
+              <MoneyInput
                 id="base_price"
-                type="number"
-                step="0.01"
-                min={0}
                 value={form.base_price ?? ""}
-                onChange={(e) =>
-                  setField(
-                    "base_price",
-                    e.target.value === "" ? null : e.target.value
-                  )
+                onChange={(v) =>
+                  setField("base_price", v === "" ? null : v)
                 }
+                min={0}
+                step={1000}
+                showUsdSubtitle
                 placeholder="Laisser vide pour calculer depuis les modules"
               />
             </div>

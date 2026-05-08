@@ -892,6 +892,26 @@ export function usePaginatedSales(
   });
 }
 
+/**
+ * Agrégats du chiffre d'affaires sur les ventes filtrées. Cohérent
+ * avec ``usePaginatedSales`` : passez les **mêmes filtres** pour que
+ * la card "CA total" reflète exactement la liste affichée.
+ *
+ * Le backend exclut par défaut les brouillons / annulées (chiffre
+ * d'affaires réalisé). On peut forcer un état spécifique via
+ * ``filters.status``.
+ */
+export function useSalesSummary(
+  orgId: string,
+  filters?: Omit<ListSalesParams, "page" | "page_size">
+) {
+  return useQuery({
+    queryKey: ["inventory", "sales-summary", orgId, filters ?? {}],
+    queryFn: () => salesService.getSummary(orgId, filters as ListSalesParams),
+    enabled: !!orgId,
+  });
+}
+
 export function useSale(
   orgId: string,
   id: string

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { useContracts, useCreatePayment, useMembers } from "@/lib/hooks/hr";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -205,10 +206,16 @@ function CreatePaymentPage() {
 
             <div className="space-y-2">
               <Label htmlFor="amount">Montant *</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="amount" type="number" min="0" step="0.01" placeholder="Ex: 3000.00" value={amount} onChange={(e) => setAmount(e.target.value)} className="pl-10" required />
-              </div>
+              <MoneyInput
+                id="amount"
+                value={amount}
+                onChange={setAmount}
+                min={0}
+                step={1000}
+                showUsdSubtitle
+                placeholder="Ex: 3 000 000"
+                required
+              />
             </div>
 
             <div className="space-y-2">

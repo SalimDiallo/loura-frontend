@@ -18,6 +18,7 @@ export * from './form';
 export * from './form-fields';
 export * from './input';
 export * from './label';
+export * from './money-input';
 export * from './page-header';
 export * from './page-section';
 export * from './password-field-toggle';

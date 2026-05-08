@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   QuickSelect,
   type QuickSelectItem,
@@ -311,15 +312,13 @@ export function AddTransactionDialog({
                   </button>
                 )}
               </div>
-              <Input
+              <MoneyInput
                 id="tx-amount"
-                type="number"
-                step="0.01"
-                min="0"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={setAmount}
+                min={0}
+                step={1000}
                 required
-                inputMode="decimal"
               />
             </div>
             <div>

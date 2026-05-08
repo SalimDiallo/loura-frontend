@@ -366,6 +366,8 @@ export const API_ENDPOINTS = {
     // Ventes (Sales)
     SALES: {
       LIST: (orgId: string) => `/inventory/organizations/${orgId}/sales/`,
+      SUMMARY: (orgId: string) =>
+        `/inventory/organizations/${orgId}/sales/summary/`,
       CREATE: (orgId: string) => `/inventory/organizations/${orgId}/sales/`,
       DETAIL: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/sales/${id}/`,

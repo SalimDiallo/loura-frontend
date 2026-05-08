@@ -67,6 +67,53 @@ export const documentsService = {
   },
 
   /**
+   * Facture groupée des ventes : agrège plusieurs Sales selon les
+   * filtres (mêmes paramètres que la liste GET /sales/) en un unique
+   * HTML branding-prêt à imprimer.
+   *
+   * Côté backend : ``GroupedSaleInvoiceView``. Le param ``include_drafts``
+   * permet de générer un récap interne incluant les brouillons (à ne
+   * pas remettre au client en l'état).
+   */
+  async getGroupedSaleInvoiceHtml(
+    orgId: string,
+    filters: Record<string, string | number | boolean | undefined>
+  ): Promise<string> {
+    const params = new URLSearchParams();
+    for (const [key, val] of Object.entries(filters)) {
+      if (val !== undefined && val !== null && val !== "") {
+        params.append(key, String(val));
+      }
+    }
+    const qs = params.toString();
+    const url =
+      `${API_CONFIG.baseURL}/inventory/organizations/${orgId}/sales/grouped-invoice/` +
+      (qs ? `?${qs}` : "");
+    const token = tokenManager.getAccessToken();
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "text/html",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!response.ok) {
+      let errorData: unknown;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      const message =
+        (errorData as { detail?: string; message?: string })?.detail ||
+        (errorData as { detail?: string; message?: string })?.message ||
+        "Impossible de générer la facture groupée";
+      throw new ApiError(message, response.status, errorData);
+    }
+    return response.text();
+  },
+
+  /**
    * Récupère un document fictif (devis de démo) rendu avec un modèle
    * spécifique — utilisé sur la page « Paramètres » pour aider
    * l'utilisateur à choisir parmi les modèles disponibles.

@@ -13,6 +13,7 @@ import type {
   SaleInstallment,
   SalePayment,
   SaleResponse,
+  SalesSummary,
   UpdateSaleData,
 } from "@/lib/types/inventory";
 
@@ -21,6 +22,17 @@ export const salesService = {
     return apiClient.get<Sale[]>(API_ENDPOINTS.INVENTORY.SALES.LIST(orgId), {
       params: params as Record<string, unknown> | undefined,
     });
+  },
+
+  /**
+   * Agrégats CA / paid / outstanding selon les mêmes filtres que la
+   * liste. Permet d'afficher un total dynamique sans paginer le client.
+   */
+  async getSummary(orgId: string, params?: ListSalesParams) {
+    return apiClient.get<SalesSummary>(
+      API_ENDPOINTS.INVENTORY.SALES.SUMMARY(orgId),
+      { params: params as Record<string, unknown> | undefined }
+    );
   },
 
   async getById(orgId: string, id: string) {
