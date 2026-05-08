@@ -26,6 +26,7 @@ import { toast } from "sonner";
 // ─── Subscription Banner (compact, design landing-like) ─────────────────────
 
 function CurrentSubscriptionBanner() {
+  const router = useRouter();
   const { data: subscription, isLoading } = useMySubscription();
   const cancelMutation = useCancelSubscription();
   const cancelScheduledMutation = useCancelScheduledChange();
@@ -111,11 +112,16 @@ function CurrentSubscriptionBanner() {
             : undefined;
 
         if (reason === "missing_payer_number") {
-          toast.warning(err.message, {
-            description:
-              "Cliquez sur « Changer de plan » pour ressaisir vos coordonnées de paiement.",
-            duration: 8000,
-          });
+          // Pas d'infos de paiement mémorisées : on envoie l'utilisateur
+          // directement sur l'écran de saisie du numéro pour son plan
+          // courant — il finalise le renouvellement comme une nouvelle
+          // souscription.
+          toast.info(
+            "Saisissez votre numéro de paiement pour finaliser le renouvellement."
+          );
+          router.push(
+            `/core/billing/upgrade/${subscription.plan.code}?cycle=${subscription.cycle}`
+          );
           return;
         }
         if (reason === "djomy_not_configured") {
