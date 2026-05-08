@@ -30,11 +30,21 @@ const PLAN_ICONS: Record<string, typeof Sparkles> = {
     enterprise: Crown,
 };
 
-/** Format GNF brut, gardé en sous-texte pour la transparence. */
+/** Format GNF brut, gardé en sous-texte pour la transparence.
+ *
+ * Le franc guinéen n'a pas de subdivision : on arrondit à l'entier
+ * AVANT formatage pour éviter qu'une décimale issue d'un calcul prorata
+ * (ex: 43 633.33) soit lue comme un chiffre à 8 positions par
+ * l'utilisateur quand le séparateur décimal et celui des milliers
+ * partagent un espace en fr-GN.
+ */
 function formatGnf(value: string | number): string {
     const n = typeof value === "string" ? parseFloat(value) : value;
     if (!Number.isFinite(n)) return String(value);
-    return `${new Intl.NumberFormat("fr-GN").format(n).replace(/,/g, " ")} FNG`;
+    const rounded = Math.round(n);
+    return `${new Intl.NumberFormat("fr-FR", {
+        maximumFractionDigits: 0,
+    }).format(rounded)} FNG`;
 }
 
 // ─── Page ───────────────────────────────────────────────────────────────────
@@ -136,8 +146,11 @@ export default function UpgradePage() {
             subscription.cycle === "yearly" ? subscription.plan.price_yearly : subscription.plan.price_monthly
         );
         const daysInPeriod = subscription.cycle === "yearly" ? 365 : 30;
-        prorataCredit = (currentPrice / daysInPeriod) * subscription.days_remaining;
-        finalPrice = Math.max(0, basePriceNum - prorataCredit);
+        // Arrondi à l'entier (le franc guinéen n'a pas de subdivision).
+        // Doit matcher le calcul backend dans ``_calculate_upgrade_prorata``
+        // pour éviter tout écart d'affichage vs montant facturé.
+        prorataCredit = Math.round((currentPrice / daysInPeriod) * subscription.days_remaining);
+        finalPrice = Math.max(0, Math.round(basePriceNum - prorataCredit));
     }
     
     // Conversion GNF → USD pour l'affichage (paiement Djomy reste en GNF).
