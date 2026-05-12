@@ -1,5 +1,6 @@
 "use client"
 
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -7,6 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { useAdminUsersBilling } from "@/lib/hooks/admin"
 import { useSubscriptionsStats } from "@/lib/hooks/monitoring"
 import Link from "next/link"
 
@@ -18,6 +28,11 @@ function fmt(n: string | number): string {
 
 export default function MonitoringSubscriptionsPage() {
   const { data, isLoading } = useSubscriptionsStats()
+  const recentSubs = useAdminUsersBilling({
+    has_sub: "true",
+    page: 1,
+    page_size: 10,
+  })
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-8">
@@ -146,6 +161,74 @@ export default function MonitoringSubscriptionsPage() {
               </li>
             ))}
           </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Abonnements actifs (10 derniers)</CardTitle>
+            <CardDescription>
+              Clic sur une ligne pour gérer cet utilisateur.
+            </CardDescription>
+          </div>
+          <Link
+            href="/admin/users"
+            className="text-sm text-primary hover:underline"
+          >
+            Tout voir →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Fin de période</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentSubs.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    Chargement…
+                  </TableCell>
+                </TableRow>
+              ) : (recentSubs.data?.results ?? []).length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    Aucun abonnement actif.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                (recentSubs.data?.results ?? []).map((u) => (
+                  <TableRow key={u.id} className="hover:bg-muted/40">
+                    <TableCell>
+                      <Link
+                        href={`/admin/users?focus=${u.id}`}
+                        className="font-mono text-xs text-primary hover:underline"
+                      >
+                        {u.email}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={u.plan_code === "pro" ? "default" : "secondary"}>
+                        {u.plan_code ?? "—"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs">{u.sub_status ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {u.current_period_end
+                        ? new Date(u.current_period_end).toLocaleDateString("fr-FR")
+                        : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

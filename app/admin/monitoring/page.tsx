@@ -155,6 +155,18 @@ export default function MonitoringHomePage() {
       </Card>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <Link href="/admin/users" className="contents">
+          <Card className="transition-colors hover:border-primary/50">
+            <CardHeader className="py-4">
+              <CardTitle className="text-sm">
+                Gérer les abonnements →
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Mois gratuits, changement de plan, annulations.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
         <Link href="/admin/monitoring/visits" className="contents">
           <Card className="transition-colors hover:border-primary/50">
             <CardHeader className="py-4">

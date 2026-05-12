@@ -279,9 +279,13 @@ export type BillingEventType =
   | 'renewed'
   | 'cancelled'
   | 'expired'
+  | 'expiry_reminder'
+  | 'renewal_attempt'
+  | 'renewal_failed'
   | 'payment_success'
   | 'payment_failed'
-  | 'limit_reached';
+  | 'limit_reached'
+  | 'gift_granted';
 
 export interface BillingEvent {
   id: string;

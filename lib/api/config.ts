@@ -98,6 +98,17 @@ export const API_ENDPOINTS = {
       TRANSACTION_STATUS: (reference: string) =>
         `/core/billing/transactions/${reference}/status/`,
     },
+    // ── Administration des abonnements (superadmin) ───────────────────────
+    ADMIN_BILLING: {
+      USERS_LIST: "/core/admin/users-billing/",
+      USER_DETAIL: (userId: string) => `/core/admin/users-billing/${userId}/`,
+      CHANGE_PLAN: (userId: string) =>
+        `/core/admin/users-billing/${userId}/change-plan/`,
+      GRANT_MONTHS: (userId: string) =>
+        `/core/admin/users-billing/${userId}/grant-months/`,
+      CANCEL: (userId: string) =>
+        `/core/admin/users-billing/${userId}/cancel/`,
+    },
   },
 
   // ── Monitoring (superadmin only) ───────────────────────────────────────────
