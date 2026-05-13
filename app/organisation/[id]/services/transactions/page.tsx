@@ -533,6 +533,11 @@ function TransactionsPage() {
           ) : (
             <>
               <ListTable
+                onRowClick={(t: ServiceTransaction) =>
+                  router.push(
+                    `/organisation/${orgId}/services/transactions/${t.id}`
+                  )
+                }
                 columns={[
                   <ListTableColumn key="date" header="Date">
                     {({ value: t }) => (
@@ -553,11 +558,12 @@ function TransactionsPage() {
                           <button
                             type="button"
                             className="text-xs text-primary hover:underline block"
-                            onClick={() =>
+                            onClick={(e) => {
+                              e.stopPropagation();
                               router.push(
                                 `/organisation/${orgId}/services/enrollments/${t.enrollment}`
-                              )
-                            }
+                              );
+                            }}
                           >
                             {t.enrollment_reference}
                           </button>
@@ -621,7 +627,10 @@ function TransactionsPage() {
                   >
                     {({ value: t }) => (
                       <Can permission={PERMISSIONS.SERVICE_TRANSACTIONS.CONFIRM}>
-                        <div className="flex justify-end gap-1">
+                        <div
+                          className="flex justify-end gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {t.status === "pending" && canConfirm && (
                             <Button
                               size="sm"

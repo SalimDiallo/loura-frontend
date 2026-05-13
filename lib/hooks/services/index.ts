@@ -494,6 +494,16 @@ export function usePaginatedServiceTransactions(
   });
 }
 
+export function useServiceTransaction(orgId: string, id: string | undefined) {
+  return useQuery({
+    queryKey: id
+      ? servicesQueryKeys.transaction(orgId, id)
+      : ["services", "transactions", orgId, "noop"],
+    queryFn: () => serviceTransactionsService.get(orgId, id as string),
+    enabled: !!orgId && !!id,
+  });
+}
+
 export function useEnrollmentTransactions(
   orgId: string,
   enrollmentId: string | undefined
@@ -550,6 +560,9 @@ export function useConfirmServiceTransaction(orgId: string) {
     mutationFn: (id: string) => serviceTransactionsService.confirm(orgId, id),
     onSuccess: (tx) => {
       qc.invalidateQueries({ queryKey: ["services", "transactions", orgId] });
+      qc.invalidateQueries({
+        queryKey: servicesQueryKeys.transaction(orgId, tx.id),
+      });
       if (tx.enrollment) {
         qc.invalidateQueries({
           queryKey: servicesQueryKeys.enrollment(orgId, tx.enrollment),
@@ -565,6 +578,9 @@ export function useCancelServiceTransaction(orgId: string) {
     mutationFn: (id: string) => serviceTransactionsService.cancel(orgId, id),
     onSuccess: (tx) => {
       qc.invalidateQueries({ queryKey: ["services", "transactions", orgId] });
+      qc.invalidateQueries({
+        queryKey: servicesQueryKeys.transaction(orgId, tx.id),
+      });
       if (tx.enrollment) {
         qc.invalidateQueries({
           queryKey: servicesQueryKeys.enrollment(orgId, tx.enrollment),
