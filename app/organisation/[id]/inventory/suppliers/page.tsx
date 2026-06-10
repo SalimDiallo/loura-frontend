@@ -41,6 +41,7 @@ function SuppliersPage() {
     const orgId = params.id as string;
     const { can } = useOrgPermissions();
     const canManage = can(PERMISSIONS.SUPPLIERS.MANAGE);
+    const canViewPurchaseOrders = can(PERMISSIONS.PURCHASE_ORDERS.VIEW);
 
     const [search, setSearch] = useState("");
     const [filterOpen, setFilterOpen] = useState(false);
@@ -244,9 +245,26 @@ function SuppliersPage() {
                                     >
                                         {({ value: s }) => (
                                             <div className="flex items-center gap-1.5 justify-end">
+                                                {canViewPurchaseOrders && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        title="Voir les approvisionnements"
+                                                        aria-label="Voir les approvisionnements"
+                                                        onClick={() =>
+                                                            router.push(
+                                                                `/organisation/${orgId}/inventory/suppliers/${s.id}/purchase-orders`
+                                                            )
+                                                        }
+                                                    >
+                                                        <FaTruck className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
+                                                    title="Modifier le fournisseur"
+                                                    aria-label="Modifier le fournisseur"
                                                     onClick={() =>
                                                         router.push(
                                                             `/organisation/${orgId}/inventory/suppliers/${s.id}`

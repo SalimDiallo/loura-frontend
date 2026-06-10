@@ -62,6 +62,7 @@ function SupplierDetailPage() {
     const supplierId = params.supplierId as string;
     const { can } = useOrgPermissions();
     const canManage = can(PERMISSIONS.SUPPLIERS.MANAGE);
+    const canViewPurchaseOrders = can(PERMISSIONS.PURCHASE_ORDERS.VIEW);
 
     const { data: supplier, isLoading } = useSupplier(orgId, supplierId);
     const updateSupplier = useUpdateSupplier();
@@ -172,7 +173,7 @@ function SupplierDetailPage() {
                                     Paiement à {supplier.payment_terms_days} jours
                                 </p>
                             </div>
-                            <div className="space-y-1 pt-4 border-t">
+                            <div className="space-y-2 pt-4 border-t">
                                 <p className="text-sm font-medium">Activité</p>
                                 <p className="text-xs text-muted-foreground">
                                     {supplier.purchase_orders_count} commande(s)
@@ -180,6 +181,22 @@ function SupplierDetailPage() {
                                 <p className="text-xs text-muted-foreground">
                                     Encours : {supplier.outstanding_amount}
                                 </p>
+                                {canViewPurchaseOrders && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full gap-2 mt-1"
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/suppliers/${supplierId}/purchase-orders`
+                                            )
+                                        }
+                                    >
+                                        <Truck className="h-4 w-4" />
+                                        Voir les approvisionnements
+                                    </Button>
+                                )}
                             </div>
                             <AuditFootprint
                                 created_at={supplier.created_at}

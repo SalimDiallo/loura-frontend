@@ -266,6 +266,7 @@ export function ListPageLayout({
   title,
   icon,
   description,
+  backLink,
   headerActions = [],
   stats = [],
   searchFilters,
@@ -274,6 +275,7 @@ export function ListPageLayout({
   title: string;
   icon?: any;
   description?: string;
+  backLink?: string;
   headerActions?: PageHeaderAction[];
   stats?: React.ReactNode[];
   searchFilters?: React.ReactNode;
@@ -286,6 +288,7 @@ export function ListPageLayout({
           title={title}
           subtitle={description}
           icon={icon}
+          backLink={backLink}
           actions={headerActions}
         />
       </div>
