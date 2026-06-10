@@ -1,9 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api";
 import { useMySubscription, useRenewNow } from "@/lib/hooks/core";
 import { AlertTriangle, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +31,7 @@ const DISMISS_KEY_PREFIX = "loura.expirationAlert.dismissed:";
 export function ExpirationAlert() {
   const { data: subscription } = useMySubscription();
   const renewMutation = useRenewNow();
+  const router = useRouter();
   const [dismissed, setDismissed] = useState(false);
 
   if (!subscription) return null;
@@ -70,8 +73,33 @@ export function ExpirationAlert() {
           "Renouvellement lancé. Confirmez la notification sur votre téléphone."
         );
       },
-      onError: (err: Error) =>
-        toast.error(err.message || "Erreur lors du renouvellement."),
+      onError: (err: Error) => {
+        // Le backend qualifie l'erreur via ``reason``. Si le numéro de
+        // paiement est manquant, on redirige l'utilisateur vers l'écran de
+        // saisie du numéro — préchargé avec son plan/cycle courant — pour
+        // qu'il finalise le renouvellement, plutôt que d'afficher une erreur.
+        const reason =
+          err instanceof ApiError
+            ? (err.data as { reason?: string } | undefined)?.reason
+            : undefined;
+
+        if (reason === "missing_payer_number") {
+          toast.info(
+            "Saisissez votre numéro de paiement pour finaliser le renouvellement."
+          );
+          router.push(
+            `/core/billing/upgrade/${subscription.plan.code}?cycle=${subscription.cycle}`
+          );
+          return;
+        }
+        if (reason === "djomy_not_configured") {
+          toast.error(
+            "Service de paiement indisponible. Réessayez dans quelques instants."
+          );
+          return;
+        }
+        toast.error(err.message || "Erreur lors du renouvellement.");
+      },
     });
   };
 

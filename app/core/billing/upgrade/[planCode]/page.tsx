@@ -106,7 +106,17 @@ export default function UpgradePage() {
         );
     }
 
-    if (subscription?.plan.code === plan.code && subscription?.cycle === cycle) {
+    // Renouvellement : on arrive ici depuis « Renouveler maintenant » quand
+    // aucun numéro de paiement n'est mémorisé (le backend a renvoyé
+    // ``missing_payer_number``). Dans ce cas, même plan + même cycle est le
+    // comportement VOULU — on doit laisser l'utilisateur ressaisir son
+    // numéro pour finaliser, donc on NE bloque PAS sur « forfait actuel ».
+    const isSamePlanAndCycle =
+        subscription?.plan.code === plan.code && subscription?.cycle === cycle;
+    const isRenewal =
+        isSamePlanAndCycle && subscription?.has_payer_number === false;
+
+    if (isSamePlanAndCycle && !isRenewal) {
         return (
             <div className="container mx-auto p-6 max-w-2xl">
                 <Card>
@@ -190,6 +200,8 @@ export default function UpgradePage() {
                 plan_code: plan.code,
                 cycle,
                 payer_number: isFree ? undefined : payerNumber,
+                // Renouvellement : prolonge la sub existante côté webhook.
+                ...(isRenewal ? { is_renewal: true } : {}),
                 // Pas de sélection de méthode - Djomy propose toutes les options
             },
             {
@@ -244,7 +256,11 @@ export default function UpgradePage() {
                         <Icon className="h-6 w-6 text-primary" />
                     </div>
                     <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                    <CardDescription>{plan.description}</CardDescription>
+                    <CardDescription>
+                        {isRenewal
+                            ? "Ressaisissez votre numéro de paiement pour renouveler votre abonnement."
+                            : plan.description}
+                    </CardDescription>
                 </CardHeader>
 
                 <CardContent className="space-y-6">
@@ -331,7 +347,7 @@ export default function UpgradePage() {
                         ) : (
                             <>
                                 <Wallet className="h-5 w-5 mr-2" />
-                                Payer
+                                {isRenewal ? "Renouveler" : "Payer"}
                             </>
                         )}
                     </Button>

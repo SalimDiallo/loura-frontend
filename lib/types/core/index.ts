@@ -172,6 +172,12 @@ export interface Subscription {
   auto_renew: boolean;
   /** Méthode de paiement mémorisée pour les renouvellements auto. */
   payment_method: "OM" | "MOMO" | "KULU" | "" | string;
+  /**
+   * Un numéro de paiement est-il mémorisé sur l'abonnement ? Le numéro
+   * lui-même n'est jamais exposé ; ce booléen permet à l'UI d'autoriser
+   * la ressaisie lors d'un renouvellement quand le numéro manque.
+   */
+  has_payer_number: boolean;
   renewal_attempts: number;
   last_renewal_error: string;
   /**
@@ -206,6 +212,13 @@ export interface ChangePlanData {
   payer_number?: string;
   /** Liste blanche des méthodes de paiement à proposer ; vide = toutes. */
   allowed_payment_methods?: DjomyPaymentMethod[];
+  /**
+   * Renouvellement du forfait courant (même plan + même cycle) lorsqu'aucun
+   * numéro n'était mémorisé. Marque la transaction côté backend pour que le
+   * webhook **prolonge** l'abonnement au lieu de le recréer (ou de ne rien
+   * faire, cf. garde-fou « même plan » dans ``change_plan``).
+   */
+  is_renewal?: boolean;
 }
 
 export type DjomyTransactionStatus =
