@@ -90,3 +90,21 @@ export function useErrorDetail(id: number | null) {
     enabled: id !== null,
   })
 }
+
+export function useSystemHealth() {
+  return useQuery({
+    queryKey: ["monitoring", "health"],
+    queryFn: () => monitoringService.getSystemHealth(),
+    refetchInterval: REFRESH_MS,
+    staleTime: REFRESH_MS,
+  })
+}
+
+export function useTasksStatus() {
+  return useQuery({
+    queryKey: ["monitoring", "tasks"],
+    queryFn: () => monitoringService.getTasksStatus(),
+    refetchInterval: REFRESH_MS * 2,
+    staleTime: REFRESH_MS * 2,
+  })
+}

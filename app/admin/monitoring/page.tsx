@@ -23,6 +23,9 @@ import {
     YAxis,
 } from "recharts"
 
+import { ScheduledTasksCard } from "./_components/scheduled-tasks-card"
+import { SystemHealthCard } from "./_components/system-health-card"
+
 function StatCard({
   title,
   value,
@@ -71,7 +74,7 @@ export default function MonitoringHomePage() {
         </p>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Visites 24h"
           value={visits.data?.totals["24h"] ?? "—"}
@@ -100,6 +103,24 @@ export default function MonitoringHomePage() {
           href="/admin/monitoring/subscriptions"
           loading={subs.isLoading}
         />
+        <StatCard
+          title="p95 latence 24h"
+          value={
+            visits.data?.performance?.p95_duration_ms_24h !== null &&
+            visits.data?.performance?.p95_duration_ms_24h !== undefined
+              ? `${visits.data.performance.p95_duration_ms_24h} ms`
+              : "—"
+          }
+          hint={`${visits.data?.performance?.slow_requests_24h ?? 0} requêtes lentes (≥ ${
+            visits.data?.performance?.slow_threshold_ms ?? 2000
+          } ms)`}
+          loading={visits.isLoading}
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SystemHealthCard />
+        <ScheduledTasksCard />
       </section>
 
       <Card>

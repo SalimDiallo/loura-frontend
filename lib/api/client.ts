@@ -238,6 +238,23 @@ class ApiClient {
           }
         }
 
+        // Les 5xx remontent au monitoring (ErrorEvent + Sentry côté back).
+        // Import dynamique pour casser le cycle client → logger → service →
+        // client ; l'endpoint d'ingest est exclu pour éviter une boucle.
+        if (
+          response.status >= 500 &&
+          !endpoint.includes('/monitoring/logs/frontend/ingest/')
+        ) {
+          void import('@/lib/monitoring/logger')
+            .then(({ monLog }) =>
+              monLog.error(
+                `API ${response.status} sur ${options.method ?? 'GET'} ${endpoint}`,
+                { status: response.status, endpoint }
+              )
+            )
+            .catch(() => {});
+        }
+
         throw new ApiError(
           errorData.message || errorData.detail || 'Une erreur est survenue',
           response.status,

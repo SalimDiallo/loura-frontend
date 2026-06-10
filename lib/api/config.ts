@@ -123,6 +123,8 @@ export const API_ENDPOINTS = {
     LOGS_FRONTEND_INGEST: "/monitoring/logs/frontend/ingest/",
     ERRORS_LIST: "/monitoring/errors/",
     ERROR_DETAIL: (id: number) => `/monitoring/errors/${id}/`,
+    HEALTH_DETAILS: "/monitoring/health/details/",
+    TASKS_STATUS: "/monitoring/tasks/",
   },
 
   // ── HR (Human Resources) ────────────────────────────────────────────────────

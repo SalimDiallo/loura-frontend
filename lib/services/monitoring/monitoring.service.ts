@@ -12,6 +12,8 @@ import type {
   OrgsStats,
   PageView,
   SubscriptionsStats,
+  SystemHealth,
+  TasksStatusResponse,
   UniqueVisitorsResponse,
   VisitsSummary,
   VisitsWindow,
@@ -102,6 +104,17 @@ export const monitoringService = {
   async getError(id: number) {
     return apiClient.get<ErrorEventDetail>(
       API_ENDPOINTS.MONITORING.ERROR_DETAIL(id)
+    )
+  },
+
+  // ── Santé système + tâches ──
+  async getSystemHealth() {
+    return apiClient.get<SystemHealth>(API_ENDPOINTS.MONITORING.HEALTH_DETAILS)
+  },
+
+  async getTasksStatus() {
+    return apiClient.get<TasksStatusResponse>(
+      API_ENDPOINTS.MONITORING.TASKS_STATUS
     )
   },
 }

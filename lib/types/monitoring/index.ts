@@ -37,6 +37,12 @@ export interface VisitsSummary {
     other: number
   }
   unique_visitors_24h: number
+  performance: {
+    avg_duration_ms_24h: number | null
+    p95_duration_ms_24h: number | null
+    slow_requests_24h: number
+    slow_threshold_ms: number
+  }
 }
 
 export interface OrgsStats {
@@ -133,4 +139,68 @@ export interface UniqueVisitorsResponse {
   count: number
   results: UniqueVisitor[]
   has_more: boolean
+}
+
+// ── Santé système + tâches planifiées (J4) ──
+
+export type HealthStatus = "ok" | "degraded" | "down"
+
+export interface HealthCheck {
+  ok: boolean
+  latency_ms?: number
+  error?: string
+  workers?: string[]
+  eager?: boolean
+  last_heartbeat?: string | null
+  stale?: boolean
+  used_percent?: number
+  free_gb?: number
+}
+
+export type TaskRunStatus = "running" | "success" | "failure"
+
+export interface BeatTaskStatus {
+  name: string
+  task: string
+  last_run: {
+    status: TaskRunStatus
+    started_at: string
+    finished_at: string | null
+    duration_ms: number | null
+  } | null
+  stale: boolean
+}
+
+export interface SystemHealth {
+  status: HealthStatus
+  checks: {
+    database: HealthCheck
+    redis: HealthCheck
+    celery_worker: HealthCheck
+    celery_beat: HealthCheck
+    logs_writable: HealthCheck
+    disk: HealthCheck
+  }
+  beat_tasks: BeatTaskStatus[]
+  version: string
+  environment: string
+  uptime_seconds: number
+  server_time: string
+}
+
+export interface TaskRun {
+  id: number
+  task_name: string
+  task_id: string
+  status: TaskRunStatus
+  started_at: string
+  finished_at: string | null
+  duration_ms: number | null
+  detail: string
+  error: string
+}
+
+export interface TasksStatusResponse {
+  beat: BeatTaskStatus[]
+  recent_runs: TaskRun[]
 }
