@@ -77,7 +77,7 @@ export const DOCS_MANIFEST: DocSection[] = [
     pages: [
       {
         slug: "inventory/pos",
-        title: "Caisse (POS)",
+        title: "Ventes Rapides (POS)",
         description: "Encaisser des ventes rapidement.",
       },
       {

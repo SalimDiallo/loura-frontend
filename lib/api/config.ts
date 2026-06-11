@@ -432,6 +432,17 @@ export const API_ENDPOINTS = {
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/expenses/${id}/`,
     },
+    // Caisse / Trésorerie
+    CASH: {
+      TRANSACTIONS: (orgId: string) =>
+        `/inventory/organizations/${orgId}/cash/transactions/`,
+      SUMMARY: (orgId: string) =>
+        `/inventory/organizations/${orgId}/cash/summary/`,
+      ADJUSTMENTS: (orgId: string) =>
+        `/inventory/organizations/${orgId}/cash/adjustments/`,
+      ADJUSTMENT_DETAIL: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/cash/adjustments/${id}/`,
+    },
     // Commandes fournisseur (Purchase Orders)
     PURCHASE_ORDERS: {
       LIST: (orgId: string) =>

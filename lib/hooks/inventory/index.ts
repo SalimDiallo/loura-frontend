@@ -1533,3 +1533,127 @@ export function useSetMemberWarehouseAccess() {
     },
   });
 }
+
+// ─── Caisse / Trésorerie ──────────────────────────────────────────────────────
+
+import { cashService } from "@/lib/services/inventory";
+import type {
+  CashAdjustment,
+  CashSummary,
+  CashTransaction,
+  CreateCashAdjustmentData,
+  ListCashAdjustmentsParams,
+  ListCashTransactionsParams,
+  UpdateCashAdjustmentData,
+} from "@/lib/types/inventory";
+
+const CASH_KEY = (orgId: string) => ["inventory", "cash", orgId];
+const CASH_ADJUSTMENTS_KEY = (orgId: string) => [
+  "inventory",
+  "cash-adjustments",
+  orgId,
+];
+const CASH_ADJUSTMENT_KEY = (orgId: string, id: string) => [
+  "inventory",
+  "cash-adjustment",
+  orgId,
+  id,
+];
+
+/** Liste consolidée paginée des transactions de caisse (entrées + sorties). */
+export function usePaginatedCashTransactions(
+  orgId: string,
+  filters?: Omit<ListCashTransactionsParams, "page" | "page_size">,
+  options?: { pageSize?: number; initialPage?: number; enabled?: boolean }
+): UsePaginatedQueryReturn<CashTransaction> {
+  return usePaginatedQuery<CashTransaction, any>({
+    queryKey: [...CASH_KEY(orgId), "transactions"],
+    fetchFn: (params) => cashService.transactions(orgId, params) as any,
+    filters,
+    pageSize: options?.pageSize ?? 15,
+    initialPage: options?.initialPage ?? 1,
+    enabled: options?.enabled !== false && !!orgId,
+  });
+}
+
+/** Résumé de caisse (total entrées / sorties / solde) pour le filtre courant. */
+export function useCashSummary(
+  orgId: string,
+  params?: ListCashTransactionsParams
+): UseQueryResult<CashSummary, Error> {
+  return useQuery({
+    queryKey: [...CASH_KEY(orgId), "summary", params ?? {}],
+    queryFn: () => cashService.summary(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function useCashAdjustments(
+  orgId: string,
+  params?: ListCashAdjustmentsParams
+) {
+  return useQuery({
+    queryKey: [...CASH_ADJUSTMENTS_KEY(orgId), params ?? {}],
+    queryFn: () => cashService.listAdjustments(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function useCashAdjustment(
+  orgId: string,
+  id: string
+): UseQueryResult<CashAdjustment, Error> {
+  return useQuery({
+    queryKey: CASH_ADJUSTMENT_KEY(orgId, id),
+    queryFn: () => cashService.getAdjustment(orgId, id),
+    enabled: !!orgId && !!id,
+  });
+}
+
+/** Invalide toutes les vues caisse (transactions + résumé + apports). */
+function invalidateCash(qc: ReturnType<typeof useQueryClient>, orgId: string) {
+  qc.invalidateQueries({ queryKey: CASH_KEY(orgId) });
+  qc.invalidateQueries({ queryKey: CASH_ADJUSTMENTS_KEY(orgId) });
+}
+
+export function useCreateCashAdjustment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orgId,
+      data,
+    }: {
+      orgId: string;
+      data: CreateCashAdjustmentData;
+    }) => cashService.createAdjustment(orgId, data),
+    onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
+  });
+}
+
+export function useUpdateCashAdjustment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orgId,
+      id,
+      data,
+    }: {
+      orgId: string;
+      id: string;
+      data: UpdateCashAdjustmentData;
+    }) => cashService.updateAdjustment(orgId, id, data),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: CASH_ADJUSTMENT_KEY(orgId, id) });
+      invalidateCash(qc, orgId);
+    },
+  });
+}
+
+export function useDeleteCashAdjustment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      cashService.deleteAdjustment(orgId, id),
+    onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
+  });
+}

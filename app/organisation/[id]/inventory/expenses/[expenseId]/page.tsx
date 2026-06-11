@@ -2,15 +2,15 @@
 
 import { Can, PermissionGuard } from "@/components/permissions";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,14 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import {
-  useDeleteExpense,
-  useExpense,
-  useUpdateExpense,
-  useWarehouses,
+    useDeleteExpense,
+    useExpense,
+    useUpdateExpense,
+    useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
-import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaArrowLeft, FaCoins, FaTrash } from "react-icons/fa";
@@ -229,7 +229,7 @@ function ExpenseDetail() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="amount">Montant (GNF)</Label>
+                <Label htmlFor="amount">Montant *</Label>
                 <Input
                   id="amount"
                   type="number"

@@ -72,6 +72,7 @@ import {
     FaUsers,
     FaWarehouse
 } from "react-icons/fa";
+import { FaWallet } from "react-icons/fa6";
 
 // ============================================================================
 // RESIZE CONSTANTS
@@ -322,7 +323,7 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           active: "/inventory"
         },
         { 
-          title: "Caisse", 
+          title: "Ventes Rapides", 
           url: `${b}/inventory/pos`, 
           icon: FaShoppingCart, 
           requiredPermission: PERMISSIONS.SALES.VIEW,
@@ -417,6 +418,13 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           icon: FaCoins,
           requiredPermission: PERMISSIONS.EXPENSES.VIEW,
           active: "/inventory/expenses"
+        },
+        {
+          title: "Caisse",
+          url: `${b}/inventory/cash`,
+          icon: FaWallet,
+          requiredPermission: PERMISSIONS.CASH.VIEW,
+          active: "/inventory/cash"
         },
         {
           title: "Rapports",

@@ -92,6 +92,13 @@ export const PERMISSIONS = {
     VIEW: 'inventory.view_expenses',
     MANAGE: 'inventory.manage_expenses',
   },
+  // ── Inventaire : Caisse / Trésorerie ──────────────────────────────────────
+  CASH: {
+    VIEW: 'inventory.view_cash',
+    MANAGE: 'inventory.manage_cash',
+    // Profil caissier : ne voit QUE ses propres transactions de caisse.
+    CASHIER: 'inventory.caissier',
+  },
   // ── Inventaire : Restriction par entrepôt ────────────────────────────────
   // Si attribuée à un membre, restreint son accès aux entrepôts listés dans
   // sa liste blanche (``MembershipWarehouseAccess``). Sans cette permission,

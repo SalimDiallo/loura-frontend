@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCreateExpense, useWarehouses } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
-import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { FaCoins } from "react-icons/fa";
@@ -106,7 +106,7 @@ function CreateExpensePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="amount">Montant (GNF) *</Label>
+                <Label htmlFor="amount">Montant *</Label>
                 <Input
                   id="amount"
                   type="number"

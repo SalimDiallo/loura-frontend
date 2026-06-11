@@ -3,6 +3,7 @@
  */
 
 export * from "./analytics.service";
+export * from "./cash.service";
 export * from "./categories.service";
 export * from "./expenses.service";
 export * from "./physical_inventories.service";

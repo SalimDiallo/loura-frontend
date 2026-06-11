@@ -1,37 +1,33 @@
 "use client";
 
 import {
-  ListPageLayout,
-  ListPagination,
-  ListSearchFilters,
-  ListStat,
-  ListTable,
-  ListTableColumn,
+    ListPageLayout,
+    ListPagination,
+    ListSearchFilters,
+    ListStat,
+    ListTable,
+    ListTableColumn,
 } from "@/components/layout/ListPageLayout";
 import {
-  Can,
-  PermissionGuard,
-  useOrgPermissions,
+    Can,
+    PermissionGuard,
+    useOrgPermissions,
 } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePaginatedExpenses, useWarehouses } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
+import { formatCurrency } from "@/utils/formatters";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
-  FaCalendarAlt,
-  FaCoins,
-  FaPlus,
-  FaWarehouse,
+    FaCalendarAlt,
+    FaCoins,
+    FaPlus,
+    FaWarehouse,
 } from "react-icons/fa";
 
-function formatGNF(value: string | number): string {
-  const n = typeof value === "string" ? Number(value) : value;
-  if (!isFinite(n)) return String(value);
-  return new Intl.NumberFormat("fr-FR").format(n) + " GNF";
-}
 
 function formatDate(iso: string): string {
   try {
@@ -133,7 +129,7 @@ function ExpensesPage() {
         <ListStat
           key="amount"
           label="Montant (page)"
-          value={formatGNF(totalPage)}
+          value={formatCurrency(totalPage)}
           icon={<FaCoins className="h-4 w-4 text-amber-600" />}
         />,
       ]}
@@ -214,7 +210,7 @@ function ExpensesPage() {
                 <ListTableColumn key="amount" header="Montant" align="right">
                   {({ value: e }) => (
                     <span className="font-mono tabular-nums font-medium">
-                      {formatGNF(e.amount)}
+                      {formatCurrency(e.amount)}
                     </span>
                   )}
                 </ListTableColumn>,

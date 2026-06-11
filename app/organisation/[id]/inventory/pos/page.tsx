@@ -467,7 +467,7 @@ function POSPage() {
                             <FaReceipt className="h-5 w-5" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold">Caisse rapide</h1>
+                            <h1 className="text-xl font-bold">Ventes rapide</h1>
                             <p className="text-xs text-muted-foreground">
                                 Encaissement comptant ou crédit
                             </p>

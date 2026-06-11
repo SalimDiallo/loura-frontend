@@ -1226,6 +1226,125 @@ export interface ExpensesAnalyticsResponse {
   by_day: ExpensesByDayRow[];
 }
 
+// ─── Caisse / Trésorerie ────────────────────────────────────────────────────
+
+export type CashDirection = "in" | "out";
+
+export type CashPaymentMethod =
+  | "cash"
+  | "bank_transfer"
+  | "mobile_money"
+  | "check"
+  | "card"
+  | "other";
+
+export type CashSourceType =
+  | "sale_payment"
+  | "po_payment"
+  | "expense"
+  | "adjustment";
+
+/** Transaction de caisse normalisée (vue consolidée, lecture seule). */
+export interface CashTransaction {
+  id: string;
+  source_type: CashSourceType;
+  direction: CashDirection;
+  amount: string;
+  method: string;
+  label: string;
+  reference: string;
+  date: string;
+  warehouse_id: string | null;
+  warehouse_name: string;
+  created_by_info: UserMiniInfo | null;
+}
+
+export interface ListCashTransactionsParams {
+  date?: string;
+  from?: string;
+  to?: string;
+  warehouse?: string;
+  direction?: CashDirection;
+  method?: CashPaymentMethod;
+  /** Filtrer sur l'auteur (id utilisateur) du mouvement. */
+  user?: string;
+  page?: number;
+  page_size?: number | string;
+}
+
+export interface CashSummaryBreakdownRow {
+  in: string;
+  out: string;
+  balance: string;
+  count_in: number;
+  count_out: number;
+  count: number;
+}
+
+export interface CashSummaryWarehouseRow extends CashSummaryBreakdownRow {
+  name: string;
+}
+
+export interface CashSummaryUserRow extends CashSummaryBreakdownRow {
+  name: string;
+  email: string;
+}
+
+export interface CashSummary {
+  count: number;
+  count_in: number;
+  count_out: number;
+  total_in: string;
+  total_out: string;
+  balance: string;
+  currency: string;
+  by_method: Record<string, CashSummaryBreakdownRow>;
+  by_warehouse: Record<string, CashSummaryWarehouseRow>;
+  /** Ventilation par auteur ("unknown" = mouvements sans auteur connu). */
+  by_user: Record<string, CashSummaryUserRow>;
+}
+
+/** Apport / retrait de fonds (CRUD). */
+export interface CashAdjustment {
+  id: string;
+  organization: string;
+  warehouse: string;
+  warehouse_name: string;
+  direction: CashDirection;
+  amount: string;
+  method: CashPaymentMethod;
+  label: string;
+  reason: string;
+  adjustment_date: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  created_by_info: UserMiniInfo | null;
+  updated_by_info: UserMiniInfo | null;
+}
+
+export interface CreateCashAdjustmentData {
+  warehouse_id: string;
+  direction: CashDirection;
+  amount: string;
+  method?: CashPaymentMethod;
+  label: string;
+  reason?: string;
+  adjustment_date: string;
+  notes?: string;
+}
+
+export type UpdateCashAdjustmentData = Partial<CreateCashAdjustmentData>;
+
+export interface ListCashAdjustmentsParams {
+  warehouse?: string;
+  direction?: CashDirection;
+  from?: string;
+  to?: string;
+  page?: number;
+  page_size?: number | string;
+}
+
 // ─── Accès entrepôt par membre (HR + inventory) ────────────────────────────
 
 export interface MemberWarehouseAccessResponse {
