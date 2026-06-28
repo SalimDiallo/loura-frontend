@@ -7,7 +7,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Download, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Download, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 
 // ─── KPI Card ────────────────────────────────────────────────────────────────
@@ -199,6 +199,29 @@ export function ReportEmpty({
         <div className="text-center py-10 text-muted-foreground">
             <Icon className="h-10 w-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm">{message}</p>
+        </div>
+    );
+}
+
+// ─── Error state ─────────────────────────────────────────────────────────────
+
+export function ReportError({
+    message = "Impossible de charger les données.",
+    onRetry,
+}: {
+    message?: string;
+    onRetry?: () => void;
+}) {
+    return (
+        <div className="text-center py-10">
+            <AlertTriangle className="h-10 w-10 mx-auto mb-3 text-red-500/70" />
+            <p className="text-sm text-muted-foreground mb-3">{message}</p>
+            {onRetry && (
+                <Button variant="outline" size="sm" onClick={onRetry} className="gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Réessayer
+                </Button>
+            )}
         </div>
     );
 }

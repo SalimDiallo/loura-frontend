@@ -106,6 +106,14 @@ export const PERMISSIONS = {
   WAREHOUSE_SCOPE: {
     SCOPE: 'inventory.scope_warehouses',
   },
+  // ── Comptabilité (reporting financier) ────────────────────────────────────
+  ACCOUNTING: {
+    VIEW_REPORTS: 'accounting.view_reports',
+    VIEW_PNL: 'accounting.view_pnl',
+    VIEW_TREASURY: 'accounting.view_treasury',
+    VIEW_RECEIVABLES: 'accounting.view_receivables',
+    EXPORT: 'accounting.export',
+  },
   // ── Services : Catégories ─────────────────────────────────────────────────
   SERVICE_CATEGORIES: {
     VIEW: 'services.view_categories',

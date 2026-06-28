@@ -632,6 +632,28 @@ export const API_ENDPOINTS = {
     },
   },
 
+  // ── Comptabilité (reporting financier — phase 1) ─────────────────────────
+  ACCOUNTING: {
+    OVERVIEW: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/overview/`,
+    PNL: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/pnl/`,
+    PNL_TREND: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/pnl-trend/`,
+    TREASURY_JOURNAL: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/treasury-journal/`,
+    EXPENSES_BY_CATEGORY: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/expenses-by-category/`,
+    REVENUE_BY_SOURCE: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/revenue-by-source/`,
+    RECEIVABLES: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/receivables/`,
+    PAYABLES: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/payables/`,
+    REPORT_DOCUMENT: (orgId: string) =>
+      `/accounting/organizations/${orgId}/accounting/report-document/`,
+  },
+
   // ── Feedback utilisateur ────────────────────────────────────────────────
   FEEDBACK: {
     CREATE: "/feedback/",

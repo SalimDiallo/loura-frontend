@@ -501,6 +501,50 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
         },
       ],
     },
+    {
+      id: "accounting",
+      title: "Comptabilité",
+      icon: FaCoins,
+      defaultOpen: false,
+      requiredModule: "accounting",
+      items: [
+        {
+          title: "Vue d'ensemble",
+          url: `${b}/accounting`,
+          icon: FaChartBar,
+          requiredPermission: PERMISSIONS.ACCOUNTING.VIEW_REPORTS,
+          active: "/accounting"
+        },
+        {
+          title: "Compte de résultat",
+          url: `${b}/accounting/pnl`,
+          icon: FaChartBar,
+          requiredPermission: PERMISSIONS.ACCOUNTING.VIEW_PNL,
+          active: "/accounting/pnl"
+        },
+        {
+          title: "Journal de trésorerie",
+          url: `${b}/accounting/treasury`,
+          icon: FaMoneyBillWave,
+          requiredPermission: PERMISSIONS.ACCOUNTING.VIEW_TREASURY,
+          active: "/accounting/treasury"
+        },
+        {
+          title: "Créances clients",
+          url: `${b}/accounting/receivables`,
+          icon: FaReceipt,
+          requiredPermission: PERMISSIONS.ACCOUNTING.VIEW_RECEIVABLES,
+          active: "/accounting/receivables"
+        },
+        {
+          title: "Dettes fournisseurs",
+          url: `${b}/accounting/payables`,
+          icon: FaWallet,
+          requiredPermission: PERMISSIONS.ACCOUNTING.VIEW_RECEIVABLES,
+          active: "/accounting/payables"
+        },
+      ],
+    },
   ];
 }
 
