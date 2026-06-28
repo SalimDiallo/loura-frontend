@@ -54,4 +54,11 @@ export const categoriesService = {
       API_ENDPOINTS.INVENTORY.CATEGORIES.DELETE(orgId, id)
     );
   },
+
+  async restore(orgId: string, id: string) {
+    return apiClient.post<UpdateCategoryResponse>(
+      API_ENDPOINTS.INVENTORY.CATEGORIES.RESTORE(orgId, id),
+      {}
+    );
+  },
 };

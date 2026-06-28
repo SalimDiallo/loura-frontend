@@ -47,4 +47,11 @@ export const warehousesService = {
       API_ENDPOINTS.INVENTORY.WAREHOUSES.DELETE(orgId, id)
     );
   },
+
+  async restore(orgId: string, id: string) {
+    return apiClient.post<UpdateWarehouseResponse>(
+      API_ENDPOINTS.INVENTORY.WAREHOUSES.RESTORE(orgId, id),
+      {}
+    );
+  },
 };

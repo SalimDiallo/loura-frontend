@@ -48,6 +48,13 @@ export const physicalInventoriesService = {
     );
   },
 
+  async restore(orgId: string, id: string) {
+    return apiClient.post<PhysicalInventoryResponse>(
+      API_ENDPOINTS.INVENTORY.PHYSICAL_INVENTORIES.RESTORE(orgId, id),
+      {}
+    );
+  },
+
   async populate(
     orgId: string,
     id: string,

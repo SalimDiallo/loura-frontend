@@ -26,6 +26,8 @@ export interface Category {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CategoryTreeNode {
@@ -93,6 +95,8 @@ export interface Warehouse {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CreateWarehouseData {
@@ -165,6 +169,8 @@ export interface Product {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CreateProductData {
@@ -204,6 +210,8 @@ export interface ListCategoriesParams {
   search?: string;
   parent?: string | "null";
   is_active?: boolean | string;
+  /** ?deleted=true → corbeille (catégories supprimées). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -211,6 +219,8 @@ export interface ListCategoriesParams {
 export interface ListWarehousesParams {
   search?: string;
   is_active?: boolean | string;
+  /** ?deleted=true → corbeille (entrepôts supprimés). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -221,6 +231,8 @@ export interface ListProductsParams {
   unit?: ProductUnit;
   is_active?: boolean | string;
   track_stock?: boolean | string;
+  /** ?deleted=true → corbeille (produits supprimés). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -263,6 +275,8 @@ export interface Stock {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export type StockMovementType = "in" | "out" | "adjust" | "transfer";
@@ -302,6 +316,8 @@ export interface StockMovement {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
   validated_by_info?: UserMiniInfo | null;
 }
 
@@ -429,6 +445,8 @@ export interface Supplier {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CreateSupplierData {
@@ -465,6 +483,8 @@ export interface DeleteSupplierResponse {
 export interface ListSuppliersParams {
   search?: string;
   is_active?: boolean | string;
+  /** ?deleted=true → corbeille (fournisseurs supprimés). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -536,6 +556,8 @@ export interface PurchaseOrderPayment {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface PurchaseOrder {
@@ -564,6 +586,8 @@ export interface PurchaseOrder {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CreatePurchaseOrderItemData {
@@ -630,6 +654,8 @@ export interface ListPurchaseOrdersParams {
   supplier?: string;
   from?: string;
   to?: string;
+  /** ?deleted=true → corbeille (commandes supprimées). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -715,6 +741,8 @@ export interface SalePayment {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface SaleInstallment {
@@ -762,6 +790,8 @@ export interface Sale {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CreateSaleItemData {
@@ -843,6 +873,8 @@ export interface ListSalesParams {
   min_total?: string | number;
   max_total?: string | number;
   ordering?: SaleOrdering;
+  /** ?deleted=true → corbeille (ventes supprimées). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -892,6 +924,8 @@ export interface PhysicalInventoryItem {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface PhysicalInventoryTotals {
@@ -922,6 +956,8 @@ export interface PhysicalInventory {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CreatePhysicalInventoryData {
@@ -962,6 +998,8 @@ export interface ListPhysicalInventoriesParams {
   warehouse?: string;
   from?: string;
   to?: string;
+  /** ?deleted=true → corbeille (inventaires supprimés). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -1073,6 +1111,8 @@ export interface Quote {
   updated_at: string;
   created_by_info?: UserMiniInfo | null;
   updated_by_info?: UserMiniInfo | null;
+  deleted_by_info?: UserMiniInfo | null;
+  deleted_at?: string | null;
 }
 
 export interface CreateQuoteItemData {
@@ -1138,6 +1178,8 @@ export interface ListQuotesParams {
   warehouse?: string;
   from?: string;
   to?: string;
+  /** ?deleted=true → corbeille (devis supprimés). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }
@@ -1199,6 +1241,8 @@ export interface ListExpensesParams {
   warehouse?: string;
   from?: string;
   to?: string;
+  /** ?deleted=true → corbeille (dépenses supprimées). */
+  deleted?: boolean | string;
   page?: number;
   page_size?: number | string;
 }

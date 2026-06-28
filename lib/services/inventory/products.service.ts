@@ -48,6 +48,13 @@ export const productsService = {
     );
   },
 
+  async restore(orgId: string, id: string) {
+    return apiClient.post<UpdateProductResponse>(
+      API_ENDPOINTS.INVENTORY.PRODUCTS.RESTORE(orgId, id),
+      {}
+    );
+  },
+
   async uploadImage(orgId: string, id: string, file: File) {
     const formData = new FormData();
     formData.append("image", file);

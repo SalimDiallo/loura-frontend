@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Switch } from "@/components/ui/switch";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCategories, useCreateProduct } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
-import type { CreateProductData, ProductUnit } from "@/lib/types";
+import type { Category, CreateProductData, ProductUnit } from "@/lib/types";
 import { PRODUCT_UNITS } from "@/lib/types/inventory";
 import {
     Barcode,
@@ -60,6 +61,24 @@ function CreateProductPage() {
         track_stock: true,
         is_active: true,
     });
+    // Le SKU est suggéré automatiquement depuis le nom tant que l'utilisateur
+    // ne l'a pas édité manuellement. Il reste librement modifiable.
+    const [skuTouched, setSkuTouched] = useState(false);
+
+    // Suggestion de SKU dérivée du nom (translittération ASCII, alphanumérique).
+    const suggestedSku = useMemo(() => {
+        const base = (formData.name || "")
+            .normalize("NFKD")
+            .replace(/[̀-ͯ]/g, "")
+            .replace(/[^A-Za-z0-9]/g, "")
+            .toUpperCase()
+            .slice(0, 12);
+        return base ? `${base}-0001` : "";
+    }, [formData.name]);
+
+    // Valeur affichée dans le champ : la saisie manuelle prime, sinon la
+    // suggestion. Le numéro final unique est garanti côté serveur.
+    const effectiveSku = skuTouched ? formData.sku : suggestedSku;
 
     const { data: allCategories = [] } = useCategories(orgId, {
         page_size: "all",
@@ -68,7 +87,7 @@ function CreateProductPage() {
 
     const categoryItems: SmartSelectorItem[] = useMemo(
         () =>
-            (allCategories as any[]).map((c) => ({
+            (allCategories as Category[]).map((c) => ({
                 id: c.id,
                 name: c.name,
                 subtitle: c.full_path,
@@ -79,24 +98,26 @@ function CreateProductPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.sku) {
-            toast("Champs manquants", {
-                description: "Nom et SKU sont obligatoires.",
+        if (!formData.name) {
+            toast("Champ manquant", {
+                description: "Le nom du produit est obligatoire.",
             });
             return;
         }
         try {
-            await createProduct.mutateAsync({ orgId, data: formData });
+            // SKU non touché → on laisse le serveur générer un SKU unique
+            // (envoi vide). Sinon on envoie la saisie manuelle.
+            const payload = {
+                ...formData,
+                sku: skuTouched ? formData.sku.trim() : "",
+            };
+            await createProduct.mutateAsync({ orgId, data: payload });
             toast.success("Produit créé avec succès !");
             router.push(`/organisation/${orgId}/inventory/products`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
                 description:
-                    error?.data?.sku?.[0] ||
-                    error?.data?.name?.[0] ||
-                    error?.data?.detail ||
-                    error?.message ||
-                    "Impossible de créer le produit",
+                    getApiErrorMessage(error) || "Impossible de créer le produit",
             });
         }
     };
@@ -119,7 +140,7 @@ function CreateProductPage() {
                                 {formData.name || "Nouveau produit"}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                SKU: {formData.sku || "…"}
+                                SKU: {effectiveSku || "auto"}
                             </p>
                         </div>
                         <div className="pt-3 border-t space-y-1">
@@ -185,17 +206,22 @@ function CreateProductPage() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="sku">SKU *</Label>
+                                <Label htmlFor="sku">SKU</Label>
                                 <Input
                                     id="sku"
-                                    placeholder="COCA-33"
-                                    value={formData.sku}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, sku: e.target.value })
-                                    }
-                                    required
+                                    placeholder="COCA-0001"
+                                    value={effectiveSku}
+                                    onChange={(e) => {
+                                        setSkuTouched(true);
+                                        setFormData({ ...formData, sku: e.target.value });
+                                    }}
                                     maxLength={64}
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    {skuTouched
+                                        ? "SKU personnalisé."
+                                        : "Généré automatiquement — modifiable."}
+                                </p>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="barcode">
@@ -279,7 +305,7 @@ function CreateProductPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="purchase_price">
                                         <DollarSign className="inline h-3.5 w-3.5 mr-1" />
-                                        Prix d'achat
+                                        Prix d&apos;achat
                                     </Label>
                                     <Input
                                         id="purchase_price"
@@ -362,7 +388,7 @@ function CreateProductPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="min_stock_level">
                                         <TrendingDown className="inline h-3.5 w-3.5 mr-1" />
-                                        Seuil d'alerte
+                                        Seuil d&apos;alerte
                                     </Label>
                                     <Input
                                         id="min_stock_level"
@@ -386,7 +412,7 @@ function CreateProductPage() {
                                 <div className="space-y-0.5">
                                     <Label className="text-base">Actif</Label>
                                     <p className="text-sm text-muted-foreground">
-                                        Un produit inactif n'est plus proposé dans les
+                                        Un produit inactif n&apos;est plus proposé dans les
                                         sélections.
                                     </p>
                                 </div>

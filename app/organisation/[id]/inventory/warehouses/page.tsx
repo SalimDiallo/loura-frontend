@@ -14,11 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePaginatedWarehouses } from "@/lib/hooks/inventory";
+import { getApiErrorMessage } from "@/lib/api/error-message";
+import { usePaginatedWarehouses, useRestoreWarehouse } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { FaCheckCircle, FaEdit, FaMapMarkerAlt, FaPlus, FaWarehouse } from "react-icons/fa";
+import { FaCheckCircle, FaEdit, FaMapMarkerAlt, FaPlus, FaTrashRestore, FaUndo, FaWarehouse } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function WarehousesPageWrapper() {
     return (
@@ -37,11 +39,30 @@ function WarehousesPage() {
 
     const [search, setSearch] = useState("");
     const [filterOpen, setFilterOpen] = useState(false);
+    const [showTrash, setShowTrash] = useState(false);
 
     const stableFilters = useMemo(
-        () => ({ search: search || undefined }),
-        [search]
+        () => ({
+            search: search || undefined,
+            deleted: showTrash ? "true" : undefined,
+        }),
+        [search, showTrash]
     );
+
+    const restoreWarehouse = useRestoreWarehouse();
+
+    const handleRestore = (warehouseId: string) => {
+        restoreWarehouse.mutate(
+            { orgId, warehouseId },
+            {
+                onSuccess: () => toast.success("Entrepôt restauré."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
 
     const {
         data: warehouses,
@@ -67,11 +88,21 @@ function WarehousesPage() {
 
     return (
         <ListPageLayout
-            title="Entrepôts"
-            icon={FaWarehouse}
-            description="Gérez les emplacements physiques de votre stock"
-            headerActions={
-                canManage
+            title={showTrash ? "Entrepôts — Corbeille" : "Entrepôts"}
+            icon={showTrash ? FaTrashRestore : FaWarehouse}
+            description={
+                showTrash
+                    ? "Entrepôts supprimés — restaurez-les si besoin"
+                    : "Gérez les emplacements physiques de votre stock"
+            }
+            headerActions={[
+                {
+                    label: showTrash ? "Voir les actifs" : "Corbeille",
+                    icon: showTrash ? FaWarehouse : FaTrashRestore,
+                    variant: "outline" as const,
+                    onClick: () => setShowTrash((v) => !v),
+                },
+                ...(canManage && !showTrash
                     ? [
                         {
                             label: "Nouvel entrepôt",
@@ -82,8 +113,8 @@ function WarehousesPage() {
                                 ),
                         },
                     ]
-                    : []
-            }
+                    : []),
+            ]}
             stats={[
                 <ListStat
                     key="total"
@@ -122,25 +153,35 @@ function WarehousesPage() {
                             ))}
                         </div>
                     ) : warehouses.length === 0 ? (
-                        <div className="text-center py-16 bg-muted/20 rounded-lg">
-                            <FaWarehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Aucun entrepôt</p>
-                            <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Commencez par créer votre premier entrepôt.
-                            </p>
-                            <Can permission={PERMISSIONS.WAREHOUSES.MANAGE}>
-                                <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/warehouses/create`
-                                        )
-                                    }
-                                >
-                                    <FaPlus className="mr-2" />
-                                    Créer un entrepôt
-                                </Button>
-                            </Can>
-                        </div>
+                        showTrash ? (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Corbeille vide</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Aucun entrepôt supprimé.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaWarehouse className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Aucun entrepôt</p>
+                                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                                    Commencez par créer votre premier entrepôt.
+                                </p>
+                                <Can permission={PERMISSIONS.WAREHOUSES.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/warehouses/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Créer un entrepôt
+                                    </Button>
+                                </Can>
+                            </div>
+                        )
                     ) : (
                         <>
                             <ListTable
@@ -193,9 +234,37 @@ function WarehousesPage() {
                                             </span>
                                         )}
                                     </ListTableColumn>,
-                                    <ListTableColumn key="status" header="Statut">
-                                        {({ value: w }) => <BadgeStatus status={w.is_active} />}
-                                    </ListTableColumn>,
+                                    ...(showTrash
+                                        ? [
+                                            <ListTableColumn
+                                                key="deleted_by"
+                                                header="Supprimé par"
+                                            >
+                                                {({ value: w }) => (
+                                                    <div className="text-xs">
+                                                        <div className="font-medium">
+                                                            {w.deleted_by_info?.name ||
+                                                                w.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {w.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    w.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </ListTableColumn>,
+                                          ]
+                                        : [
+                                            <ListTableColumn key="status" header="Statut">
+                                                {({ value: w }) => (
+                                                    <BadgeStatus status={w.is_active} />
+                                                )}
+                                            </ListTableColumn>,
+                                          ]),
                                     <ListTableColumn
                                         key="actions"
                                         header="Actions"
@@ -203,7 +272,18 @@ function WarehousesPage() {
                                     >
                                         {({ value: w }) => (
                                             <div className="flex items-center gap-2 justify-end">
-                                                {canManage && (
+                                                {canManage && showTrash && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={restoreWarehouse.isPending}
+                                                        onClick={() => handleRestore(w.id)}
+                                                    >
+                                                        <FaUndo className="h-4 w-4 mr-1.5" />
+                                                        Restaurer
+                                                    </Button>
+                                                )}
+                                                {canManage && !showTrash && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

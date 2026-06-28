@@ -195,7 +195,8 @@ function ExpenseDetail() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Supprimer cette dépense ?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Cette action est irréversible.
+                  La dépense sera déplacée dans la corbeille et retirée des
+                  soldes de caisse. Elle reste restaurable.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

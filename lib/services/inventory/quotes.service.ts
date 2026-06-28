@@ -46,6 +46,13 @@ export const quotesService = {
     );
   },
 
+  async restore(orgId: string, id: string) {
+    return apiClient.post<QuoteResponse>(
+      API_ENDPOINTS.INVENTORY.QUOTES.RESTORE(orgId, id),
+      {}
+    );
+  },
+
   async send(orgId: string, id: string) {
     return apiClient.post<QuoteResponse>(
       API_ENDPOINTS.INVENTORY.QUOTES.SEND(orgId, id),

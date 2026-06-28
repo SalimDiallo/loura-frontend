@@ -13,11 +13,13 @@ import { Can, PermissionGuard, useOrgPermissions } from "@/components/permission
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePaginatedCategories } from "@/lib/hooks/inventory";
+import { getApiErrorMessage } from "@/lib/api/error-message";
+import { usePaginatedCategories, useRestoreCategory } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { FaBoxOpen, FaEdit, FaLayerGroup, FaPlus, FaTags } from "react-icons/fa";
+import { FaBoxOpen, FaEdit, FaLayerGroup, FaPlus, FaTags, FaTrashRestore, FaUndo } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function CategoriesPageWrapper() {
     return (
@@ -36,11 +38,30 @@ function CategoriesPage() {
 
     const [search, setSearch] = useState("");
     const [filterOpen, setFilterOpen] = useState(false);
+    const [showTrash, setShowTrash] = useState(false);
 
     const stableFilters = useMemo(
-        () => ({ search: search || undefined }),
-        [search]
+        () => ({
+            search: search || undefined,
+            deleted: showTrash ? "true" : undefined,
+        }),
+        [search, showTrash]
     );
+
+    const restoreCategory = useRestoreCategory();
+
+    const handleRestore = (categoryId: string) => {
+        restoreCategory.mutate(
+            { orgId, categoryId },
+            {
+                onSuccess: () => toast.success("Catégorie restaurée."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
 
     const {
         data: categories,
@@ -68,11 +89,21 @@ function CategoriesPage() {
 
     return (
         <ListPageLayout
-            title="Catégories produits"
-            icon={FaTags}
-            description="Organisez votre catalogue avec une hiérarchie de catégories"
-            headerActions={
-                canManage
+            title={showTrash ? "Catégories — Corbeille" : "Catégories produits"}
+            icon={showTrash ? FaTrashRestore : FaTags}
+            description={
+                showTrash
+                    ? "Catégories supprimées — restaurez-les si besoin"
+                    : "Organisez votre catalogue avec une hiérarchie de catégories"
+            }
+            headerActions={[
+                {
+                    label: showTrash ? "Voir les actives" : "Corbeille",
+                    icon: showTrash ? FaTags : FaTrashRestore,
+                    variant: "outline" as const,
+                    onClick: () => setShowTrash((v) => !v),
+                },
+                ...(canManage && !showTrash
                     ? [
                         {
                             label: "Nouvelle catégorie",
@@ -83,8 +114,8 @@ function CategoriesPage() {
                                 ),
                         },
                     ]
-                    : []
-            }
+                    : []),
+            ]}
             stats={[
                 <ListStat
                     key="total"
@@ -109,7 +140,7 @@ function CategoriesPage() {
                     filtersAreActive={!!search}
                     filters={
                         <div className="text-sm text-muted-foreground mt-4">
-                            La recherche s'applique au nom et à la description.
+                            La recherche s&apos;applique au nom et à la description.
                         </div>
                     }
                 />
@@ -123,25 +154,35 @@ function CategoriesPage() {
                             ))}
                         </div>
                     ) : categories.length === 0 ? (
-                        <div className="text-center py-16 bg-muted/20 rounded-lg">
-                            <FaTags className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Aucune catégorie</p>
-                            <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Créez votre première catégorie pour structurer le catalogue.
-                            </p>
-                            <Can permission={PERMISSIONS.PRODUCT_CATEGORIES.MANAGE}>
-                                <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/categories/create`
-                                        )
-                                    }
-                                >
-                                    <FaPlus className="mr-2" />
-                                    Créer une catégorie
-                                </Button>
-                            </Can>
-                        </div>
+                        showTrash ? (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Corbeille vide</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Aucune catégorie supprimée.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTags className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Aucune catégorie</p>
+                                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                                    Créez votre première catégorie pour structurer le catalogue.
+                                </p>
+                                <Can permission={PERMISSIONS.PRODUCT_CATEGORIES.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/categories/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Créer une catégorie
+                                    </Button>
+                                </Can>
+                            </div>
+                        )
                     ) : (
                         <>
                             <ListTable
@@ -187,11 +228,37 @@ function CategoriesPage() {
                                             </span>
                                         )}
                                     </ListTableColumn>,
-                                    <ListTableColumn key="status" header="Statut">
-                                        {({ value: cat }) => (
-                                            <BadgeStatus status={cat.is_active} />
-                                        )}
-                                    </ListTableColumn>,
+                                    ...(showTrash
+                                        ? [
+                                            <ListTableColumn
+                                                key="deleted_by"
+                                                header="Supprimé par"
+                                            >
+                                                {({ value: cat }) => (
+                                                    <div className="text-xs">
+                                                        <div className="font-medium">
+                                                            {cat.deleted_by_info?.name ||
+                                                                cat.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {cat.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    cat.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </ListTableColumn>,
+                                          ]
+                                        : [
+                                            <ListTableColumn key="status" header="Statut">
+                                                {({ value: cat }) => (
+                                                    <BadgeStatus status={cat.is_active} />
+                                                )}
+                                            </ListTableColumn>,
+                                          ]),
                                     <ListTableColumn
                                         key="actions"
                                         header="Actions"
@@ -199,7 +266,18 @@ function CategoriesPage() {
                                     >
                                         {({ value: cat }) => (
                                             <div className="flex items-center gap-2 justify-end">
-                                                {canManage && (
+                                                {canManage && showTrash && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={restoreCategory.isPending}
+                                                        onClick={() => handleRestore(cat.id)}
+                                                    >
+                                                        <FaUndo className="h-4 w-4 mr-1.5" />
+                                                        Restaurer
+                                                    </Button>
+                                                )}
+                                                {canManage && !showTrash && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

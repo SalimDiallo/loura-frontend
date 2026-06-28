@@ -47,4 +47,11 @@ export const suppliersService = {
       API_ENDPOINTS.INVENTORY.SUPPLIERS.DELETE(orgId, id)
     );
   },
+
+  async restore(orgId: string, id: string) {
+    return apiClient.post<UpdateSupplierResponse>(
+      API_ENDPOINTS.INVENTORY.SUPPLIERS.RESTORE(orgId, id),
+      {}
+    );
+  },
 };

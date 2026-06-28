@@ -19,9 +19,11 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import { useCustomers } from "@/lib/hooks/hr";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import {
     usePaginatedSales,
     useProducts,
+    useRestoreSale,
     useSalesSummary,
     useWarehouses,
 } from "@/lib/hooks/inventory";
@@ -45,7 +47,10 @@ import {
     FaPlus,
     FaReceipt,
     FaTimes,
+    FaTrashRestore,
+    FaUndo,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 interface SalesPageProps {
     creditOnly?: boolean;
@@ -159,6 +164,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
     const [maxTotal, setMaxTotal] = useState<string>("");
     const [ordering, setOrdering] = useState<SaleOrdering>("-sale_date");
     const [groupedInvoiceOpen, setGroupedInvoiceOpen] = useState(false);
+    const [showTrash, setShowTrash] = useState(false);
 
     const { data: customersList = [] } = useCustomers(orgId, {
         page_size: "all",
@@ -208,6 +214,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
             min_total: minTotal || undefined,
             max_total: maxTotal || undefined,
             ordering,
+            deleted: showTrash ? "true" : undefined,
         }),
         [
             search,
@@ -222,6 +229,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
             minTotal,
             maxTotal,
             ordering,
+            showTrash,
         ]
     );
 
@@ -361,18 +369,6 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         setOrdering("-sale_date");
     };
 
-    if (error) {
-        return (
-            <div className="container mx-auto p-6">
-                <Card>
-                    <CardContent className="pt-6">
-                        <p className="text-destructive">Erreur : {error.message}</p>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
     // Sous-titre humain décrivant les filtres actifs ; sert de rappel
     // dans l'en-tête du modal "Facture groupée".
     const groupedInvoiceSubtitle = useMemo(() => {
@@ -421,9 +417,31 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         ]
     );
 
+    const restoreSale = useRestoreSale();
+
+    const handleRestore = (id: string) => {
+        restoreSale.mutate(
+            { orgId, id },
+            {
+                onSuccess: () => toast.success("Vente restaurée."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
+
     const headerActionsList = useMemo(() => {
-        if (!canManage) return [];
+        const trashToggle = {
+            label: showTrash ? "Voir les actives" : "Corbeille",
+            icon: showTrash ? FaReceipt : FaTrashRestore,
+            variant: "outline" as const,
+            onClick: () => setShowTrash((v) => !v),
+        };
+        if (!canManage || showTrash) return [trashToggle];
         return [
+            trashToggle,
             {
                 label: "Facture groupée",
                 icon: FaFileInvoiceDollar,
@@ -441,17 +459,37 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                     ),
             },
         ];
-    }, [canManage, sales, router, orgId, creditOnly]);
+    }, [canManage, sales, router, orgId, creditOnly, showTrash]);
+
+    if (error) {
+        return (
+            <div className="container mx-auto p-6">
+                <Card>
+                    <CardContent className="pt-6">
+                        <p className="text-destructive">Erreur : {error.message}</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <>
         <ListPageLayout
-            title={creditOnly ? "Créances clients" : "Ventes"}
-            icon={creditOnly ? FaCreditCard : FaReceipt}
+            title={
+                showTrash
+                    ? `${creditOnly ? "Créances" : "Ventes"} — Corbeille`
+                    : creditOnly
+                      ? "Créances clients"
+                      : "Ventes"
+            }
+            icon={showTrash ? FaTrashRestore : creditOnly ? FaCreditCard : FaReceipt}
             description={
-                creditOnly
-                    ? "Ventes à crédit et encours clients"
-                    : "Ventes au comptant et à crédit"
+                showTrash
+                    ? "Ventes supprimées — restaurez-les si besoin"
+                    : creditOnly
+                      ? "Ventes à crédit et encours clients"
+                      : "Ventes au comptant et à crédit"
             }
             headerActions={headerActionsList}
             stats={[
@@ -1011,34 +1049,64 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                         header="Actions"
                                         align="right"
                                     >
-                                        {({ value: s }) => (
-                                            <div className="flex items-center justify-end gap-1">
-                                                <GenerateDocumentButton
-                                                    orgId={orgId}
-                                                    docType="sale_invoice"
-                                                    objectId={s.id}
-                                                    modalTitle={`Facture · ${s.sale_number}`}
-                                                    modalSubtitle={s.customer?.name ?? "Comptoir"}
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    hideIcon
-                                                    aria-label="Imprimer la facture"
-                                                >
-                                                    <FaReceipt className="h-3.5 w-3.5" />
-                                                </GenerateDocumentButton>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        router.push(
-                                                            `/organisation/${orgId}/inventory/sales/${s.id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <FaEye className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        )}
+                                        {({ value: s }) =>
+                                            showTrash ? (
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <div className="text-xs text-right">
+                                                        <div className="font-medium">
+                                                            {s.deleted_by_info?.name ||
+                                                                s.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {s.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    s.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {canManage && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={restoreSale.isPending}
+                                                            onClick={() => handleRestore(s.id)}
+                                                        >
+                                                            <FaUndo className="h-3.5 w-3.5 mr-1.5" />
+                                                            Restaurer
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <GenerateDocumentButton
+                                                        orgId={orgId}
+                                                        docType="sale_invoice"
+                                                        objectId={s.id}
+                                                        modalTitle={`Facture · ${s.sale_number}`}
+                                                        modalSubtitle={s.customer?.name ?? "Comptoir"}
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        hideIcon
+                                                        aria-label="Imprimer la facture"
+                                                    >
+                                                        <FaReceipt className="h-3.5 w-3.5" />
+                                                    </GenerateDocumentButton>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            router.push(
+                                                                `/organisation/${orgId}/inventory/sales/${s.id}`
+                                                            )
+                                                        }
+                                                    >
+                                                        <FaEye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            )
+                                        }
                                     </ListTableColumn>,
                                 ]}
                                 data={sales}

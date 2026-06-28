@@ -53,6 +53,13 @@ export const expensesService = {
     );
   },
 
+  async restore(orgId: string, id: string) {
+    return apiClient.post<{ message: string; data: Expense }>(
+      API_ENDPOINTS.INVENTORY.EXPENSES.RESTORE(orgId, id),
+      {}
+    );
+  },
+
   async analytics(
     orgId: string,
     params?: { from?: string; to?: string }

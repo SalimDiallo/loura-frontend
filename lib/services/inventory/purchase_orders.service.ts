@@ -50,6 +50,13 @@ export const purchaseOrdersService = {
     );
   },
 
+  async restore(orgId: string, id: string) {
+    return apiClient.post<PurchaseOrderResponse>(
+      API_ENDPOINTS.INVENTORY.PURCHASE_ORDERS.RESTORE(orgId, id),
+      {}
+    );
+  },
+
   async send(orgId: string, id: string) {
     return apiClient.post<PurchaseOrderResponse>(
       API_ENDPOINTS.INVENTORY.PURCHASE_ORDERS.SEND(orgId, id),

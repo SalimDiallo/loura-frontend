@@ -59,6 +59,13 @@ export const salesService = {
     );
   },
 
+  async restore(orgId: string, id: string) {
+    return apiClient.post<SaleResponse>(
+      API_ENDPOINTS.INVENTORY.SALES.RESTORE(orgId, id),
+      {}
+    );
+  },
+
   async complete(orgId: string, id: string) {
     return apiClient.post<SaleResponse>(
       API_ENDPOINTS.INVENTORY.SALES.COMPLETE(orgId, id),

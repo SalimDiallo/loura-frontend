@@ -442,11 +442,12 @@ function WarehouseDetailPage() {
             <Dialog open={showDelete} onOpenChange={setShowDelete}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Supprimer l'entrepôt</DialogTitle>
+                        <DialogTitle>Supprimer l&apos;entrepôt</DialogTitle>
                         <DialogDescription>
-                            Voulez-vous supprimer l'entrepôt{" "}
+                            Voulez-vous supprimer l&apos;entrepôt{" "}
                             <span className="font-semibold">{warehouse.name}</span> ?
-                            Cette action est irréversible.
+                            Il sera déplacé dans la corbeille (restaurable depuis
+                            la liste des entrepôts).
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

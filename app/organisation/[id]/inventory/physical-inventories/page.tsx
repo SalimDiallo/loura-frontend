@@ -14,8 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import {
     usePaginatedPhysicalInventories,
+    useRestorePhysicalInventory,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -33,7 +35,10 @@ import {
     FaPlus,
     FaReceipt,
     FaTimes,
+    FaTrashRestore,
+    FaUndo,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function PhysicalInventoriesPageWrapper() {
     return (
@@ -72,6 +77,7 @@ function PhysicalInventoriesPage() {
     const [filterOpen, setFilterOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [warehouseFilter, setWarehouseFilter] = useState<string>("");
+    const [showTrash, setShowTrash] = useState(false);
 
     const { data: warehousesList = [] } = useWarehouses(orgId, {
         page_size: "all",
@@ -84,9 +90,25 @@ function PhysicalInventoriesPage() {
             search: search || undefined,
             status: (statusFilter as PhysicalInventoryStatus) || undefined,
             warehouse: warehouseFilter || undefined,
+            deleted: showTrash ? "true" : undefined,
         }),
-        [search, statusFilter, warehouseFilter]
+        [search, statusFilter, warehouseFilter, showTrash]
     );
+
+    const restoreInventory = useRestorePhysicalInventory();
+
+    const handleRestore = (id: string) => {
+        restoreInventory.mutate(
+            { orgId, id },
+            {
+                onSuccess: () => toast.success("Inventaire restauré."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
 
     const {
         data: inventories,
@@ -114,11 +136,21 @@ function PhysicalInventoriesPage() {
 
     return (
         <ListPageLayout
-            title="Inventaires physiques"
-            icon={FaClipboardCheck}
-            description="Comptage physique, comparaison et ajustements de stock"
-            headerActions={
-                canManage
+            title={showTrash ? "Inventaires — Corbeille" : "Inventaires physiques"}
+            icon={showTrash ? FaTrashRestore : FaClipboardCheck}
+            description={
+                showTrash
+                    ? "Inventaires supprimés — restaurez-les si besoin"
+                    : "Comptage physique, comparaison et ajustements de stock"
+            }
+            headerActions={[
+                {
+                    label: showTrash ? "Voir les actifs" : "Corbeille",
+                    icon: showTrash ? FaClipboardCheck : FaTrashRestore,
+                    variant: "outline" as const,
+                    onClick: () => setShowTrash((v) => !v),
+                },
+                ...(canManage && !showTrash
                     ? [
                           {
                               label: "Nouvel inventaire",
@@ -129,8 +161,8 @@ function PhysicalInventoriesPage() {
                                   ),
                           },
                       ]
-                    : []
-            }
+                    : []),
+            ]}
             stats={[
                 <ListStat
                     key="total"
@@ -203,28 +235,38 @@ function PhysicalInventoriesPage() {
                             ))}
                         </div>
                     ) : inventories.length === 0 ? (
-                        <div className="text-center py-16 bg-muted/20 rounded-lg">
-                            <FaClipboardCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                            <p className="text-lg font-medium">
-                                Aucun inventaire physique
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Créez une session de comptage pour détecter les
-                                écarts entre le physique et le système.
-                            </p>
-                            <Can permission={PERMISSIONS.STOCK.MANAGE}>
-                                <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/physical-inventories/create`
-                                        )
-                                    }
-                                >
-                                    <FaPlus className="mr-2" />
-                                    Nouvel inventaire
-                                </Button>
-                            </Can>
-                        </div>
+                        showTrash ? (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Corbeille vide</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Aucun inventaire supprimé.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaClipboardCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">
+                                    Aucun inventaire physique
+                                </p>
+                                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                                    Créez une session de comptage pour détecter les
+                                    écarts entre le physique et le système.
+                                </p>
+                                <Can permission={PERMISSIONS.STOCK.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/physical-inventories/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Nouvel inventaire
+                                    </Button>
+                                </Can>
+                            </div>
+                        )
                     ) : (
                         <>
                             <ListTable
@@ -323,38 +365,68 @@ function PhysicalInventoriesPage() {
                                         header="Actions"
                                         align="right"
                                     >
-                                        {({ value: inv }) => (
-                                            <div className="flex items-center justify-end gap-1">
-                                                {inv.status !== "draft" && (
-                                                    <GenerateDocumentButton
-                                                        orgId={orgId}
-                                                        docType="physical_inventory"
-                                                        objectId={inv.id}
-                                                        modalTitle={`Inventaire · ${inv.reference}`}
-                                                        modalSubtitle={
-                                                            inv.warehouse?.name
-                                                        }
+                                        {({ value: inv }) =>
+                                            showTrash ? (
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <div className="text-xs text-right">
+                                                        <div className="font-medium">
+                                                            {inv.deleted_by_info?.name ||
+                                                                inv.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {inv.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    inv.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {canManage && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={restoreInventory.isPending}
+                                                            onClick={() => handleRestore(inv.id)}
+                                                        >
+                                                            <FaUndo className="h-3.5 w-3.5 mr-1.5" />
+                                                            Restaurer
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {inv.status !== "draft" && (
+                                                        <GenerateDocumentButton
+                                                            orgId={orgId}
+                                                            docType="physical_inventory"
+                                                            objectId={inv.id}
+                                                            modalTitle={`Inventaire · ${inv.reference}`}
+                                                            modalSubtitle={
+                                                                inv.warehouse?.name
+                                                            }
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            hideIcon
+                                                            aria-label="Imprimer le rapport d'inventaire"
+                                                        >
+                                                            <FaReceipt className="h-3.5 w-3.5" />
+                                                        </GenerateDocumentButton>
+                                                    )}
+                                                    <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        hideIcon
-                                                        aria-label="Imprimer le rapport d'inventaire"
+                                                        onClick={() =>
+                                                            router.push(
+                                                                `/organisation/${orgId}/inventory/physical-inventories/${inv.id}`
+                                                            )
+                                                        }
                                                     >
-                                                        <FaReceipt className="h-3.5 w-3.5" />
-                                                    </GenerateDocumentButton>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        router.push(
-                                                            `/organisation/${orgId}/inventory/physical-inventories/${inv.id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <FaEdit className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        )}
+                                                        <FaEdit className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            )
+                                        }
                                     </ListTableColumn>,
                                 ]}
                                 data={inventories}

@@ -314,6 +314,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/categories/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/categories/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/categories/${id}/restore/`,
     },
     // Entrepôts
     WAREHOUSES: {
@@ -326,6 +328,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/warehouses/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/warehouses/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/warehouses/${id}/restore/`,
     },
     // Produits
     PRODUCTS: {
@@ -337,6 +341,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/products/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/products/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/products/${id}/restore/`,
       IMAGE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/products/${id}/image/`,
     },
@@ -378,6 +384,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/suppliers/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/suppliers/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/suppliers/${id}/restore/`,
     },
     // Ventes (Sales)
     SALES: {
@@ -391,6 +399,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/sales/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/sales/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/sales/${id}/restore/`,
       COMPLETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/sales/${id}/complete/`,
       CANCEL: (orgId: string, id: string) =>
@@ -431,6 +441,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/expenses/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/expenses/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/expenses/${id}/restore/`,
     },
     // Caisse / Trésorerie
     CASH: {
@@ -455,6 +467,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/purchase-orders/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/purchase-orders/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/purchase-orders/${id}/restore/`,
       SEND: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/purchase-orders/${id}/send/`,
       CANCEL: (orgId: string, id: string) =>
@@ -475,6 +489,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/quotes/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/quotes/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/quotes/${id}/restore/`,
       SEND: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/quotes/${id}/send/`,
       ACCEPT: (orgId: string, id: string) =>
@@ -499,6 +515,8 @@ export const API_ENDPOINTS = {
         `/inventory/organizations/${orgId}/physical-inventories/${id}/`,
       DELETE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/physical-inventories/${id}/`,
+      RESTORE: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/physical-inventories/${id}/restore/`,
       POPULATE: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/physical-inventories/${id}/populate/`,
       ITEMS: (orgId: string, id: string) =>

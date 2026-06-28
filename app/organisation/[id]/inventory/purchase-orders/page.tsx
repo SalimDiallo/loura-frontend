@@ -14,9 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
     usePaginatedPurchaseOrders,
+    useRestorePurchaseOrder,
     useSuppliers,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -35,8 +37,11 @@ import {
     FaPlus,
     FaReceipt,
     FaTimes,
-    FaTruck
+    FaTrashRestore,
+    FaTruck,
+    FaUndo,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function PurchaseOrdersPageWrapper() {
     return (
@@ -100,6 +105,7 @@ function PurchaseOrdersPage() {
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [supplierFilter, setSupplierFilter] = useState<string>("");
     const [paymentFilter, setPaymentFilter] = useState<string>("");
+    const [showTrash, setShowTrash] = useState(false);
 
     const { data: suppliersList = [] } = useSuppliers(orgId, {
         page_size: "all",
@@ -114,9 +120,25 @@ function PurchaseOrdersPage() {
             supplier: supplierFilter || undefined,
             payment_status:
                 (paymentFilter as PurchaseOrderPaymentStatus) || undefined,
+            deleted: showTrash ? "true" : undefined,
         }),
-        [search, statusFilter, supplierFilter, paymentFilter]
+        [search, statusFilter, supplierFilter, paymentFilter, showTrash]
     );
+
+    const restorePurchaseOrder = useRestorePurchaseOrder();
+
+    const handleRestore = (id: string) => {
+        restorePurchaseOrder.mutate(
+            { orgId, id },
+            {
+                onSuccess: () => toast.success("Commande restaurée."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
 
     const {
         data: orders,
@@ -144,11 +166,21 @@ function PurchaseOrdersPage() {
 
     return (
         <ListPageLayout
-            title="Approvisionnements"
-            icon={FaTruck}
-            description="Commandes fournisseur, réceptions et règlements"
-            headerActions={
-                canManage
+            title={showTrash ? "Approvisionnements — Corbeille" : "Approvisionnements"}
+            icon={showTrash ? FaTrashRestore : FaTruck}
+            description={
+                showTrash
+                    ? "Commandes supprimées — restaurez-les si besoin"
+                    : "Commandes fournisseur, réceptions et règlements"
+            }
+            headerActions={[
+                {
+                    label: showTrash ? "Voir les actives" : "Corbeille",
+                    icon: showTrash ? FaTruck : FaTrashRestore,
+                    variant: "outline" as const,
+                    onClick: () => setShowTrash((v) => !v),
+                },
+                ...(canManage && !showTrash
                     ? [
                           {
                               label: "Nouvelle commande",
@@ -159,8 +191,8 @@ function PurchaseOrdersPage() {
                                   ),
                           },
                       ]
-                    : []
-            }
+                    : []),
+            ]}
             stats={[
                 <ListStat
                     key="total"
@@ -241,25 +273,35 @@ function PurchaseOrdersPage() {
                             ))}
                         </div>
                     ) : orders.length === 0 ? (
-                        <div className="text-center py-16 bg-muted/20 rounded-lg">
-                            <FaTruck className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Aucune commande</p>
-                            <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Créez votre premier bon de commande fournisseur.
-                            </p>
-                            <Can permission={PERMISSIONS.PURCHASE_ORDERS.MANAGE}>
-                                <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/purchase-orders/create`
-                                        )
-                                    }
-                                >
-                                    <FaPlus className="mr-2" />
-                                    Nouvelle commande
-                                </Button>
-                            </Can>
-                        </div>
+                        showTrash ? (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Corbeille vide</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Aucune commande supprimée.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTruck className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Aucune commande</p>
+                                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                                    Créez votre premier bon de commande fournisseur.
+                                </p>
+                                <Can permission={PERMISSIONS.PURCHASE_ORDERS.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/purchase-orders/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Nouvelle commande
+                                    </Button>
+                                </Can>
+                            </div>
+                        )
                     ) : (
                         <>
                             <ListTable
@@ -343,34 +385,64 @@ function PurchaseOrdersPage() {
                                         header="Actions"
                                         align="right"
                                     >
-                                        {({ value: po }) => (
-                                            <div className="flex items-center justify-end gap-1">
-                                                <GenerateDocumentButton
-                                                    orgId={orgId}
-                                                    docType="purchase_order"
-                                                    objectId={po.id}
-                                                    modalTitle={`Bon de commande · ${po.order_number}`}
-                                                    modalSubtitle={po.supplier?.name}
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    hideIcon
-                                                    aria-label="Imprimer le bon de commande"
-                                                >
-                                                    <FaReceipt className="h-3.5 w-3.5" />
-                                                </GenerateDocumentButton>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        router.push(
-                                                            `/organisation/${orgId}/inventory/purchase-orders/${po.id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <FaEdit className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        )}
+                                        {({ value: po }) =>
+                                            showTrash ? (
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <div className="text-xs text-right">
+                                                        <div className="font-medium">
+                                                            {po.deleted_by_info?.name ||
+                                                                po.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {po.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    po.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {canManage && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={restorePurchaseOrder.isPending}
+                                                            onClick={() => handleRestore(po.id)}
+                                                        >
+                                                            <FaUndo className="h-3.5 w-3.5 mr-1.5" />
+                                                            Restaurer
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <GenerateDocumentButton
+                                                        orgId={orgId}
+                                                        docType="purchase_order"
+                                                        objectId={po.id}
+                                                        modalTitle={`Bon de commande · ${po.order_number}`}
+                                                        modalSubtitle={po.supplier?.name}
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        hideIcon
+                                                        aria-label="Imprimer le bon de commande"
+                                                    >
+                                                        <FaReceipt className="h-3.5 w-3.5" />
+                                                    </GenerateDocumentButton>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            router.push(
+                                                                `/organisation/${orgId}/inventory/purchase-orders/${po.id}`
+                                                            )
+                                                        }
+                                                    >
+                                                        <FaEdit className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            )
+                                        }
                                     </ListTableColumn>,
                                 ]}
                                 data={orders}

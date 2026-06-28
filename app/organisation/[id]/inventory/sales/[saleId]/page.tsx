@@ -115,6 +115,8 @@ function SaleDetailPage() {
 
     const [showDelete, setShowDelete] = useState(false);
     const [showCancel, setShowCancel] = useState(false);
+    // Paiement en attente de confirmation de suppression (id ou null).
+    const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
 
     // Payment form
     const [payAmount, setPayAmount] = useState("");
@@ -232,10 +234,16 @@ function SaleDetailPage() {
         if (remaining > 0) setPayAmount(remaining.toFixed(2));
     };
 
-    const handleDeletePayment = async (paymentId: string) => {
+    const handleDeletePayment = async () => {
+        if (!paymentToDelete) return;
         try {
-            await deletePaymentMutation.mutateAsync({ orgId, id: saleId, paymentId });
+            await deletePaymentMutation.mutateAsync({
+                orgId,
+                id: saleId,
+                paymentId: paymentToDelete,
+            });
             toast.success("Paiement supprimé.");
+            setPaymentToDelete(null);
         } catch (err) {
             toast.error("Impossible de supprimer le paiement", {
                 description: getApiErrorMessage(err),
@@ -249,7 +257,9 @@ function SaleDetailPage() {
         canManage && sale.status !== "cancelled" && sale.payments.length === 0;
     const canEdit = canManage && sale.status === "draft";
     const canComplete = canManage && sale.status === "draft";
-    const canDelete = canManage && sale.status === "draft";
+    // Toute vente peut être supprimée (soft delete + corbeille). Pour une
+    // vente finalisée, le backend réintègre le stock et retire les paiements.
+    const canDelete = canManage;
 
     const actions = [
         canEdit && {
@@ -873,13 +883,14 @@ function SaleDetailPage() {
                                                                 size="sm"
                                                                 className="text-destructive hover:text-destructive"
                                                                 onClick={() =>
-                                                                    handleDeletePayment(
+                                                                    setPaymentToDelete(
                                                                         p.id
                                                                     )
                                                                 }
                                                                 disabled={
                                                                     deletePaymentMutation.isPending
                                                                 }
+                                                                aria-label="Supprimer ce paiement"
                                                             >
                                                                 <FaTrash className="h-3 w-3" />
                                                             </Button>
@@ -916,7 +927,7 @@ function SaleDetailPage() {
                                               <p className="text-sm text-muted-foreground text-center py-8">
                                                   Aucune échéance définie. Le
                                                   total est dû à la date
-                                                  d'échéance globale.
+                                                  d&apos;échéance globale.
                                               </p>
                                           ) : (
                                               <div className="space-y-2">
@@ -1121,8 +1132,8 @@ function SaleDetailPage() {
                                 <DialogDescription>
                                     Vérifiez les informations avant validation.
                                     Un paiement enregistré peut être supprimé
-                                    depuis l'historique tant que la vente n'est
-                                    pas archivée.
+                                    depuis l&apos;historique tant que la vente
+                                    n&apos;est pas archivée.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-2 rounded-md border bg-muted/30 p-4 text-sm">
@@ -1229,14 +1240,23 @@ function SaleDetailPage() {
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>
-                                    Supprimer ce brouillon ?
+                                    Supprimer cette vente ?
                                 </DialogTitle>
                                 <DialogDescription>
-                                    Cette action est irréversible. Le brouillon{" "}
+                                    La vente{" "}
                                     <span className="font-mono font-semibold">
                                         {sale.sale_number}
                                     </span>{" "}
-                                    sera définitivement supprimé.
+                                    sera déplacée dans la corbeille (restaurable
+                                    depuis l&apos;onglet « Corbeille »).
+                                    {sale.status === "completed" && (
+                                        <>
+                                            {" "}
+                                            Comme elle est finalisée, le stock
+                                            vendu sera réintégré et les paiements
+                                            enregistrés seront retirés des soldes.
+                                        </>
+                                    )}
                                 </DialogDescription>
                             </DialogHeader>
                             <DialogFooter>
@@ -1253,6 +1273,49 @@ function SaleDetailPage() {
                                     className="gap-2"
                                 >
                                     {deleteMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <FaTrash className="h-3.5 w-3.5" />
+                                    )}
+                                    Supprimer
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Confirmation suppression d'un paiement */}
+                    <Dialog
+                        open={paymentToDelete !== null}
+                        onOpenChange={(open) =>
+                            !open && setPaymentToDelete(null)
+                        }
+                    >
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    Supprimer ce paiement ?
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Le paiement sera retiré de la vente et le
+                                    solde restant dû recalculé. Cette action
+                                    peut modifier le statut de paiement de la
+                                    vente.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setPaymentToDelete(null)}
+                                >
+                                    Annuler
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleDeletePayment}
+                                    disabled={deletePaymentMutation.isPending}
+                                    className="gap-2"
+                                >
+                                    {deletePaymentMutation.isPending ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
                                         <FaTrash className="h-3.5 w-3.5" />

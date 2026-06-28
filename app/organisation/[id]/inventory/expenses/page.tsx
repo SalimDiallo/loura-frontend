@@ -16,7 +16,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePaginatedExpenses, useWarehouses } from "@/lib/hooks/inventory";
+import { getApiErrorMessage } from "@/lib/api/error-message";
+import {
+    usePaginatedExpenses,
+    useRestoreExpense,
+    useWarehouses,
+} from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import { formatCurrency } from "@/utils/formatters";
 import { useParams, useRouter } from "next/navigation";
@@ -25,8 +30,11 @@ import {
     FaCalendarAlt,
     FaCoins,
     FaPlus,
+    FaTrashRestore,
+    FaUndo,
     FaWarehouse,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 
 function formatDate(iso: string): string {
@@ -59,6 +67,7 @@ function ExpensesPage() {
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
+  const [showTrash, setShowTrash] = useState(false);
 
   const { data: warehouses = [] } = useWarehouses(orgId, {
     page_size: "all",
@@ -69,9 +78,25 @@ function ExpensesPage() {
     () => ({
       search: search || undefined,
       warehouse: warehouseFilter || undefined,
+      deleted: showTrash ? "true" : undefined,
     }),
-    [search, warehouseFilter]
+    [search, warehouseFilter, showTrash]
   );
+
+  const restoreExpense = useRestoreExpense();
+
+  const handleRestore = (id: string) => {
+    restoreExpense.mutate(
+      { orgId, id },
+      {
+        onSuccess: () => toast.success("Dépense restaurée."),
+        onError: (err) =>
+          toast.error("Restauration impossible", {
+            description: getApiErrorMessage(err),
+          }),
+      }
+    );
+  };
 
   const {
     data: expenses,
@@ -102,11 +127,21 @@ function ExpensesPage() {
 
   return (
     <ListPageLayout
-      title="Dépenses"
-      icon={FaCoins}
-      description="Suivez les dépenses engagées par entrepôt"
-      headerActions={
-        canManage
+      title={showTrash ? "Dépenses — Corbeille" : "Dépenses"}
+      icon={showTrash ? FaTrashRestore : FaCoins}
+      description={
+        showTrash
+          ? "Dépenses supprimées — restaurez-les si besoin"
+          : "Suivez les dépenses engagées par entrepôt"
+      }
+      headerActions={[
+        {
+          label: showTrash ? "Voir les actives" : "Corbeille",
+          icon: showTrash ? FaCoins : FaTrashRestore,
+          variant: "outline" as const,
+          onClick: () => setShowTrash((v) => !v),
+        },
+        ...(canManage && !showTrash
           ? [
               {
                 label: "Nouvelle dépense",
@@ -117,8 +152,8 @@ function ExpensesPage() {
                   ),
               },
             ]
-          : []
-      }
+          : []),
+      ]}
       stats={[
         <ListStat
           key="total"
@@ -171,26 +206,36 @@ function ExpensesPage() {
               ))}
             </div>
           ) : expenses.length === 0 ? (
-            <div className="text-center py-16 bg-muted/20 rounded-lg">
-              <FaCoins className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-              <p className="text-lg font-medium">Aucune dépense</p>
-              <p className="text-sm text-muted-foreground mt-1 mb-6">
-                Enregistrez vos premières dépenses pour suivre vos charges par
-                entrepôt.
-              </p>
-              <Can permission={PERMISSIONS.EXPENSES.MANAGE}>
-                <Button
-                  onClick={() =>
-                    router.push(
-                      `/organisation/${orgId}/inventory/expenses/create`
-                    )
-                  }
-                >
-                  <FaPlus className="mr-2" />
-                  Ajouter une dépense
-                </Button>
-              </Can>
-            </div>
+            showTrash ? (
+              <div className="text-center py-16 bg-muted/20 rounded-lg">
+                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                <p className="text-lg font-medium">Corbeille vide</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Aucune dépense supprimée.
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-muted/20 rounded-lg">
+                <FaCoins className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                <p className="text-lg font-medium">Aucune dépense</p>
+                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                  Enregistrez vos premières dépenses pour suivre vos charges par
+                  entrepôt.
+                </p>
+                <Can permission={PERMISSIONS.EXPENSES.MANAGE}>
+                  <Button
+                    onClick={() =>
+                      router.push(
+                        `/organisation/${orgId}/inventory/expenses/create`
+                      )
+                    }
+                  >
+                    <FaPlus className="mr-2" />
+                    Ajouter une dépense
+                  </Button>
+                </Can>
+              </div>
+            )
           ) : (
             <>
             <ListTable
@@ -260,12 +305,55 @@ function ExpensesPage() {
                     </div>
                   )}
                 </ListTableColumn>,
+                ...(showTrash
+                  ? [
+                      <ListTableColumn
+                        key="actions"
+                        header="Actions"
+                        align="right"
+                      >
+                        {({ value: e }) => (
+                          <div className="flex items-center justify-end gap-3">
+                            <div className="text-xs text-right">
+                              <div className="font-medium">
+                                {e.deleted_by_info?.name ||
+                                  e.deleted_by_info?.email ||
+                                  "—"}
+                              </div>
+                              {e.deleted_at && (
+                                <div className="text-muted-foreground">
+                                  {new Date(e.deleted_at).toLocaleDateString(
+                                    "fr-FR"
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            {canManage && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={restoreExpense.isPending}
+                                onClick={() => handleRestore(e.id)}
+                              >
+                                <FaUndo className="h-3.5 w-3.5 mr-1.5" />
+                                Restaurer
+                              </Button>
+                            )}
+                          </div>
+                        )
+                        }
+                      </ListTableColumn>,
+                    ]
+                  : []),
               ]}
               data={expenses}
-              onRowClick={(e) =>
-                router.push(
-                  `/organisation/${orgId}/inventory/expenses/${e.id}`
-                )
+              onRowClick={
+                showTrash
+                  ? undefined
+                  : (e) =>
+                      router.push(
+                        `/organisation/${orgId}/inventory/expenses/${e.id}`
+                      )
               }
             />
             <ListPagination

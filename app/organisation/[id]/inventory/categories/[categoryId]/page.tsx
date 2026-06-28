@@ -343,7 +343,8 @@ function CategoryDetailPage() {
                         <DialogDescription>
                             Voulez-vous supprimer la catégorie{" "}
                             <span className="font-semibold">{category.name}</span> ?
-                            Cette action est irréversible.
+                            Elle sera déplacée dans la corbeille (restaurable).
+                            Les produits rattachés ne sont pas supprimés.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

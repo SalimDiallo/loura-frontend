@@ -14,12 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCurrencyFormatter } from "@/lib/hooks";
-import { usePaginatedProducts } from "@/lib/hooks/inventory";
+import { usePaginatedProducts, useRestoreProduct } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { FaBox, FaBoxes, FaEdit, FaPlus, FaTag } from "react-icons/fa";
+import { FaBox, FaBoxes, FaEdit, FaPlus, FaTag, FaTrashRestore, FaUndo } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function ProductsPageWrapper() {
     return (
@@ -39,11 +41,30 @@ function ProductsPage() {
 
     const [search, setSearch] = useState("");
     const [filterOpen, setFilterOpen] = useState(false);
+    const [showTrash, setShowTrash] = useState(false);
 
     const stableFilters = useMemo(
-        () => ({ search: search || undefined }),
-        [search]
+        () => ({
+            search: search || undefined,
+            deleted: showTrash ? "true" : undefined,
+        }),
+        [search, showTrash]
     );
+
+    const restoreProduct = useRestoreProduct();
+
+    const handleRestore = (productId: string) => {
+        restoreProduct.mutate(
+            { orgId, productId },
+            {
+                onSuccess: () => toast.success("Produit restauré."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
 
     const {
         data: products,
@@ -69,11 +90,21 @@ function ProductsPage() {
 
     return (
         <ListPageLayout
-            title="Produits"
-            icon={FaBox}
-            description="Catalogue des produits et services de votre organisation"
-            headerActions={
-                canManage
+            title={showTrash ? "Produits — Corbeille" : "Produits"}
+            icon={showTrash ? FaTrashRestore : FaBox}
+            description={
+                showTrash
+                    ? "Produits supprimés — restaurez-les si besoin"
+                    : "Catalogue des produits et services de votre organisation"
+            }
+            headerActions={[
+                {
+                    label: showTrash ? "Voir les produits actifs" : "Corbeille",
+                    icon: showTrash ? FaBox : FaTrashRestore,
+                    variant: "outline" as const,
+                    onClick: () => setShowTrash((v) => !v),
+                },
+                ...(canManage && !showTrash
                     ? [
                         {
                             label: "Nouveau produit",
@@ -84,8 +115,8 @@ function ProductsPage() {
                                 ),
                         },
                     ]
-                    : []
-            }
+                    : []),
+            ]}
             stats={[
                 <ListStat
                     key="total"
@@ -124,25 +155,35 @@ function ProductsPage() {
                             ))}
                         </div>
                     ) : products.length === 0 ? (
-                        <div className="text-center py-16 bg-muted/20 rounded-lg">
-                            <FaBox className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Aucun produit</p>
-                            <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Commencez par créer votre premier produit.
-                            </p>
-                            <Can permission={PERMISSIONS.PRODUCTS.MANAGE}>
-                                <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/products/create`
-                                        )
-                                    }
-                                >
-                                    <FaPlus className="mr-2" />
-                                    Créer un produit
-                                </Button>
-                            </Can>
-                        </div>
+                        showTrash ? (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Corbeille vide</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Aucun produit supprimé.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaBox className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Aucun produit</p>
+                                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                                    Commencez par créer votre premier produit.
+                                </p>
+                                <Can permission={PERMISSIONS.PRODUCTS.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/products/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Créer un produit
+                                    </Button>
+                                </Can>
+                            </div>
+                        )
                     ) : (
                         <>
                             <ListTable
@@ -219,9 +260,37 @@ function ProductsPage() {
                                             )
                                         }
                                     </ListTableColumn>,
-                                    <ListTableColumn key="status" header="Statut">
-                                        {({ value: p }) => <BadgeStatus status={p.is_active} />}
-                                    </ListTableColumn>,
+                                    ...(showTrash
+                                        ? [
+                                            <ListTableColumn
+                                                key="deleted_by"
+                                                header="Supprimé par"
+                                            >
+                                                {({ value: p }) => (
+                                                    <div className="text-xs">
+                                                        <div className="font-medium">
+                                                            {p.deleted_by_info?.name ||
+                                                                p.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {p.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    p.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </ListTableColumn>,
+                                          ]
+                                        : [
+                                            <ListTableColumn key="status" header="Statut">
+                                                {({ value: p }) => (
+                                                    <BadgeStatus status={p.is_active} />
+                                                )}
+                                            </ListTableColumn>,
+                                          ]),
                                     <ListTableColumn
                                         key="actions"
                                         header="Actions"
@@ -229,7 +298,18 @@ function ProductsPage() {
                                     >
                                         {({ value: p }) => (
                                             <div className="flex items-center gap-2 justify-end">
-                                                {canManage && (
+                                                {canManage && showTrash && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={restoreProduct.isPending}
+                                                        onClick={() => handleRestore(p.id)}
+                                                    >
+                                                        <FaUndo className="h-4 w-4 mr-1.5" />
+                                                        Restaurer
+                                                    </Button>
+                                                )}
+                                                {canManage && !showTrash && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

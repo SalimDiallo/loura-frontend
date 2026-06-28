@@ -13,7 +13,8 @@ import { Can, PermissionGuard, useOrgPermissions } from "@/components/permission
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePaginatedSuppliers } from "@/lib/hooks/inventory";
+import { getApiErrorMessage } from "@/lib/api/error-message";
+import { usePaginatedSuppliers, useRestoreSupplier } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -24,8 +25,11 @@ import {
     FaMapMarkerAlt,
     FaPhone,
     FaPlus,
+    FaTrashRestore,
     FaTruck,
+    FaUndo,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function SuppliersPageWrapper() {
     return (
@@ -46,14 +50,31 @@ function SuppliersPage() {
     const [search, setSearch] = useState("");
     const [filterOpen, setFilterOpen] = useState(false);
     const [activeOnly, setActiveOnly] = useState(true);
+    const [showTrash, setShowTrash] = useState(false);
 
     const stableFilters = useMemo(
         () => ({
             search: search || undefined,
-            is_active: activeOnly ? "true" : undefined,
+            is_active: showTrash ? undefined : activeOnly ? "true" : undefined,
+            deleted: showTrash ? "true" : undefined,
         }),
-        [search, activeOnly]
+        [search, activeOnly, showTrash]
     );
+
+    const restoreSupplier = useRestoreSupplier();
+
+    const handleRestore = (id: string) => {
+        restoreSupplier.mutate(
+            { orgId, id },
+            {
+                onSuccess: () => toast.success("Fournisseur restauré."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
 
     const {
         data: suppliers,
@@ -81,11 +102,21 @@ function SuppliersPage() {
 
     return (
         <ListPageLayout
-            title="Fournisseurs"
-            icon={FaTruck}
-            description="Gérez vos sources d'approvisionnement et leurs conditions commerciales"
-            headerActions={
-                canManage
+            title={showTrash ? "Fournisseurs — Corbeille" : "Fournisseurs"}
+            icon={showTrash ? FaTrashRestore : FaTruck}
+            description={
+                showTrash
+                    ? "Fournisseurs supprimés — restaurez-les si besoin"
+                    : "Gérez vos sources d'approvisionnement et leurs conditions commerciales"
+            }
+            headerActions={[
+                {
+                    label: showTrash ? "Voir les actifs" : "Corbeille",
+                    icon: showTrash ? FaTruck : FaTrashRestore,
+                    variant: "outline" as const,
+                    onClick: () => setShowTrash((v) => !v),
+                },
+                ...(canManage && !showTrash
                     ? [
                           {
                               label: "Nouveau fournisseur",
@@ -96,8 +127,8 @@ function SuppliersPage() {
                                   ),
                           },
                       ]
-                    : []
-            }
+                    : []),
+            ]}
             stats={[
                 <ListStat
                     key="total"
@@ -144,26 +175,36 @@ function SuppliersPage() {
                             ))}
                         </div>
                     ) : suppliers.length === 0 ? (
-                        <div className="text-center py-16 bg-muted/20 rounded-lg">
-                            <FaTruck className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Aucun fournisseur</p>
-                            <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Ajoutez vos partenaires d'approvisionnement pour tracer vos
-                                achats.
-                            </p>
-                            <Can permission={PERMISSIONS.SUPPLIERS.MANAGE}>
-                                <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/suppliers/create`
-                                        )
-                                    }
-                                >
-                                    <FaPlus className="mr-2" />
-                                    Ajouter un fournisseur
-                                </Button>
-                            </Can>
-                        </div>
+                        showTrash ? (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Corbeille vide</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Aucun fournisseur supprimé.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTruck className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Aucun fournisseur</p>
+                                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                                    Ajoutez vos partenaires d&apos;approvisionnement pour tracer
+                                    vos achats.
+                                </p>
+                                <Can permission={PERMISSIONS.SUPPLIERS.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/suppliers/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Ajouter un fournisseur
+                                    </Button>
+                                </Can>
+                            </div>
+                        )
                     ) : (
                         <>
                             <ListTable
@@ -233,48 +274,90 @@ function SuppliersPage() {
                                             </span>
                                         )}
                                     </ListTableColumn>,
-                                    <ListTableColumn key="status" header="Statut">
-                                        {({ value: s }) => (
-                                            <BadgeStatus status={s.is_active} />
-                                        )}
-                                    </ListTableColumn>,
+                                    ...(showTrash
+                                        ? [
+                                            <ListTableColumn
+                                                key="deleted_by"
+                                                header="Supprimé par"
+                                            >
+                                                {({ value: s }) => (
+                                                    <div className="text-xs">
+                                                        <div className="font-medium">
+                                                            {s.deleted_by_info?.name ||
+                                                                s.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {s.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    s.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </ListTableColumn>,
+                                          ]
+                                        : [
+                                            <ListTableColumn key="status" header="Statut">
+                                                {({ value: s }) => (
+                                                    <BadgeStatus status={s.is_active} />
+                                                )}
+                                            </ListTableColumn>,
+                                          ]),
                                     <ListTableColumn
                                         key="actions"
                                         header="Actions"
                                         align="right"
                                     >
-                                        {({ value: s }) => (
-                                            <div className="flex items-center gap-1.5 justify-end">
-                                                {canViewPurchaseOrders && (
+                                        {({ value: s }) =>
+                                            showTrash ? (
+                                                <div className="flex items-center gap-1.5 justify-end">
+                                                    {canManage && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={restoreSupplier.isPending}
+                                                            onClick={() => handleRestore(s.id)}
+                                                        >
+                                                            <FaUndo className="h-3.5 w-3.5 mr-1.5" />
+                                                            Restaurer
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1.5 justify-end">
+                                                    {canViewPurchaseOrders && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            title="Voir les approvisionnements"
+                                                            aria-label="Voir les approvisionnements"
+                                                            onClick={() =>
+                                                                router.push(
+                                                                    `/organisation/${orgId}/inventory/suppliers/${s.id}/purchase-orders`
+                                                                )
+                                                            }
+                                                        >
+                                                            <FaTruck className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        title="Voir les approvisionnements"
-                                                        aria-label="Voir les approvisionnements"
+                                                        title="Modifier le fournisseur"
+                                                        aria-label="Modifier le fournisseur"
                                                         onClick={() =>
                                                             router.push(
-                                                                `/organisation/${orgId}/inventory/suppliers/${s.id}/purchase-orders`
+                                                                `/organisation/${orgId}/inventory/suppliers/${s.id}`
                                                             )
                                                         }
                                                     >
-                                                        <FaTruck className="h-3.5 w-3.5" />
+                                                        <FaEdit className="h-3.5 w-3.5" />
                                                     </Button>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    title="Modifier le fournisseur"
-                                                    aria-label="Modifier le fournisseur"
-                                                    onClick={() =>
-                                                        router.push(
-                                                            `/organisation/${orgId}/inventory/suppliers/${s.id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <FaEdit className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        )}
+                                                </div>
+                                            )
+                                        }
                                     </ListTableColumn>,
                                 ]}
                                 data={suppliers}

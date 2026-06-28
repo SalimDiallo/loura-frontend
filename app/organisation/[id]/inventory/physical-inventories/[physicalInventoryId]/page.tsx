@@ -12,7 +12,16 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
@@ -69,6 +78,7 @@ function PhysicalInventoryDetailPage() {
     const [headerNotes, setHeaderNotes] = useState<string>("");
     const [showOnlyDiff, setShowOnlyDiff] = useState(false);
     const [search, setSearch] = useState("");
+    const [showDelete, setShowDelete] = useState(false);
 
     useEffect(() => {
         if (!inventory) return;
@@ -169,11 +179,9 @@ function PhysicalInventoryDetailPage() {
                 data: { include_zero: true },
             });
             toast.success(res.message ?? "Inventaire peuplé.");
-        } catch (e: any) {
+        } catch (e: unknown) {
             toast.error(
-                e?.response?.data?.error ??
-                    e?.message ??
-                    "Impossible de peupler l'inventaire."
+                getApiErrorMessage(e) || "Impossible de peupler l'inventaire."
             );
         }
     };
@@ -227,11 +235,9 @@ function PhysicalInventoryDetailPage() {
                 });
             }
             toast.success("Modifications enregistrées.");
-        } catch (e: any) {
+        } catch (e: unknown) {
             toast.error(
-                e?.response?.data?.error ??
-                    e?.message ??
-                    "Échec de l'enregistrement."
+                getApiErrorMessage(e) || "Échec de l'enregistrement."
             );
         }
     };
@@ -254,11 +260,9 @@ function PhysicalInventoryDetailPage() {
                 id: inventory.id,
             });
             toast.success(res.message ?? "Inventaire clôturé.");
-        } catch (e: any) {
+        } catch (e: unknown) {
             toast.error(
-                e?.response?.data?.error ??
-                    e?.message ??
-                    "Impossible de clôturer l'inventaire."
+                getApiErrorMessage(e) || "Impossible de clôturer l'inventaire."
             );
         }
     };
@@ -274,30 +278,19 @@ function PhysicalInventoryDetailPage() {
                 id: inventory.id,
             });
             toast.success(res.message ?? "Inventaire annulé.");
-        } catch (e: any) {
-            toast.error(
-                e?.response?.data?.error ??
-                    e?.message ??
-                    "Impossible d'annuler."
-            );
+        } catch (e: unknown) {
+            toast.error(getApiErrorMessage(e) || "Impossible d'annuler.");
         }
     };
 
     const handleDelete = async () => {
-        const proceed = window.confirm(
-            "Supprimer définitivement ce brouillon d'inventaire ?"
-        );
-        if (!proceed) return;
         try {
             await deleteMutation.mutateAsync({ orgId, id: inventory.id });
+            setShowDelete(false);
             toast.success("Inventaire supprimé.");
             router.push(`/organisation/${orgId}/inventory/physical-inventories`);
-        } catch (e: any) {
-            toast.error(
-                e?.response?.data?.error ??
-                    e?.message ??
-                    "Impossible de supprimer."
-            );
+        } catch (e: unknown) {
+            toast.error(getApiErrorMessage(e) || "Impossible de supprimer.");
         }
     };
 
@@ -516,7 +509,7 @@ function PhysicalInventoryDetailPage() {
                         <Button
                             variant="ghost"
                             className="text-red-600 hover:text-red-700"
-                            onClick={handleDelete}
+                            onClick={() => setShowDelete(true)}
                             disabled={deleteMutation.isPending}
                         >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -583,7 +576,7 @@ function PhysicalInventoryDetailPage() {
                         {inventory.items.length === 0 ? (
                             <div className="text-center py-12 px-6">
                                 <p className="text-sm text-muted-foreground">
-                                    Aucune ligne pour l'instant.
+                                    Aucune ligne pour l&apos;instant.
                                 </p>
                                 <Can permission={PERMISSIONS.STOCK.MANAGE}>
                                     {isDraft && (
@@ -783,6 +776,39 @@ function PhysicalInventoryDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Confirmation de suppression (soft delete → corbeille) */}
+            <Dialog open={showDelete} onOpenChange={setShowDelete}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Supprimer ce brouillon ?</DialogTitle>
+                        <DialogDescription>
+                            Le brouillon d&apos;inventaire{" "}
+                            <span className="font-mono font-semibold">
+                                {inventory.reference}
+                            </span>{" "}
+                            sera déplacé dans la corbeille (restaurable depuis la
+                            liste des inventaires).
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowDelete(false)}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            disabled={deleteMutation.isPending}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Supprimer
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

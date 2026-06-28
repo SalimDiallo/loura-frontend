@@ -14,10 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import { useCustomers } from "@/lib/hooks/hr";
 import {
     usePaginatedQuotes,
+    useRestoreQuote,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { Customer, QuoteStatus, QuoteType } from "@/lib/types";
@@ -36,7 +38,10 @@ import {
     FaReceipt,
     FaRegHandshake,
     FaTimes,
+    FaTrashRestore,
+    FaUndo,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function QuotesPageWrapper() {
     return (
@@ -89,6 +94,7 @@ function QuotesPage() {
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [typeFilter, setTypeFilter] = useState<string>("");
     const [customerFilter, setCustomerFilter] = useState<string>("");
+    const [showTrash, setShowTrash] = useState(false);
 
     const { data: customersList = [] } = useCustomers(orgId, {
         page_size: "all",
@@ -102,9 +108,25 @@ function QuotesPage() {
             status: (statusFilter as QuoteStatus) || undefined,
             quote_type: (typeFilter as QuoteType) || undefined,
             customer: customerFilter || undefined,
+            deleted: showTrash ? "true" : undefined,
         }),
-        [search, statusFilter, typeFilter, customerFilter]
+        [search, statusFilter, typeFilter, customerFilter, showTrash]
     );
+
+    const restoreQuote = useRestoreQuote();
+
+    const handleRestore = (id: string) => {
+        restoreQuote.mutate(
+            { orgId, id },
+            {
+                onSuccess: () => toast.success("Devis restauré."),
+                onError: (err) =>
+                    toast.error("Restauration impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
 
     const {
         data: quotes,
@@ -132,11 +154,21 @@ function QuotesPage() {
 
     return (
         <ListPageLayout
-            title="Devis & Pro forma"
-            icon={FaFileInvoice}
-            description="Offres commerciales, conversion en vente 1-clic"
-            headerActions={
-                canManage
+            title={showTrash ? "Devis — Corbeille" : "Devis & Pro forma"}
+            icon={showTrash ? FaTrashRestore : FaFileInvoice}
+            description={
+                showTrash
+                    ? "Devis supprimés — restaurez-les si besoin"
+                    : "Offres commerciales, conversion en vente 1-clic"
+            }
+            headerActions={[
+                {
+                    label: showTrash ? "Voir les actifs" : "Corbeille",
+                    icon: showTrash ? FaFileInvoice : FaTrashRestore,
+                    variant: "outline" as const,
+                    onClick: () => setShowTrash((v) => !v),
+                },
+                ...(canManage && !showTrash
                     ? [
                           {
                               label: "Nouveau document",
@@ -147,8 +179,8 @@ function QuotesPage() {
                                   ),
                           },
                       ]
-                    : []
-            }
+                    : []),
+            ]}
             stats={[
                 <ListStat
                     key="total"
@@ -238,25 +270,35 @@ function QuotesPage() {
                             ))}
                         </div>
                     ) : quotes.length === 0 ? (
-                        <div className="text-center py-16 bg-muted/20 rounded-lg">
-                            <FaFileInvoice className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Aucun document</p>
-                            <p className="text-sm text-muted-foreground mt-1 mb-6">
-                                Créez votre premier devis ou pro forma.
-                            </p>
-                            <Can permission={PERMISSIONS.SALES.MANAGE}>
-                                <Button
-                                    onClick={() =>
-                                        router.push(
-                                            `/organisation/${orgId}/inventory/quotes/create`
-                                        )
-                                    }
-                                >
-                                    <FaPlus className="mr-2" />
-                                    Nouveau document
-                                </Button>
-                            </Can>
-                        </div>
+                        showTrash ? (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaTrashRestore className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Corbeille vide</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Aucun devis supprimé.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-muted/20 rounded-lg">
+                                <FaFileInvoice className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                                <p className="text-lg font-medium">Aucun document</p>
+                                <p className="text-sm text-muted-foreground mt-1 mb-6">
+                                    Créez votre premier devis ou pro forma.
+                                </p>
+                                <Can permission={PERMISSIONS.SALES.MANAGE}>
+                                    <Button
+                                        onClick={() =>
+                                            router.push(
+                                                `/organisation/${orgId}/inventory/quotes/create`
+                                            )
+                                        }
+                                    >
+                                        <FaPlus className="mr-2" />
+                                        Nouveau document
+                                    </Button>
+                                </Can>
+                            </div>
+                        )
                     ) : (
                         <>
                             <ListTable
@@ -364,42 +406,72 @@ function QuotesPage() {
                                         header="Actions"
                                         align="right"
                                     >
-                                        {({ value: q }) => (
-                                            <div className="flex items-center justify-end gap-1">
-                                                <GenerateDocumentButton
-                                                    orgId={orgId}
-                                                    docType={
-                                                        q.quote_type ===
-                                                        "proforma"
-                                                            ? "proforma"
-                                                            : "quote"
-                                                    }
-                                                    objectId={q.id}
-                                                    modalTitle={`${q.quote_type_display} · ${q.quote_number}`}
-                                                    modalSubtitle={
-                                                        q.customer?.name ??
-                                                        q.customer_name_snapshot
-                                                    }
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    hideIcon
-                                                    aria-label="Imprimer le document"
-                                                >
-                                                    <FaReceipt className="h-3.5 w-3.5" />
-                                                </GenerateDocumentButton>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        router.push(
-                                                            `/organisation/${orgId}/inventory/quotes/${q.id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <FaEye className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        )}
+                                        {({ value: q }) =>
+                                            showTrash ? (
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <div className="text-xs text-right">
+                                                        <div className="font-medium">
+                                                            {q.deleted_by_info?.name ||
+                                                                q.deleted_by_info?.email ||
+                                                                "—"}
+                                                        </div>
+                                                        {q.deleted_at && (
+                                                            <div className="text-muted-foreground">
+                                                                {new Date(
+                                                                    q.deleted_at
+                                                                ).toLocaleDateString("fr-FR")}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {canManage && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={restoreQuote.isPending}
+                                                            onClick={() => handleRestore(q.id)}
+                                                        >
+                                                            <FaUndo className="h-3.5 w-3.5 mr-1.5" />
+                                                            Restaurer
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <GenerateDocumentButton
+                                                        orgId={orgId}
+                                                        docType={
+                                                            q.quote_type ===
+                                                            "proforma"
+                                                                ? "proforma"
+                                                                : "quote"
+                                                        }
+                                                        objectId={q.id}
+                                                        modalTitle={`${q.quote_type_display} · ${q.quote_number}`}
+                                                        modalSubtitle={
+                                                            q.customer?.name ??
+                                                            q.customer_name_snapshot
+                                                        }
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        hideIcon
+                                                        aria-label="Imprimer le document"
+                                                    >
+                                                        <FaReceipt className="h-3.5 w-3.5" />
+                                                    </GenerateDocumentButton>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            router.push(
+                                                                `/organisation/${orgId}/inventory/quotes/${q.id}`
+                                                            )
+                                                        }
+                                                    >
+                                                        <FaEye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            )
+                                        }
                                     </ListTableColumn>,
                                 ]}
                                 data={quotes}

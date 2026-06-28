@@ -263,6 +263,22 @@ export function useDeleteCategory(): UseMutationResult<
   });
 }
 
+export function useRestoreCategory(): UseMutationResult<
+  UpdateCategoryResponse,
+  Error,
+  { orgId: string; categoryId: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, categoryId }) =>
+      categoriesService.restore(orgId, categoryId),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "categories", orgId] });
+      qc.invalidateQueries({ queryKey: ["inventory", "products", orgId] });
+    },
+  });
+}
+
 // ─── Entrepôts ───────────────────────────────────────────────────────────────
 
 export function useWarehouses(
@@ -334,6 +350,21 @@ export function useDeleteWarehouse(): UseMutationResult<
   });
 }
 
+export function useRestoreWarehouse(): UseMutationResult<
+  UpdateWarehouseResponse,
+  Error,
+  { orgId: string; warehouseId: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, warehouseId }) =>
+      warehousesService.restore(orgId, warehouseId),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "warehouses", orgId] });
+    },
+  });
+}
+
 // ─── Produits ────────────────────────────────────────────────────────────────
 
 export function useProducts(
@@ -399,6 +430,21 @@ export function useDeleteProduct(): UseMutationResult<
   return useMutation({
     mutationFn: ({ orgId, productId }) =>
       productsService.delete(orgId, productId),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "products", orgId] });
+    },
+  });
+}
+
+export function useRestoreProduct(): UseMutationResult<
+  UpdateProductResponse,
+  Error,
+  { orgId: string; productId: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, productId }) =>
+      productsService.restore(orgId, productId),
     onSuccess: (_, { orgId }) => {
       qc.invalidateQueries({ queryKey: ["inventory", "products", orgId] });
     },
@@ -700,6 +746,20 @@ export function useDeleteSupplier(): UseMutationResult<
   });
 }
 
+export function useRestoreSupplier(): UseMutationResult<
+  UpdateSupplierResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => suppliersService.restore(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "suppliers", orgId] });
+    },
+  });
+}
+
 // ─── Commandes fournisseur (Purchase Orders) ─────────────────────────────────
 
 export function usePurchaseOrders(
@@ -777,6 +837,20 @@ export function useDeletePurchaseOrder(): UseMutationResult<
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ orgId, id }) => purchaseOrdersService.delete(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders", orgId] });
+    },
+  });
+}
+
+export function useRestorePurchaseOrder(): UseMutationResult<
+  PurchaseOrderResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => purchaseOrdersService.restore(orgId, id),
     onSuccess: (_, { orgId }) => {
       qc.invalidateQueries({ queryKey: ["inventory", "purchase-orders", orgId] });
     },
@@ -966,6 +1040,20 @@ export function useDeleteSale(): UseMutationResult<
   });
 }
 
+export function useRestoreSale(): UseMutationResult<
+  SaleResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => salesService.restore(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "sales", orgId] });
+    },
+  });
+}
+
 export function useCompleteSale(): UseMutationResult<
   SaleResponse,
   Error,
@@ -1118,6 +1206,22 @@ export function useDeletePhysicalInventory(): UseMutationResult<
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ orgId, id }) => physicalInventoriesService.delete(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({
+        queryKey: ["inventory", "physical-inventories", orgId],
+      });
+    },
+  });
+}
+
+export function useRestorePhysicalInventory(): UseMutationResult<
+  PhysicalInventoryResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => physicalInventoriesService.restore(orgId, id),
     onSuccess: (_, { orgId }) => {
       qc.invalidateQueries({
         queryKey: ["inventory", "physical-inventories", orgId],
@@ -1279,6 +1383,20 @@ export function useDeleteQuote(): UseMutationResult<
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ orgId, id }) => quotesService.delete(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId] });
+    },
+  });
+}
+
+export function useRestoreQuote(): UseMutationResult<
+  QuoteResponse,
+  Error,
+  { orgId: string; id: string }
+> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }) => quotesService.restore(orgId, id),
     onSuccess: (_, { orgId }) => {
       qc.invalidateQueries({ queryKey: ["inventory", "quotes", orgId] });
     },
@@ -1478,6 +1596,23 @@ export function useDeleteExpense() {
   return useMutation({
     mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
       expensesService.delete(orgId, id),
+    onSuccess: (_, { orgId }) => {
+      qc.invalidateQueries({ queryKey: EXPENSES_KEY(orgId) });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "expenses-analytics", orgId],
+      });
+      qc.invalidateQueries({
+        queryKey: ["inventory", "analytics", "overview", orgId],
+      });
+    },
+  });
+}
+
+export function useRestoreExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      expensesService.restore(orgId, id),
     onSuccess: (_, { orgId }) => {
       qc.invalidateQueries({ queryKey: EXPENSES_KEY(orgId) });
       qc.invalidateQueries({
