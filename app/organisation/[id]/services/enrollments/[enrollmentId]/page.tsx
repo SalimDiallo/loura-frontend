@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   QuickSelect,
   type QuickSelectItem,
@@ -86,6 +87,7 @@ import {
   FaHandHoldingUsd,
   FaListOl,
   FaMoneyBillWave,
+  FaPen,
   FaPlay,
   FaPlus,
   FaProjectDiagram,
@@ -846,6 +848,7 @@ function ModuleCard({
 }) {
   const { formatCurrency } = useCurrencyFormatter();
   const [notesOpen, setNotesOpen] = useState(false);
+  const [priceOpen, setPriceOpen] = useState(false);
   // Le reste à payer ne s'affiche jamais négatif : si le module est sur-payé,
   // on montre 0 et on affiche un excédent visible séparément.
   const rawBalance = Number(instance.balance_due);
@@ -891,10 +894,22 @@ function ModuleCard({
           </div>
           <div>
             <div className="text-muted-foreground">Prix</div>
-            <div className="font-medium">
-              {instance.price != null
-                ? formatCurrency(Number(instance.price))
-                : "—"}
+            <div className="flex items-center gap-1.5">
+              <span className="font-medium">
+                {instance.price != null
+                  ? formatCurrency(Number(instance.price))
+                  : "—"}
+              </span>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => setPriceOpen(true)}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={`Modifier le prix de l'étape ${instance.name}`}
+                >
+                  <FaPen className="h-2.5 w-2.5" />
+                </button>
+              )}
             </div>
           </div>
           <div>
@@ -1012,7 +1027,108 @@ function ModuleCard({
         instanceId={instance.id}
         instanceName={instance.name}
       />
+
+      <EditModulePriceDialog
+        open={priceOpen}
+        onOpenChange={setPriceOpen}
+        orgId={orgId}
+        enrollmentId={enrollmentId}
+        instance={instance}
+      />
     </Card>
+  );
+}
+
+/**
+ * Dialog : personnaliser le montant d'une étape pour ce client.
+ * Le total dû de l'inscription est recalculé côté backend.
+ */
+function EditModulePriceDialog({
+  open,
+  onOpenChange,
+  orgId,
+  enrollmentId,
+  instance,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  orgId: string;
+  enrollmentId: string;
+  instance: ServiceModuleInstance;
+}) {
+  const updateModule = useUpdateModuleInstance(orgId, enrollmentId);
+  const [price, setPrice] = useState<string>(
+    instance.price != null ? String(instance.price) : ""
+  );
+
+  // Ré-synchronise la valeur à chaque ouverture (l'étape a pu changer).
+  const handleOpenChange = (o: boolean) => {
+    if (o) setPrice(instance.price != null ? String(instance.price) : "");
+    onOpenChange(o);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Montant de l&apos;étape</DialogTitle>
+          <DialogDescription>
+            Personnalisez le montant de « {instance.name} » pour ce client.
+            Le total dû sera recalculé.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              await updateModule.mutateAsync({
+                id: instance.id,
+                data: { price: price === "" ? null : price },
+              });
+              toast.success("Montant mis à jour.");
+              onOpenChange(false);
+            } catch (err: unknown) {
+              const e2 = err as {
+                data?: { detail?: string };
+                message?: string;
+              };
+              toast.error("Échec", {
+                description: e2?.data?.detail || e2?.message,
+              });
+            }
+          }}
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="mod-price">Montant</Label>
+            <MoneyInput
+              id="mod-price"
+              value={price}
+              onChange={setPrice}
+              min={0}
+              step={1000}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Annuler
+            </Button>
+            <Button type="submit" disabled={updateModule.isPending}>
+              {updateModule.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
