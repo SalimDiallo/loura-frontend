@@ -177,12 +177,15 @@ export const enrollmentsService = {
       total_due: string;
     }>(ENDPOINTS.ENROLLMENTS.GENERATE_MODULES(orgId, id), {}),
 
-  addModule: (orgId: string, id: string, moduleId: string) =>
+  addModule: (orgId: string, id: string, moduleId: string, price?: string) =>
     apiClient.post<{
       message: string;
       data: ServiceModuleInstance;
       total_due: string;
-    }>(ENDPOINTS.ENROLLMENTS.ADD_MODULE(orgId, id), { module: moduleId }),
+    }>(ENDPOINTS.ENROLLMENTS.ADD_MODULE(orgId, id), {
+      module: moduleId,
+      ...(price != null && price !== "" ? { price } : {}),
+    }),
 
   recomputeTotal: (orgId: string, id: string) =>
     apiClient.post<{ message: string; total_due: string }>(
