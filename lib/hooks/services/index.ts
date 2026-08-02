@@ -319,8 +319,8 @@ export function useGenerateEnrollmentModules(orgId: string) {
 export function useAddEnrollmentModule(orgId: string, enrollmentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (moduleId: string) =>
-      enrollmentsService.addModule(orgId, enrollmentId, moduleId),
+    mutationFn: ({ moduleId, price }: { moduleId: string; price?: string }) =>
+      enrollmentsService.addModule(orgId, enrollmentId, moduleId, price),
     onSuccess: () => {
       qc.invalidateQueries({
         queryKey: servicesQueryKeys.enrollment(orgId, enrollmentId),

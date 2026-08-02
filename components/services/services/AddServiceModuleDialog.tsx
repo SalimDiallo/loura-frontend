@@ -9,13 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCurrencyFormatter } from "@/lib/hooks";
 import {
   useAddEnrollmentModule,
   useService,
 } from "@/lib/hooks/services";
-import type { ServiceModuleInstance } from "@/lib/types";
+import type { ServiceModule, ServiceModuleInstance } from "@/lib/types";
 import { Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { FaCheckCircle, FaClock, FaListOl } from "react-icons/fa";
@@ -47,7 +48,6 @@ export function AddServiceModuleDialog({
   serviceId,
   existingInstances,
 }: Props) {
-  const { formatCurrency } = useCurrencyFormatter();
   const { data: service, isLoading } = useService(
     orgId,
     open ? serviceId : undefined
@@ -64,10 +64,12 @@ export function AddServiceModuleDialog({
       .sort((a, b) => a.order - b.order);
   }, [service, existingInstances]);
 
-  const handleAdd = async (moduleId: string) => {
+  const handleAdd = async (moduleId: string, price: string) => {
     setPendingId(moduleId);
     try {
-      await addModule.mutateAsync(moduleId);
+      // Envoie le prix personnalisé pour ce client uniquement s'il diffère
+      // (ou est renseigné) ; sinon le backend reprend le prix catalogue.
+      await addModule.mutateAsync({ moduleId, price: price || undefined });
       toast.success("Étape ajoutée à l'inscription.");
     } catch (err: unknown) {
       const e = err as { data?: { detail?: string }; message?: string };
@@ -111,61 +113,13 @@ export function AddServiceModuleDialog({
             </div>
           ) : (
             availableModules.map((m) => (
-              <div
+              <ModuleRow
                 key={m.id}
-                className="flex items-start gap-3 rounded-lg border p-3 hover:bg-muted/30 transition"
-              >
-                <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">
-                  {m.order + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium truncate">
-                      {m.name}
-                    </span>
-                    {m.is_required ? (
-                      <span className="text-[10px] uppercase tracking-wide text-primary bg-primary/10 rounded px-1.5 py-0.5">
-                        Obligatoire
-                      </span>
-                    ) : (
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5">
-                        Optionnel
-                      </span>
-                    )}
-                  </div>
-                  {m.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                      {m.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                    {m.estimated_duration_days != null && (
-                      <span className="inline-flex items-center gap-1">
-                        <FaClock className="h-2.5 w-2.5" />
-                        {m.estimated_duration_days} j
-                      </span>
-                    )}
-                    {m.price != null && (
-                      <span className="font-semibold text-foreground">
-                        {formatCurrency(Number(m.price))}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => handleAdd(m.id)}
-                  disabled={pendingId !== null}
-                  aria-label={`Ajouter l'étape ${m.name}`}
-                >
-                  {pendingId === m.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="h-3.5 w-3.5" />
-                  )}
-                  <span className="ml-1">Ajouter</span>
-                </Button>
-              </div>
+                module={m}
+                disabled={pendingId !== null}
+                isPending={pendingId === m.id}
+                onAdd={(price) => handleAdd(m.id, price)}
+              />
             ))
           )}
         </div>
@@ -177,5 +131,91 @@ export function AddServiceModuleDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Une ligne du picker : module du catalogue + champ prix **éditable**.
+ * Le montant est pré-rempli avec le prix catalogue mais peut être ajusté
+ * pour ce client avant l'ajout.
+ */
+function ModuleRow({
+  module: m,
+  disabled,
+  isPending,
+  onAdd,
+}: {
+  module: ServiceModule;
+  disabled: boolean;
+  isPending: boolean;
+  onAdd: (price: string) => void;
+}) {
+  const [price, setPrice] = useState<string>(
+    m.price != null ? String(m.price) : ""
+  );
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-3 hover:bg-muted/30 transition sm:flex-row sm:items-start">
+      <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center">
+        {m.order + 1}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium truncate">{m.name}</span>
+          {m.is_required ? (
+            <span className="text-[10px] uppercase tracking-wide text-primary bg-primary/10 rounded px-1.5 py-0.5">
+              Obligatoire
+            </span>
+          ) : (
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+              Optionnel
+            </span>
+          )}
+        </div>
+        {m.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+            {m.description}
+          </p>
+        )}
+        {m.estimated_duration_days != null && (
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+            <span className="inline-flex items-center gap-1">
+              <FaClock className="h-2.5 w-2.5" />
+              {m.estimated_duration_days} j
+            </span>
+          </div>
+        )}
+        <div className="mt-2 space-y-1">
+          <Label
+            htmlFor={`price-${m.id}`}
+            className="text-xs text-muted-foreground"
+          >
+            Montant pour ce client
+          </Label>
+          <MoneyInput
+            id={`price-${m.id}`}
+            value={price}
+            onChange={setPrice}
+            min={0}
+            step={1000}
+            disabled={disabled}
+          />
+        </div>
+      </div>
+      <Button
+        size="sm"
+        className="shrink-0 sm:mt-6"
+        onClick={() => onAdd(price)}
+        disabled={disabled}
+        aria-label={`Ajouter l'étape ${m.name}`}
+      >
+        {isPending ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Plus className="h-3.5 w-3.5" />
+        )}
+        <span className="ml-1">Ajouter</span>
+      </Button>
+    </div>
   );
 }
