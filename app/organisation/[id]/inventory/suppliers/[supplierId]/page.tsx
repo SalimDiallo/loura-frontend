@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { useCurrencyFormatter } from "@/lib/hooks";
 import {
     useDeleteSupplier,
     useSupplier,
@@ -63,6 +64,7 @@ function SupplierDetailPage() {
     const { can } = useOrgPermissions();
     const canManage = can(PERMISSIONS.SUPPLIERS.MANAGE);
     const canViewPurchaseOrders = can(PERMISSIONS.PURCHASE_ORDERS.VIEW);
+    const { formatCurrency } = useCurrencyFormatter();
 
     const { data: supplier, isLoading } = useSupplier(orgId, supplierId);
     const updateSupplier = useUpdateSupplier();
@@ -179,7 +181,18 @@ function SupplierDetailPage() {
                                     {supplier.purchase_orders_count} commande(s)
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    Encours : {supplier.outstanding_amount}
+                                    Encours :{" "}
+                                    <span
+                                        className={
+                                            Number(supplier.outstanding_amount) > 0
+                                                ? "text-red-600 font-semibold"
+                                                : ""
+                                        }
+                                    >
+                                        {formatCurrency(
+                                            Math.max(0, Number(supplier.outstanding_amount))
+                                        )}
+                                    </span>
                                 </p>
                                 {canViewPurchaseOrders && (
                                     <Button

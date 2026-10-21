@@ -1,6 +1,7 @@
 "use client";
 
 import { GenerateDocumentButton } from "@/components/documents";
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import {
     ListPageLayout,
     ListPagination,
@@ -9,24 +10,36 @@ import {
     ListTable,
     ListTableColumn,
 } from "@/components/layout/ListPageLayout";
+import { ListSelectionBar } from "@/components/layout/ListSelectionBar";
 import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ShortcutsHelpModal } from "@/components/ui/shortcuts-help";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/api/error-message";
+import { useBulkSelection } from "@/lib/hooks/use-bulk-selection";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import {
+    type KeyboardShortcut,
+    useKeyboardShortcuts,
+} from "@/lib/hooks/use-keyboard-shortcuts";
+import {
+    useDeletePhysicalInventory,
     usePaginatedPhysicalInventories,
     useRestorePhysicalInventory,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
+    PhysicalInventory,
     PhysicalInventoryStatus,
     Warehouse,
 } from "@/lib/types";
+import { Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
     FaCheckCircle,
     FaClipboardCheck,
@@ -74,10 +87,17 @@ function PhysicalInventoriesPage() {
     const canManage = can(PERMISSIONS.STOCK.MANAGE);
 
     const [search, setSearch] = useState("");
+    const debouncedSearch = useDebouncedValue(search, 300);
     const [filterOpen, setFilterOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [warehouseFilter, setWarehouseFilter] = useState<string>("");
     const [showTrash, setShowTrash] = useState(false);
+    const [toDelete, setToDelete] = useState<PhysicalInventory | null>(null);
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [showShortcuts, setShowShortcuts] = useState(false);
+
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const { data: warehousesList = [] } = useWarehouses(orgId, {
         page_size: "all",
@@ -87,15 +107,35 @@ function PhysicalInventoriesPage() {
 
     const stableFilters = useMemo(
         () => ({
-            search: search || undefined,
+            search: debouncedSearch || undefined,
             status: (statusFilter as PhysicalInventoryStatus) || undefined,
             warehouse: warehouseFilter || undefined,
             deleted: showTrash ? "true" : undefined,
         }),
-        [search, statusFilter, warehouseFilter, showTrash]
+        [debouncedSearch, statusFilter, warehouseFilter, showTrash]
     );
 
     const restoreInventory = useRestorePhysicalInventory();
+    const deleteInventory = useDeletePhysicalInventory();
+
+    const {
+        data: inventories,
+        meta,
+        setPage,
+        nextPage,
+        prevPage,
+        isLoading,
+        error,
+    } = usePaginatedPhysicalInventories(orgId, stableFilters, { pageSize: 15 });
+
+    // Tous les inventaires visibles sont maintenant supprimables (le backend
+    // réverse les ajustements si l'inventaire est validé).
+    const selectableIds = inventories.map((inv) => inv.id);
+    const selection = useBulkSelection(selectableIds);
+    useEffect(() => {
+        selection.clear();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, statusFilter, warehouseFilter, showTrash, meta.currentPage]);
 
     const handleRestore = (id: string) => {
         restoreInventory.mutate(
@@ -110,15 +150,80 @@ function PhysicalInventoriesPage() {
         );
     };
 
-    const {
-        data: inventories,
-        meta,
-        setPage,
-        nextPage,
-        prevPage,
-        isLoading,
-        error,
-    } = usePaginatedPhysicalInventories(orgId, stableFilters, { pageSize: 15 });
+    const handleConfirmDelete = () => {
+        if (!toDelete) return;
+        deleteInventory.mutate(
+            { orgId, id: toDelete.id },
+            {
+                onSuccess: () => {
+                    toast.success("Inventaire déplacé dans la corbeille.");
+                    setToDelete(null);
+                },
+                onError: (err) =>
+                    toast.error("Suppression impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        const ids = selection.ids;
+        if (ids.length === 0) return;
+        setBulkDeleting(true);
+        const results: PromiseSettledResult<unknown>[] = [];
+        for (const id of ids) {
+            try {
+                await deleteInventory.mutateAsync({ orgId, id });
+                results.push({ status: "fulfilled", value: undefined });
+            } catch (e) {
+                results.push({ status: "rejected", reason: e });
+            }
+        }
+        const ok = results.filter((r) => r.status === "fulfilled").length;
+        const failed = results.length - ok;
+        setBulkDeleting(false);
+        setBulkOpen(false);
+        selection.clear();
+        if (failed === 0) {
+            toast.success(
+                `${ok} inventaire${ok > 1 ? "s" : ""} déplacé${ok > 1 ? "s" : ""} dans la corbeille.`
+            );
+        } else {
+            toast.error(`${ok} supprimé${ok > 1 ? "s" : ""}, ${failed} en échec.`, {
+                description: "Réessayez pour les éléments restants.",
+            });
+        }
+    };
+
+    const shortcuts = useMemo<KeyboardShortcut[]>(() => {
+        const list: KeyboardShortcut[] = [
+            {
+                key: "/",
+                description: "Aller à la recherche",
+                handler: () => searchInputRef.current?.focus(),
+            },
+            {
+                key: "?",
+                shift: true,
+                description: "Afficher l'aide des raccourcis",
+                handler: () => setShowShortcuts((v) => !v),
+            },
+        ];
+        if (canManage && !showTrash) {
+            list.unshift({
+                key: "n",
+                description: "Nouvel inventaire",
+                handler: () =>
+                    router.push(
+                        `/organisation/${orgId}/inventory/physical-inventories/create`
+                    ),
+            });
+        }
+        return list;
+    }, [canManage, showTrash, orgId, router]);
+
+    useKeyboardShortcuts(shortcuts);
 
     if (error) {
         return (
@@ -133,8 +238,10 @@ function PhysicalInventoriesPage() {
     }
 
     const filtersActive = !!statusFilter || !!warehouseFilter;
+    const showSelection = canManage && !showTrash;
 
     return (
+        <>
         <ListPageLayout
             title={showTrash ? "Inventaires — Corbeille" : "Inventaires physiques"}
             icon={showTrash ? FaTrashRestore : FaClipboardCheck}
@@ -177,6 +284,7 @@ function PhysicalInventoriesPage() {
                 <ListSearchFilters
                     searchValue={search}
                     onSearchChange={setSearch}
+                    searchInputRef={searchInputRef}
                     searchPlaceholder="Référence, entrepôt, notes..."
                     filtersOpen={filterOpen}
                     onFiltersOpenChange={setFilterOpen}
@@ -269,8 +377,40 @@ function PhysicalInventoriesPage() {
                         )
                     ) : (
                         <>
+                            {showSelection && (
+                                <ListSelectionBar
+                                    count={selection.count}
+                                    label={`${selection.count} inventaire${selection.count > 1 ? "s" : ""} sélectionné${selection.count > 1 ? "s" : ""}`}
+                                    onClear={selection.clear}
+                                    onDelete={() => setBulkOpen(true)}
+                                />
+                            )}
                             <ListTable
                                 columns={[
+                                    ...(showSelection
+                                        ? [
+                                            <ListTableColumn
+                                                key="select"
+                                                header={
+                                                    <Checkbox
+                                                        checked={selection.allSelected}
+                                                        onCheckedChange={selection.toggleAll}
+                                                        aria-label="Tout sélectionner"
+                                                    />
+                                                }
+                                            >
+                                                {({ value: inv }) => (
+                                                    <Checkbox
+                                                        checked={selection.selected.has(inv.id)}
+                                                        onCheckedChange={() =>
+                                                            selection.toggleOne(inv.id)
+                                                        }
+                                                        aria-label={`Sélectionner ${inv.reference}`}
+                                                    />
+                                                )}
+                                            </ListTableColumn>,
+                                          ]
+                                        : []),
                                     <ListTableColumn
                                         key="reference"
                                         header="Référence"
@@ -362,7 +502,7 @@ function PhysicalInventoriesPage() {
                                     </ListTableColumn>,
                                     <ListTableColumn
                                         key="actions"
-                                        header="Actions"
+                                        header=""
                                         align="right"
                                     >
                                         {({ value: inv }) =>
@@ -415,7 +555,10 @@ function PhysicalInventoriesPage() {
                                                     )}
                                                     <Button
                                                         variant="ghost"
-                                                        size="sm"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                        title="Ouvrir l'inventaire"
+                                                        aria-label="Ouvrir l'inventaire"
                                                         onClick={() =>
                                                             router.push(
                                                                 `/organisation/${orgId}/inventory/physical-inventories/${inv.id}`
@@ -424,6 +567,18 @@ function PhysicalInventoriesPage() {
                                                     >
                                                         <FaEdit className="h-3.5 w-3.5" />
                                                     </Button>
+                                                    {canManage && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                            title="Supprimer l'inventaire"
+                                                            aria-label="Supprimer l'inventaire"
+                                                            onClick={() => setToDelete(inv)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             )
                                         }
@@ -444,5 +599,70 @@ function PhysicalInventoriesPage() {
                 </>
             }
         />
+
+        <ConfirmDeleteDialog
+            open={!!toDelete}
+            onOpenChange={() => setToDelete(null)}
+            title="Supprimer l'inventaire ?"
+            description={
+                toDelete?.status === "completed" ? (
+                    <>
+                        <span className="font-semibold text-amber-600">
+                            Cet inventaire a été validé.
+                        </span>{" "}
+                        La suppression annulera les corrections de stock
+                        appliquées lors de sa validation. L&apos;inventaire
+                        «&nbsp;{toDelete?.reference}&nbsp;» sera déplacé dans
+                        la corbeille et pourra être restauré à tout moment.
+                    </>
+                ) : (
+                    <>
+                        «&nbsp;{toDelete?.reference}&nbsp;» sera déplacé dans
+                        la corbeille. Vous pourrez le restaurer à tout moment.
+                    </>
+                )
+            }
+            pending={deleteInventory.isPending}
+            onConfirm={handleConfirmDelete}
+        />
+
+        <ConfirmDeleteDialog
+            open={bulkOpen}
+            onOpenChange={setBulkOpen}
+            title={`Supprimer ${selection.count} inventaire${selection.count > 1 ? "s" : ""} ?`}
+            description={(() => {
+                const completedCount = inventories.filter(
+                    (inv) =>
+                        selection.selected.has(inv.id) &&
+                        inv.status === "completed"
+                ).length;
+                return completedCount > 0 ? (
+                    <>
+                        <span className="font-semibold text-amber-600">
+                            {completedCount} inventaire
+                            {completedCount > 1 ? "s validés" : " validé"} dans la sélection.
+                        </span>{" "}
+                        Les corrections de stock associées seront annulées.
+                        Tous les inventaires sélectionnés seront déplacés dans
+                        la corbeille et pourront être restaurés à tout moment.
+                    </>
+                ) : (
+                    <>
+                        Les inventaires sélectionnés seront déplacés dans la
+                        corbeille. Vous pourrez les restaurer à tout moment.
+                    </>
+                );
+            })()}
+            pending={bulkDeleting}
+            onConfirm={handleBulkDelete}
+        />
+
+        <ShortcutsHelpModal
+            isOpen={showShortcuts}
+            onClose={() => setShowShortcuts(false)}
+            shortcuts={shortcuts}
+            title="Raccourcis — Inventaires physiques"
+        />
+        </>
     );
 }

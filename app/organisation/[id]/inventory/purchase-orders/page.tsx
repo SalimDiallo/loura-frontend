@@ -1,6 +1,7 @@
 "use client";
 
 import { GenerateDocumentButton } from "@/components/documents";
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import {
     ListPageLayout,
     ListPagination,
@@ -9,26 +10,33 @@ import {
     ListTable,
     ListTableColumn,
 } from "@/components/layout/ListPageLayout";
+import { ListSelectionBar } from "@/components/layout/ListSelectionBar";
 import { Can, PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCurrencyFormatter } from "@/lib/hooks";
+import { useBulkSelection } from "@/lib/hooks/use-bulk-selection";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import {
+    useDeletePurchaseOrder,
     usePaginatedPurchaseOrders,
     useRestorePurchaseOrder,
     useSuppliers,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
+    PurchaseOrder,
     PurchaseOrderPaymentStatus,
     PurchaseOrderStatus,
     Supplier,
 } from "@/lib/types";
+import { Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     FaCheckCircle,
     FaClock,
@@ -101,11 +109,15 @@ function PurchaseOrdersPage() {
     const { formatCurrency } = useCurrencyFormatter();
 
     const [search, setSearch] = useState("");
+    const debouncedSearch = useDebouncedValue(search, 300);
     const [filterOpen, setFilterOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>("");
     const [supplierFilter, setSupplierFilter] = useState<string>("");
     const [paymentFilter, setPaymentFilter] = useState<string>("");
     const [showTrash, setShowTrash] = useState(false);
+    const [toDelete, setToDelete] = useState<PurchaseOrder | null>(null);
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
 
     const { data: suppliersList = [] } = useSuppliers(orgId, {
         page_size: "all",
@@ -115,17 +127,37 @@ function PurchaseOrdersPage() {
 
     const stableFilters = useMemo(
         () => ({
-            search: search || undefined,
+            search: debouncedSearch || undefined,
             status: (statusFilter as PurchaseOrderStatus) || undefined,
             supplier: supplierFilter || undefined,
             payment_status:
                 (paymentFilter as PurchaseOrderPaymentStatus) || undefined,
             deleted: showTrash ? "true" : undefined,
         }),
-        [search, statusFilter, supplierFilter, paymentFilter, showTrash]
+        [debouncedSearch, statusFilter, supplierFilter, paymentFilter, showTrash]
     );
 
     const restorePurchaseOrder = useRestorePurchaseOrder();
+    const deletePurchaseOrder = useDeletePurchaseOrder();
+
+    const {
+        data: orders,
+        meta,
+        setPage,
+        nextPage,
+        prevPage,
+        isLoading,
+        error,
+    } = usePaginatedPurchaseOrders(orgId, stableFilters, { pageSize: 15 });
+
+    // Toutes les commandes visibles sont supprimables (le backend gère la
+    // réversion de stock et bloque si le stock est déjà sorti).
+    const deletableIds = orders.map((po) => po.id);
+    const selection = useBulkSelection(deletableIds);
+    useEffect(() => {
+        selection.clear();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, statusFilter, supplierFilter, paymentFilter, showTrash, meta.currentPage]);
 
     const handleRestore = (id: string) => {
         restorePurchaseOrder.mutate(
@@ -140,15 +172,51 @@ function PurchaseOrdersPage() {
         );
     };
 
-    const {
-        data: orders,
-        meta,
-        setPage,
-        nextPage,
-        prevPage,
-        isLoading,
-        error,
-    } = usePaginatedPurchaseOrders(orgId, stableFilters, { pageSize: 15 });
+    const handleConfirmDelete = () => {
+        if (!toDelete) return;
+        deletePurchaseOrder.mutate(
+            { orgId, id: toDelete.id },
+            {
+                onSuccess: () => {
+                    toast.success("Commande déplacée dans la corbeille.");
+                    setToDelete(null);
+                },
+                onError: (err) =>
+                    toast.error("Suppression impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        const ids = selection.ids;
+        if (ids.length === 0) return;
+        setBulkDeleting(true);
+        const results: PromiseSettledResult<unknown>[] = [];
+        for (const id of ids) {
+            try {
+                await deletePurchaseOrder.mutateAsync({ orgId, id });
+                results.push({ status: "fulfilled", value: undefined });
+            } catch (e) {
+                results.push({ status: "rejected", reason: e });
+            }
+        }
+        const ok = results.filter((r) => r.status === "fulfilled").length;
+        const failed = results.length - ok;
+        setBulkDeleting(false);
+        setBulkOpen(false);
+        selection.clear();
+        if (failed === 0) {
+            toast.success(
+                `${ok} commande${ok > 1 ? "s" : ""} déplacée${ok > 1 ? "s" : ""} dans la corbeille.`
+            );
+        } else {
+            toast.error(`${ok} supprimée${ok > 1 ? "s" : ""}, ${failed} en échec.`, {
+                description: "Certaines commandes n'ont pas pu être supprimées (stock déjà utilisé).",
+            });
+        }
+    };
 
     if (error) {
         return (
@@ -163,8 +231,10 @@ function PurchaseOrdersPage() {
     }
 
     const filtersActive = !!statusFilter || !!supplierFilter || !!paymentFilter;
+    const showSelection = canManage && !showTrash;
 
     return (
+        <>
         <ListPageLayout
             title={showTrash ? "Approvisionnements — Corbeille" : "Approvisionnements"}
             icon={showTrash ? FaTrashRestore : FaTruck}
@@ -304,8 +374,40 @@ function PurchaseOrdersPage() {
                         )
                     ) : (
                         <>
+                            {showSelection && (
+                                <ListSelectionBar
+                                    count={selection.count}
+                                    label={`${selection.count} commande${selection.count > 1 ? "s" : ""} sélectionnée${selection.count > 1 ? "s" : ""}`}
+                                    onClear={selection.clear}
+                                    onDelete={() => setBulkOpen(true)}
+                                />
+                            )}
                             <ListTable
                                 columns={[
+                                    ...(showSelection
+                                        ? [
+                                            <ListTableColumn
+                                                key="select"
+                                                header={
+                                                    <Checkbox
+                                                        checked={selection.allSelected}
+                                                        onCheckedChange={selection.toggleAll}
+                                                        aria-label="Tout sélectionner"
+                                                    />
+                                                }
+                                            >
+                                                {({ value: po }) => (
+                                                    <Checkbox
+                                                        checked={selection.selected.has(po.id)}
+                                                        onCheckedChange={() =>
+                                                            selection.toggleOne(po.id)
+                                                        }
+                                                        aria-label={`Sélectionner ${po.order_number}`}
+                                                    />
+                                                )}
+                                            </ListTableColumn>,
+                                          ]
+                                        : []),
                                     <ListTableColumn key="number" header="N°">
                                         {({ value: po }) => (
                                             <div>
@@ -382,7 +484,7 @@ function PurchaseOrdersPage() {
                                     </ListTableColumn>,
                                     <ListTableColumn
                                         key="actions"
-                                        header="Actions"
+                                        header=""
                                         align="right"
                                     >
                                         {({ value: po }) =>
@@ -431,7 +533,10 @@ function PurchaseOrdersPage() {
                                                     </GenerateDocumentButton>
                                                     <Button
                                                         variant="ghost"
-                                                        size="sm"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                        title="Ouvrir la commande"
+                                                        aria-label="Ouvrir la commande"
                                                         onClick={() =>
                                                             router.push(
                                                                 `/organisation/${orgId}/inventory/purchase-orders/${po.id}`
@@ -440,6 +545,18 @@ function PurchaseOrdersPage() {
                                                     >
                                                         <FaEdit className="h-3.5 w-3.5" />
                                                     </Button>
+                                                    {canManage && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                            title="Supprimer la commande"
+                                                            aria-label="Supprimer la commande"
+                                                            onClick={() => setToDelete(po)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             )
                                         }
@@ -460,5 +577,42 @@ function PurchaseOrdersPage() {
                 </>
             }
         />
+
+        <ConfirmDeleteDialog
+            open={!!toDelete}
+            onOpenChange={() => setToDelete(null)}
+            title="Supprimer la commande ?"
+            description={
+                toDelete && toDelete.status !== "draft" ? (
+                    <>
+                        Cette commande a reçu de la marchandise : la suppression
+                        corrigera le stock en conséquence. Action réversible via
+                        la corbeille.
+                        <br />
+                        <span className="font-mono font-semibold">
+                            {toDelete.order_number}
+                        </span>{" "}
+                        sera déplacée dans la corbeille.
+                    </>
+                ) : (
+                    <>
+                        «&nbsp;{toDelete?.order_number}&nbsp;» sera déplacée dans
+                        la corbeille. Vous pourrez la restaurer à tout moment.
+                    </>
+                )
+            }
+            pending={deletePurchaseOrder.isPending}
+            onConfirm={handleConfirmDelete}
+        />
+
+        <ConfirmDeleteDialog
+            open={bulkOpen}
+            onOpenChange={setBulkOpen}
+            title={`Supprimer ${selection.count} commande${selection.count > 1 ? "s" : ""} ?`}
+            description="Les commandes sélectionnées seront déplacées dans la corbeille. Pour celles ayant reçu de la marchandise, le stock sera corrigé en conséquence. Vous pourrez les restaurer à tout moment."
+            pending={bulkDeleting}
+            onConfirm={handleBulkDelete}
+        />
+        </>
     );
 }

@@ -99,7 +99,7 @@ function CreateProductPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name) {
-            toast("Champ manquant", {
+            toast.error("Champ manquant", {
                 description: "Le nom du produit est obligatoire.",
             });
             return;
@@ -202,6 +202,7 @@ function CreateProductPage() {
                                         }
                                         className="pl-10"
                                         required
+                                        autoFocus
                                     />
                                 </div>
                             </div>

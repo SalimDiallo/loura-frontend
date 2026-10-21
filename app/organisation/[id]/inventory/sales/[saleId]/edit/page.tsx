@@ -581,6 +581,7 @@ function EditSalePage() {
                                     }
                                     placeholder="Rechercher un client"
                                     accentColor="primary"
+                                    autoFocus
                                 />
                                 {saleType === "credit" &&
                                     customerItems.length === 0 && (
@@ -652,6 +653,7 @@ function EditSalePage() {
                                     Ligne
                                 </Button>
                             </div>
+                            {/* Bouton Ajouter une ligne — haut de liste */}
                             <div className="space-y-3">
                                 {items.map((item) => {
                                     const qty = parseFloat(
@@ -880,6 +882,19 @@ function EditSalePage() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                            {/* Bouton Ajouter une ligne — bas de liste */}
+                            <div className="flex justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={addItem}
+                                    className="gap-2"
+                                >
+                                    <FaPlus className="h-3 w-3" />
+                                    Ligne
+                                </Button>
                             </div>
                         </div>
 

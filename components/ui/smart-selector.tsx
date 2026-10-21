@@ -19,7 +19,7 @@ import {
     Search,
     X
 } from "lucide-react";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 export interface SmartSelectorItem {
   id: string;
@@ -42,6 +42,7 @@ interface SmartSelectorProps {
   showGroups?: boolean;
   maxHeight?: string | number;
   className?: string;
+  autoFocus?: boolean;
   // Quick Create
   onCreate?: (name: string) => Promise<SmartSelectorItem | void>;
   createLabel?: string;
@@ -98,6 +99,7 @@ export function SmartSelector({
   showGroups = true,
   maxHeight = "400px",
   className,
+  autoFocus = false,
   onCreate,
   createLabel = "Créer",
   canCreate = false,
@@ -108,6 +110,24 @@ export function SmartSelector({
 
   // Add state to control DropdownMenu open/close
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // autoFocus: open dropdown on mount (dropdown mode) or focus input (inline mode)
+  const dropdownSearchRef = useRef<HTMLInputElement>(null);
+  const inlineSearchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!autoFocus) return;
+    if (mode === "dropdown") {
+      // Small delay to let the component settle before opening
+      const t = setTimeout(() => {
+        setMenuOpen(true);
+        setTimeout(() => dropdownSearchRef.current?.focus(), 50);
+      }, 0);
+      return () => clearTimeout(t);
+    }
+    // inline mode: focus the search input directly
+    inlineSearchRef.current?.focus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredItems = useMemo(() => {
     return items.filter(
@@ -248,6 +268,7 @@ export function SmartSelector({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-50" />
             <Input
+              ref={inlineSearchRef}
               placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -392,6 +413,7 @@ export function SmartSelector({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-50" />
             <Input
+              ref={dropdownSearchRef}
               placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}

@@ -23,7 +23,7 @@ import {
     useProducts,
     useWarehouses,
 } from "@/lib/hooks/inventory";
-import { PERMISSIONS } from "@/lib/permissions";
+import { stockService } from "@/lib/services/inventory";
 import type {
     CreateSaleData,
     CreateSaleInstallmentData,
@@ -32,8 +32,11 @@ import type {
     Product,
     SaleDiscountType,
     SaleType,
+    Stock,
     Warehouse,
 } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
+import { PERMISSIONS } from "@/lib/permissions";
 import {
     Box,
     CreditCard,
@@ -117,6 +120,22 @@ function CreateSalePage() {
     const products = productsList as unknown as Product[];
 
     const createSale = useCreateSale();
+
+    // Stocks de l'entrepôt sélectionné (chargés uniquement quand un entrepôt est choisi)
+    const { data: stocksList = [] } = useQuery<Stock[]>({
+        queryKey: ["inventory", "stocks", orgId, { warehouse: warehouseId }],
+        queryFn: () =>
+            stockService.list(orgId, { warehouse: warehouseId, page_size: "all" }),
+        enabled: !!orgId && !!warehouseId,
+    });
+    // Map productId → quantité disponible (string → number)
+    const stockByProduct = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const s of stocksList) {
+            map.set(s.product.id, parseFloat(s.quantity));
+        }
+        return map;
+    }, [stocksList]);
 
     const customerItems: SmartSelectorItem[] = useMemo(
         () =>
@@ -447,6 +466,7 @@ function CreateSalePage() {
                                     onChange={(ids) => setCustomerId(ids[0] || "")}
                                     placeholder="Rechercher un client"
                                     accentColor="primary"
+                                    autoFocus
                                 />
                                 {saleType === "credit" && customerItems.length === 0 && (
                                     <p className="text-xs text-amber-600">
@@ -514,6 +534,13 @@ function CreateSalePage() {
                                     } else if (item.discount_type === "fixed") {
                                         afterDisc = lineBase - Math.min(dv, lineBase);
                                     }
+                                    const availableStock = item.product_id
+                                        ? stockByProduct.get(item.product_id)
+                                        : undefined;
+                                    const stockExceeded =
+                                        availableStock !== undefined &&
+                                        qty > 0 &&
+                                        qty > availableStock;
                                     return (
                                         <div
                                             key={item._key}
@@ -536,6 +563,21 @@ function CreateSalePage() {
                                                         placeholder="Rechercher"
                                                         accentColor="primary"
                                                     />
+                                                    {item.product_id && warehouseId && (
+                                                        <p
+                                                            className={`text-xs mt-1 ${
+                                                                stockExceeded
+                                                                    ? "text-red-600 dark:text-red-400 font-medium"
+                                                                    : "text-muted-foreground"
+                                                            }`}
+                                                        >
+                                                            {availableStock !== undefined
+                                                                ? stockExceeded
+                                                                    ? `Stock insuffisant : ${availableStock}`
+                                                                    : `Stock : ${availableStock}`
+                                                                : "Stock : —"}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="col-span-4 md:col-span-2">
                                                     <Label className="text-xs">Qté</Label>
@@ -549,6 +591,7 @@ function CreateSalePage() {
                                                                 quantity: e.target.value,
                                                             })
                                                         }
+                                                        className={stockExceeded ? "border-red-500 focus-visible:ring-red-500" : ""}
                                                     />
                                                 </div>
                                                 <div className="col-span-4 md:col-span-2">
@@ -652,6 +695,19 @@ function CreateSalePage() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                            {/* Bouton Ajouter une ligne — bas de liste */}
+                            <div className="flex justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={addItem}
+                                    className="gap-2"
+                                >
+                                    <FaPlus className="h-3 w-3" />
+                                    Ligne
+                                </Button>
                             </div>
                         </div>
 

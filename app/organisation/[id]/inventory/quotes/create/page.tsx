@@ -44,7 +44,7 @@ import {
     Warehouse as WarehouseIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FaFileAlt, FaFileInvoice, FaPlus } from "react-icons/fa";
 import { toast } from "sonner";
 
@@ -185,7 +185,9 @@ function CreateQuotePage() {
         };
     }, [items, discountType, discountValue]);
 
-    const addItem = () => {
+    const bottomAddRef = useRef<HTMLDivElement>(null);
+
+    const addItem = (scrollToBottom?: boolean) => {
         setItems((prev) => [
             ...prev,
             {
@@ -199,6 +201,11 @@ function CreateQuotePage() {
                 description: "",
             },
         ]);
+        if (scrollToBottom) {
+            setTimeout(() => {
+                bottomAddRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }, 50);
+        }
     };
 
     const removeItem = (key: string) => {
@@ -422,6 +429,7 @@ function CreateQuotePage() {
                                     onChange={handleCustomerChange}
                                     placeholder="Rechercher un client"
                                     accentColor="primary"
+                                    autoFocus
                                 />
                             </div>
                             <div className="space-y-2">
@@ -477,14 +485,14 @@ function CreateQuotePage() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={addItem}
+                                    onClick={() => addItem()}
                                     className="gap-2"
                                 >
                                     <FaPlus className="h-3 w-3" />
                                     Ligne
                                 </Button>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-3" ref={bottomAddRef}>
                                 {items.map((item) => {
                                     const qty = parseFloat(
                                         String(item.quantity || 0)
@@ -736,6 +744,18 @@ function CreateQuotePage() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                            <div className="flex justify-end pt-1">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addItem(true)}
+                                    className="gap-2"
+                                >
+                                    <FaPlus className="h-3 w-3" />
+                                    Ligne
+                                </Button>
                             </div>
                         </div>
 

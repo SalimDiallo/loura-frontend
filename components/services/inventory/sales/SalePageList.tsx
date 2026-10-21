@@ -2,6 +2,7 @@
 
 import { BadgeStatus } from "@/components/BadgeStatus";
 import { GenerateDocumentButton, GroupedInvoiceModal } from "@/components/documents";
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import {
     ListPageLayout,
     ListPagination,
@@ -10,17 +11,22 @@ import {
     ListTable,
     ListTableColumn,
 } from "@/components/layout/ListPageLayout";
+import { ListSelectionBar } from "@/components/layout/ListSelectionBar";
+import { RowActionsMenu } from "@/components/layout/RowActionsMenu";
 import { Can, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import { useCustomers } from "@/lib/hooks/hr";
 import { getApiErrorMessage } from "@/lib/api/error-message";
+import { useBulkSelection } from "@/lib/hooks/use-bulk-selection";
 import {
+    useDeleteSale,
     usePaginatedSales,
     useProducts,
     useRestoreSale,
@@ -31,6 +37,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import type {
     Customer,
     Product,
+    Sale,
     SaleOrdering,
     SalePaymentStatus,
     SaleStatus,
@@ -38,7 +45,7 @@ import type {
     Warehouse,
 } from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     FaCreditCard,
     FaEye,
@@ -417,7 +424,21 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
         ]
     );
 
+    const [toDelete, setToDelete] = useState<Sale | null>(null);
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+
     const restoreSale = useRestoreSale();
+    const deleteSale = useDeleteSale();
+
+    // ── Sélection multiple (limitée à la page visible) ────────────────────────
+    const selection = useBulkSelection(sales.map((s) => s.id));
+    // On vide la sélection dès qu'on change de page / recherche / filtres.
+    useEffect(() => {
+        selection.clear();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, showTrash, meta.currentPage, statusFilter, paymentFilter,
+        typeFilter, customerFilter, warehouseFilter, productFilter]);
 
     const handleRestore = (id: string) => {
         restoreSale.mutate(
@@ -430,6 +451,52 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                     }),
             }
         );
+    };
+
+    const handleConfirmDelete = () => {
+        if (!toDelete) return;
+        deleteSale.mutate(
+            { orgId, id: toDelete.id },
+            {
+                onSuccess: () => {
+                    toast.success("Vente déplacée dans la corbeille.");
+                    setToDelete(null);
+                },
+                onError: (err) =>
+                    toast.error("Suppression impossible", {
+                        description: getApiErrorMessage(err),
+                    }),
+            }
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        const ids = selection.ids;
+        if (ids.length === 0) return;
+        setBulkDeleting(true);
+        const results: PromiseSettledResult<unknown>[] = [];
+        for (const id of ids) {
+            try {
+                await deleteSale.mutateAsync({ orgId, id });
+                results.push({ status: "fulfilled", value: undefined });
+            } catch (e) {
+                results.push({ status: "rejected", reason: e });
+            }
+        }
+        const ok = results.filter((r) => r.status === "fulfilled").length;
+        const failed = results.length - ok;
+        setBulkDeleting(false);
+        setBulkOpen(false);
+        selection.clear();
+        if (failed === 0) {
+            toast.success(
+                `${ok} vente${ok > 1 ? "s" : ""} déplacée${ok > 1 ? "s" : ""} dans la corbeille.`
+            );
+        } else {
+            toast.error(`${ok} supprimée${ok > 1 ? "s" : ""}, ${failed} en échec.`, {
+                description: "Réessayez pour les éléments restants.",
+            });
+        }
     };
 
     const headerActionsList = useMemo(() => {
@@ -963,8 +1030,40 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                         </div>
                     ) : (
                         <>
+                            {canManage && !showTrash && (
+                                <ListSelectionBar
+                                    count={selection.count}
+                                    label={`${selection.count} vente${selection.count > 1 ? "s" : ""} sélectionnée${selection.count > 1 ? "s" : ""}`}
+                                    onClear={selection.clear}
+                                    onDelete={() => setBulkOpen(true)}
+                                />
+                            )}
                             <ListTable
                                 columns={[
+                                    ...(canManage && !showTrash
+                                        ? [
+                                            <ListTableColumn
+                                                key="select"
+                                                header={
+                                                    <Checkbox
+                                                        checked={selection.allSelected}
+                                                        onCheckedChange={selection.toggleAll}
+                                                        aria-label="Tout sélectionner"
+                                                    />
+                                                }
+                                            >
+                                                {({ value: s }) => (
+                                                    <Checkbox
+                                                        checked={selection.selected.has(s.id)}
+                                                        onCheckedChange={() =>
+                                                            selection.toggleOne(s.id)
+                                                        }
+                                                        aria-label={`Sélectionner ${s.sale_number}`}
+                                                    />
+                                                )}
+                                            </ListTableColumn>,
+                                          ]
+                                        : []),
                                     <ListTableColumn key="number" header="N°">
                                         {({ value: s }) => (
                                             <div>
@@ -1046,7 +1145,7 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                     </ListTableColumn>,
                                     <ListTableColumn
                                         key="actions"
-                                        header="Actions"
+                                        header=""
                                         align="right"
                                     >
                                         {({ value: s }) =>
@@ -1104,6 +1203,12 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                                                     >
                                                         <FaEye className="h-3.5 w-3.5" />
                                                     </Button>
+                                                    {canManage && (
+                                                        <RowActionsMenu
+                                                            onDelete={() => setToDelete(s)}
+                                                            deleteLabel="Supprimer la vente"
+                                                        />
+                                                    )}
                                                 </div>
                                             )
                                         }
@@ -1124,6 +1229,31 @@ export function SalesPage({ creditOnly = false }: SalesPageProps = {}) {
                 </>
             }
         />
+
+        <ConfirmDeleteDialog
+            open={!!toDelete}
+            onOpenChange={() => setToDelete(null)}
+            title="Supprimer la vente ?"
+            description={
+                <>
+                    La vente «&nbsp;{toDelete?.sale_number}&nbsp;» sera déplacée dans la
+                    corbeille. Si elle est finalisée, le stock sera automatiquement réintégré.
+                    Vous pourrez la restaurer à tout moment.
+                </>
+            }
+            pending={deleteSale.isPending}
+            onConfirm={handleConfirmDelete}
+        />
+
+        <ConfirmDeleteDialog
+            open={bulkOpen}
+            onOpenChange={setBulkOpen}
+            title={`Supprimer ${selection.count} vente${selection.count > 1 ? "s" : ""} ?`}
+            description="Les ventes sélectionnées seront déplacées dans la corbeille. Le stock des ventes finalisées sera automatiquement réintégré. Vous pourrez les restaurer à tout moment."
+            pending={bulkDeleting}
+            onConfirm={handleBulkDelete}
+        />
+
         <GroupedInvoiceModal
             open={groupedInvoiceOpen}
             onOpenChange={setGroupedInvoiceOpen}

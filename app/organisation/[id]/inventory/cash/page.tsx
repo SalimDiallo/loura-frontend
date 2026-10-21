@@ -15,6 +15,7 @@ import {
   type QuickSelectItem,
 } from "@/components/ui/quick-select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrencyFormatter } from "@/lib/hooks";
 import {
     useCashSummary,
     usePaginatedCashTransactions,
@@ -27,7 +28,6 @@ import type {
     CashSummary,
     CashTransaction,
 } from "@/lib/types/inventory";
-import { formatCurrency } from "@/utils/formatters";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
@@ -43,10 +43,6 @@ import {
 } from "react-icons/fa6";
 
 
-/** Formate un montant venant de l'API (string décimale ou number) en devise. */
-function money(value: string | number): string {
-  return formatCurrency(Number(value) || 0);
-}
 
 function formatDate(iso: string): string {
   try {
@@ -104,6 +100,9 @@ function periodDescription(p: PeriodState): string {
       ? "Entrées et sorties de fonds du jour"
       : `Mouvements du ${formatDate(p.date)}`;
   }
+  if (!p.from && !p.to) return "Tous les mouvements · toute la période";
+  if (!p.from) return `Mouvements jusqu'au ${formatDate(p.to)}`;
+  if (!p.to) return `Mouvements depuis le ${formatDate(p.from)}`;
   return `Mouvements du ${formatDate(p.from)} au ${formatDate(p.to)}`;
 }
 
@@ -119,19 +118,29 @@ function CashPage() {
   const params = useParams();
   const orgId = params.id as string;
   const { can } = useOrgPermissions();
+  const { formatCurrency } = useCurrencyFormatter();
+
+  /** Formate un montant venant de l'API (string décimale ou number) en devise. */
+  const money = (value: string | number) => formatCurrency(Number(value) || 0);
   const canManage = can(PERMISSIONS.CASH.MANAGE);
   // Caissier : ne voit que ses propres transactions (forcé côté backend). Le
   // filtre "par utilisateur" et le panneau de ventilation par auteur n'ont
   // alors aucun intérêt (il n'y a que lui) → on les masque.
   const isCashier = can(PERMISSIONS.CASH.CASHIER);
 
-  // Période : mode "jour unique" (par défaut) ou "intervalle" (from → to).
-  const [period, setPeriod] = useState<PeriodState>({
-    mode: "single",
-    date: todayISO(),
-    from: todayISO(),
-    to: todayISO(),
-  });
+  // Accès total aux entrepôts = pas de restriction de périmètre.
+  // WAREHOUSE_SCOPE.SCOPE : si FALSE → accès total (admin/owner) → on affiche
+  // toute la période par défaut. Si TRUE → accès restreint → défaut = aujourd'hui.
+  const hasWarehouseRestriction = can(PERMISSIONS.WAREHOUSE_SCOPE.SCOPE);
+
+  // Période : mode "jour unique" ou "intervalle" (from → to).
+  // Valeur initiale : toute la période pour un admin (pas de restriction d'entrepôt),
+  // aujourd'hui pour un utilisateur restreint à certains entrepôts.
+  const [period, setPeriod] = useState<PeriodState>(() =>
+    hasWarehouseRestriction
+      ? { mode: "single", date: todayISO(), from: todayISO(), to: todayISO() }
+      : { mode: "range", date: todayISO(), from: "", to: "" }
+  );
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [directionFilter, setDirectionFilter] = useState<CashDirection | "">("");
   const [methodFilter, setMethodFilter] = useState<CashPaymentMethod | "">("");
@@ -185,7 +194,8 @@ function CashPage() {
         name: row.name || row.email || "—",
         subtitle: `${row.count} mouvement(s) · ${money(row.in)} in / ${money(row.out)} out`,
       }));
-  }, [summary]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary, formatCurrency]);
 
   const filtersAreActive =
     !!warehouseFilter || !!directionFilter || !!methodFilter || !!userFilter;
@@ -366,10 +376,14 @@ function CashPage() {
               <div className="text-center py-16 bg-muted/20 rounded-lg">
                 <FaWallet className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
                 <p className="text-lg font-medium">
-                  Aucun mouvement {isToday ? "aujourd'hui" : "ce jour-là"}
+                  {isToday
+                    ? "Aucun mouvement aujourd'hui"
+                    : period.mode === "range" && !period.from && !period.to
+                      ? "Aucun mouvement enregistré"
+                      : "Aucun mouvement ce jour-là"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Les ventes, achats, dépenses et apports/retraits du jour
+                  Les ventes, achats, dépenses et apports/retraits
                   apparaîtront ici.
                 </p>
               </div>
@@ -471,6 +485,7 @@ function CashPage() {
                     summary={summary}
                     activeUserId={userFilter}
                     onSelectUser={setUserFilter}
+                    money={money}
                   />
                 )}
               </>
@@ -648,10 +663,12 @@ function ByUserPanel({
   summary,
   activeUserId,
   onSelectUser,
+  money,
 }: {
   summary?: CashSummary;
   activeUserId: string;
   onSelectUser: (id: string) => void;
+  money: (value: string | number) => string;
 }) {
   const rows = useMemo(() => {
     const byUser = summary?.by_user ?? {};

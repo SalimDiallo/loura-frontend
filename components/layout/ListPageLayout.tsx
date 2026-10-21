@@ -45,6 +45,7 @@ export function ListSearchFilters({
   onFiltersOpenChange,
   filtersAreActive,
   filters,
+  searchInputRef,
 }: {
   searchValue: string;
   onSearchChange: (val: string) => void;
@@ -53,6 +54,8 @@ export function ListSearchFilters({
   onFiltersOpenChange: (open: boolean) => void;
   filtersAreActive: boolean;
   filters: React.ReactNode;
+  /** Optionnel : ref vers l'input de recherche (ex. pour le focus via raccourci "/"). */
+  searchInputRef?: React.Ref<HTMLInputElement>;
 }) {
   const [collapseVisible, setCollapseVisible] = useState(filtersOpen);
   const collapseRef = useRef<HTMLDivElement>(null);
@@ -89,6 +92,7 @@ export function ListSearchFilters({
         <div className="relative flex-1">
           <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             placeholder={searchPlaceholder}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}

@@ -49,6 +49,12 @@ import {
     type Stock,
     type Warehouse,
 } from "@/lib/types";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
+import {
+    type KeyboardShortcut,
+    useKeyboardShortcuts,
+} from "@/lib/hooks/use-keyboard-shortcuts";
+import { ShortcutsHelpModal } from "@/components/ui/shortcuts-help";
 import {
     Box,
     ChevronDown,
@@ -65,7 +71,7 @@ import {
     X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaMoneyBillWave, FaReceipt } from "react-icons/fa";
 import { toast } from "sonner";
 
@@ -123,16 +129,19 @@ function POSPage() {
 
     // Filtres grille (déclarés avant le hook produits car utilisés par les filtres serveur)
     const [search, setSearch] = useState("");
+    const debouncedSearch = useDebouncedValue(search, 300);
     const [categoryFilter, setCategoryFilter] = useState<string>("");
+    const [showShortcuts, setShowShortcuts] = useState(false);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Produits paginés côté serveur (search + category appliqués au backend)
     const productsFilters = useMemo(
         () => ({
             is_active: true,
-            search: search.trim() || undefined,
+            search: debouncedSearch.trim() || undefined,
             category: categoryFilter || undefined,
         }),
-        [search, categoryFilter]
+        [debouncedSearch, categoryFilter]
     );
     const {
         data: products,
@@ -455,8 +464,33 @@ function POSPage() {
         setInstallments((prev) => prev.filter((i) => i._key !== key));
     };
 
+    // ── Raccourcis clavier POS ───────────────────────────────────────────────
+    const shortcuts = useMemo<KeyboardShortcut[]>(
+        () => [
+            {
+                key: "/",
+                description: "Rechercher un produit",
+                handler: () => searchInputRef.current?.focus(),
+            },
+            {
+                key: "?",
+                shift: true,
+                description: "Afficher l'aide des raccourcis",
+                handler: () => setShowShortcuts((v) => !v),
+            },
+        ],
+        []
+    );
+    useKeyboardShortcuts(shortcuts);
+
     return (
         <>
+        <ShortcutsHelpModal
+            isOpen={showShortcuts}
+            onClose={() => setShowShortcuts(false)}
+            shortcuts={shortcuts}
+            title="Raccourcis — Ventes rapides"
+        />
         <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
             {/* ──── Grille produits ──── */}
             <div className="flex-1 flex flex-col gap-4 min-w-0">
@@ -497,6 +531,7 @@ function POSPage() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
+                            ref={searchInputRef}
                             autoFocus
                             placeholder="Rechercher un produit par nom, SKU ou code-barres..."
                             value={search}

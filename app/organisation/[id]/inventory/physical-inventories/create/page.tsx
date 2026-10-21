@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import {
     useCreatePhysicalInventory,
     useWarehouses,
@@ -73,12 +74,10 @@ function CreatePhysicalInventoryPage() {
             router.push(
                 `/organisation/${orgId}/inventory/physical-inventories/${result.data.id}`
             );
-        } catch (err: any) {
-            toast.error(
-                err?.response?.data?.error ??
-                    err?.message ??
-                    "Impossible de créer l'inventaire."
-            );
+        } catch (err: unknown) {
+            toast.error("Impossible de créer l'inventaire.", {
+                description: getApiErrorMessage(err),
+            });
         }
     };
 

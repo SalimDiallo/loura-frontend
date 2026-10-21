@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { PermissionGuard } from "@/components/permissions";
 import { AuditFootprint } from "@/components/services/AuditBadge";
@@ -11,19 +12,12 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Switch } from "@/components/ui/switch";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import {
     useCategories,
     useCategory,
@@ -97,7 +91,7 @@ function CategoryDetailPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name) {
-            toast("Nom requis", { description: "Le nom est obligatoire." });
+            toast.error("Nom requis", { description: "Le nom est obligatoire." });
             return;
         }
         try {
@@ -107,13 +101,9 @@ function CategoryDetailPage() {
                 data: formData,
             });
             toast.success("Catégorie mise à jour.");
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description:
-                    error?.data?.name?.[0] ||
-                    error?.data?.detail ||
-                    error?.message ||
-                    "Impossible de mettre à jour la catégorie",
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -121,14 +111,11 @@ function CategoryDetailPage() {
     const handleDelete = async () => {
         try {
             await deleteCategory.mutateAsync({ orgId, categoryId });
-            toast.success("Catégorie supprimée.");
+            toast.success("Catégorie déplacée dans la corbeille.");
             router.push(`/organisation/${orgId}/inventory/categories`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description:
-                    error?.data?.error ||
-                    error?.message ||
-                    "Impossible de supprimer la catégorie",
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -226,6 +213,7 @@ function CategoryDetailPage() {
                                         }
                                         className="pl-10"
                                         required
+                                        autoFocus
                                     />
                                 </div>
                             </div>
@@ -336,35 +324,19 @@ function CategoryDetailPage() {
                 </CardContent>
             </Card>
 
-            <Dialog open={showDelete} onOpenChange={setShowDelete}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Supprimer la catégorie</DialogTitle>
-                        <DialogDescription>
-                            Voulez-vous supprimer la catégorie{" "}
-                            <span className="font-semibold">{category.name}</span> ?
-                            Elle sera déplacée dans la corbeille (restaurable).
-                            Les produits rattachés ne sont pas supprimés.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowDelete(false)}>
-                            Annuler
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={deleteCategory.isPending}
-                            className="gap-2"
-                        >
-                            {deleteCategory.isPending && (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            )}
-                            Supprimer
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDeleteDialog
+                open={showDelete}
+                onOpenChange={setShowDelete}
+                title="Supprimer la catégorie ?"
+                description={
+                    <>
+                        « {category.name} » sera déplacée dans la corbeille.
+                        Vous pourrez la restaurer à tout moment. Les produits rattachés ne sont pas supprimés.
+                    </>
+                }
+                pending={deleteCategory.isPending}
+                onConfirm={handleDelete}
+            />
         </FormPageLayout>
     );
 }
