@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import {
     ListPageLayout,
     ListPagination,
@@ -8,22 +9,30 @@ import {
     ListTable,
     ListTableColumn,
 } from "@/components/layout/ListPageLayout";
+import { ListSelectionBar } from "@/components/layout/ListSelectionBar";
+import { RowActionsMenu } from "@/components/layout/RowActionsMenu";
 import { PermissionGuard, useOrgPermissions } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getApiErrorMessage } from "@/lib/api/error-message";
+import { useBulkSelection } from "@/lib/hooks/use-bulk-selection";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import {
+    useDeleteStockMovement,
     usePaginatedStockMovements,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
+    StockMovement,
     StockMovementStatus,
     StockMovementType,
     Warehouse,
 } from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     FaArrowDown,
     FaArrowUp,
@@ -35,6 +44,7 @@ import {
     FaPlus,
     FaTimes,
 } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function MovementsPageWrapper() {
   return (
@@ -79,6 +89,15 @@ const STATUS_STYLES: Record<
   },
 };
 
+/**
+ * Seuls les mouvements en « draft » peuvent être supprimés (backend bloque
+ * les autres avec 400). Les mouvements validés ont déjà impacté le stock ;
+ * pour les corriger, il faut créer un mouvement d'ajustement inverse.
+ */
+function isDeletable(m: StockMovement): boolean {
+  return m.status === "draft";
+}
+
 function MovementsPage() {
   const params = useParams();
   const router = useRouter();
@@ -87,10 +106,15 @@ function MovementsPage() {
   const canManage = can(PERMISSIONS.STOCK.MANAGE);
 
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [filterOpen, setFilterOpen] = useState(false);
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+
+  const [toDelete, setToDelete] = useState<StockMovement | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const { data: warehousesList = [] } = useWarehouses(orgId, {
     page_size: "all",
@@ -99,12 +123,12 @@ function MovementsPage() {
 
   const stableFilters = useMemo(
     () => ({
-      search: search || undefined,
+      search: debouncedSearch || undefined,
       warehouse: warehouseFilter || undefined,
       movement_type: (typeFilter as StockMovementType) || undefined,
       status: (statusFilter as StockMovementStatus) || undefined,
     }),
-    [search, warehouseFilter, typeFilter, statusFilter]
+    [debouncedSearch, warehouseFilter, typeFilter, statusFilter]
   );
 
   const {
@@ -116,6 +140,67 @@ function MovementsPage() {
     isLoading,
     error,
   } = usePaginatedStockMovements(orgId, stableFilters, { pageSize: 15 });
+
+  const deleteMovement = useDeleteStockMovement();
+
+  // Sélection limitée aux drafts visibles (les seuls supprimables).
+  const deletableIds = useMemo(
+    () => movements.filter(isDeletable).map((m) => m.id),
+    [movements]
+  );
+  const selection = useBulkSelection(deletableIds);
+
+  // Réinitialise la sélection à chaque changement de page/filtre.
+  useEffect(() => {
+    selection.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, warehouseFilter, typeFilter, statusFilter, meta.currentPage]);
+
+  const handleConfirmDelete = () => {
+    if (!toDelete) return;
+    deleteMovement.mutate(
+      { orgId, id: toDelete.id },
+      {
+        onSuccess: () => {
+          toast.success("Mouvement supprimé.");
+          setToDelete(null);
+        },
+        onError: (err) =>
+          toast.error("Suppression impossible", {
+            description: getApiErrorMessage(err),
+          }),
+      }
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = selection.ids;
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    const results: PromiseSettledResult<unknown>[] = [];
+    for (const id of ids) {
+        try {
+            await deleteMovement.mutateAsync({ orgId, id });
+            results.push({ status: "fulfilled", value: undefined });
+        } catch (e) {
+            results.push({ status: "rejected", reason: e });
+        }
+    }
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - ok;
+    setBulkDeleting(false);
+    setBulkOpen(false);
+    selection.clear();
+    if (failed === 0) {
+      toast.success(
+        `${ok} mouvement${ok > 1 ? "s" : ""} supprimé${ok > 1 ? "s" : ""}.`
+      );
+    } else {
+      toast.error(`${ok} supprimé${ok > 1 ? "s" : ""}, ${failed} en échec.`, {
+        description: "Réessayez pour les éléments restants.",
+      });
+    }
+  };
 
   if (error) {
     return (
@@ -130,9 +215,14 @@ function MovementsPage() {
   }
 
   const filtersActive =
-    !!search || !!warehouseFilter || !!typeFilter || !!statusFilter;
+    !!debouncedSearch || !!warehouseFilter || !!typeFilter || !!statusFilter;
+
+  // La barre de sélection/suppression n'est visible qu'en mode actif (pas
+  // de corbeille pour les mouvements) avec la permission manage.
+  const showSelection = canManage;
 
   return (
+    <>
     <ListPageLayout
       title="Mouvements de stock"
       icon={FaHistory}
@@ -246,6 +336,14 @@ function MovementsPage() {
             </div>
           ) : (
             <>
+              {showSelection && (
+                <ListSelectionBar
+                  count={selection.count}
+                  label={`${selection.count} mouvement${selection.count > 1 ? "s" : ""} sélectionné${selection.count > 1 ? "s" : ""}`}
+                  onClear={selection.clear}
+                  onDelete={() => setBulkOpen(true)}
+                />
+              )}
               <ListTable
                 onRowClick={(m) =>
                   router.push(
@@ -253,6 +351,39 @@ function MovementsPage() {
                   )
                 }
                 columns={[
+                  ...(showSelection
+                    ? [
+                        <ListTableColumn
+                          key="select"
+                          header={
+                            <Checkbox
+                              checked={
+                                deletableIds.length > 0 &&
+                                deletableIds.every((id) =>
+                                  selection.selected.has(id)
+                                )
+                              }
+                              onCheckedChange={selection.toggleAll}
+                              aria-label="Tout sélectionner les brouillons"
+                              title="Sélectionne uniquement les brouillons (supprimables)"
+                            />
+                          }
+                        >
+                          {({ value: m }) =>
+                            isDeletable(m) ? (
+                              <Checkbox
+                                checked={selection.selected.has(m.id)}
+                                onCheckedChange={() => selection.toggleOne(m.id)}
+                                aria-label={`Sélectionner mouvement ${m.reference ?? m.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            ) : (
+                              <span className="block w-4" />
+                            )
+                          }
+                        </ListTableColumn>,
+                      ]
+                    : []),
                   <ListTableColumn key="type" header="Type">
                     {({ value: m }) => {
                       const mvtType = m.movement_type as StockMovementType;
@@ -345,6 +476,25 @@ function MovementsPage() {
                       </span>
                     )}
                   </ListTableColumn>,
+                  ...(canManage
+                    ? [
+                        <ListTableColumn key="actions" header="" align="right">
+                          {({ value: m }) => (
+                            <div
+                              className="flex items-center justify-end"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {isDeletable(m) && (
+                                <RowActionsMenu
+                                  onDelete={() => setToDelete(m)}
+                                  deleteLabel="Supprimer le brouillon"
+                                />
+                              )}
+                            </div>
+                          )}
+                        </ListTableColumn>,
+                      ]
+                    : []),
                 ]}
                 data={movements}
               />
@@ -361,5 +511,30 @@ function MovementsPage() {
         </>
       }
     />
+
+    <ConfirmDeleteDialog
+      open={!!toDelete}
+      onOpenChange={() => setToDelete(null)}
+      title="Supprimer le mouvement ?"
+      description={
+        <>
+          Le mouvement{toDelete?.reference ? ` « ${toDelete.reference} »` : ""} sera
+          définitivement supprimé. Seuls les brouillons peuvent être supprimés — aucun
+          impact sur le stock n&apos;a encore été enregistré pour ce mouvement.
+        </>
+      }
+      pending={deleteMovement.isPending}
+      onConfirm={handleConfirmDelete}
+    />
+
+    <ConfirmDeleteDialog
+      open={bulkOpen}
+      onOpenChange={setBulkOpen}
+      title={`Supprimer ${selection.count} mouvement${selection.count > 1 ? "s" : ""} ?`}
+      description="Les mouvements sélectionnés (brouillons uniquement) seront définitivement supprimés. Aucun impact sur le stock n'a encore été enregistré pour ces mouvements."
+      pending={bulkDeleting}
+      onConfirm={handleBulkDelete}
+    />
+    </>
   );
 }

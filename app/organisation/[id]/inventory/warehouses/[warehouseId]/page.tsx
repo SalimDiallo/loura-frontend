@@ -1,7 +1,8 @@
 "use client";
 
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
-import { PermissionGuard, useOrgPermissions } from "@/components/permissions";
+import { PermissionGuard } from "@/components/permissions";
 import { AuditFootprint } from "@/components/services/AuditBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,19 +13,12 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Switch } from "@/components/ui/switch";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { usePaginatedMembers } from "@/lib/hooks/hr";
 import {
     useDeleteWarehouse,
@@ -112,12 +106,9 @@ function WarehouseDetailPage() {
                 data: formData,
             });
             toast.success("Entrepôt mis à jour.");
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description:
-                    error?.data?.detail ||
-                    error?.message ||
-                    "Impossible de mettre à jour l'entrepôt",
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -125,14 +116,11 @@ function WarehouseDetailPage() {
     const handleDelete = async () => {
         try {
             await deleteWarehouse.mutateAsync({ orgId, warehouseId });
-            toast.success("Entrepôt supprimé.");
+            toast.success("Entrepôt déplacé dans la corbeille.");
             router.push(`/organisation/${orgId}/inventory/warehouses`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description:
-                    error?.data?.error ||
-                    error?.message ||
-                    "Impossible de supprimer l'entrepôt",
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -262,6 +250,7 @@ function WarehouseDetailPage() {
                                         }
                                         className="pl-10"
                                         required
+                                        autoFocus
                                     />
                                 </div>
                             </div>
@@ -439,35 +428,19 @@ function WarehouseDetailPage() {
                 </CardContent>
             </Card>
 
-            <Dialog open={showDelete} onOpenChange={setShowDelete}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Supprimer l&apos;entrepôt</DialogTitle>
-                        <DialogDescription>
-                            Voulez-vous supprimer l&apos;entrepôt{" "}
-                            <span className="font-semibold">{warehouse.name}</span> ?
-                            Il sera déplacé dans la corbeille (restaurable depuis
-                            la liste des entrepôts).
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowDelete(false)}>
-                            Annuler
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={deleteWarehouse.isPending}
-                            className="gap-2"
-                        >
-                            {deleteWarehouse.isPending && (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            )}
-                            Supprimer
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDeleteDialog
+                open={showDelete}
+                onOpenChange={setShowDelete}
+                title="Supprimer l'entrepôt ?"
+                description={
+                    <>
+                        « {warehouse.name} » sera déplacé dans la corbeille.
+                        Vous pourrez le restaurer à tout moment depuis la liste des entrepôts.
+                    </>
+                }
+                pending={deleteWarehouse.isPending}
+                onConfirm={handleDelete}
+            />
         </FormPageLayout>
     );
 }

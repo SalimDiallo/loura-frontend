@@ -487,6 +487,7 @@ function EditQuotePage() {
                                     onChange={handleCustomerChange}
                                     placeholder="Rechercher un client"
                                     accentColor="primary"
+                                    autoFocus
                                 />
                             </div>
                             <div className="space-y-2">
@@ -805,6 +806,19 @@ function EditQuotePage() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                            {/* Bouton Ajouter une ligne — bas de liste */}
+                            <div className="flex justify-end pt-1">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={addItem}
+                                    className="gap-2"
+                                >
+                                    <FaPlus className="h-3 w-3" />
+                                    Ligne
+                                </Button>
                             </div>
                         </div>
 

@@ -16,6 +16,7 @@ import {
     SmartSelector,
     type SmartSelectorItem,
 } from "@/components/ui/smart-selector";
+import { getApiErrorMessage } from "@/lib/api";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
     useCreatePurchaseOrder,
@@ -41,7 +42,7 @@ import {
     Warehouse as WarehouseIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import { toast } from "sonner";
 
@@ -148,11 +149,19 @@ function CreatePurchaseOrderPage() {
         };
     }, [items]);
 
-    const addItem = () => {
+    const bottomAddRef = useRef<HTMLDivElement>(null);
+
+    const addItem = (scrollToBottom?: boolean) => {
         setItems((prev) => [
             ...prev,
             { _key: nextKey(), product_id: "", quantity_ordered: "", unit_cost: "", tax_rate: "0" },
         ]);
+        if (scrollToBottom) {
+            // Let the DOM update before scrolling
+            setTimeout(() => {
+                bottomAddRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }, 50);
+        }
     };
 
     const removeItem = (key: string) => {
@@ -175,6 +184,18 @@ function CreatePurchaseOrderPage() {
             unit_cost: product?.purchase_price ?? "",
             tax_rate: product?.tax_rate ?? "0",
         });
+    };
+
+    // Pré-remplir expected_date à partir du délai de paiement fournisseur
+    const handleSupplierChange = (id: string) => {
+        setSupplierId(id);
+        if (!id) return;
+        const supplier = suppliers.find((s) => s.id === id);
+        if (supplier && supplier.payment_terms_days > 0 && !expectedDate) {
+            const d = new Date();
+            d.setDate(d.getDate() + supplier.payment_terms_days);
+            setExpectedDate(d.toISOString().split("T")[0]);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -214,13 +235,12 @@ function CreatePurchaseOrderPage() {
             router.push(
                 `/organisation/${orgId}/inventory/purchase-orders/${response.data.id}`
             );
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description:
-                    error?.data?.detail ||
-                    error?.data?.items?.[0] ||
-                    error?.message ||
-                    "Impossible de créer la commande",
+                description: getApiErrorMessage(
+                    error,
+                    "Impossible de créer la commande"
+                ),
             });
         }
     };
@@ -291,7 +311,7 @@ function CreatePurchaseOrderPage() {
                                 <SmartSelector
                                     items={supplierItems}
                                     selectedIds={supplierId ? [supplierId] : []}
-                                    onChange={(ids) => setSupplierId(ids[0] || "")}
+                                    onChange={(ids) => handleSupplierChange(ids[0] || "")}
                                     placeholder="Rechercher un fournisseur"
                                     accentColor="orange"
                                 />
@@ -314,6 +334,7 @@ function CreatePurchaseOrderPage() {
                                     value={orderDate}
                                     onChange={(e) => setOrderDate(e.target.value)}
                                     required
+                                    autoFocus
                                 />
                             </div>
                             <div className="space-y-2">
@@ -337,14 +358,14 @@ function CreatePurchaseOrderPage() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={addItem}
+                                    onClick={() => addItem()}
                                     className="gap-2"
                                 >
                                     <FaPlus className="h-3 w-3" />
                                     Ajouter une ligne
                                 </Button>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-3" ref={bottomAddRef}>
                                 {items.map((item) => {
                                     const lineSubtotal =
                                         parseFloat(String(item.quantity_ordered || 0)) *
@@ -370,6 +391,17 @@ function CreatePurchaseOrderPage() {
                                                     placeholder="Rechercher"
                                                     accentColor="primary"
                                                 />
+                                                {item.product_id && (() => {
+                                                    const p = products.find(
+                                                        (pr) => pr.id === item.product_id
+                                                    );
+                                                    return p ? (
+                                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                                            Prix d&apos;achat habituel :{" "}
+                                                            {formatCurrency(Number(p.purchase_price))}
+                                                        </p>
+                                                    ) : null;
+                                                })()}
                                             </div>
                                             <div className="col-span-4 md:col-span-2">
                                                 <Label className="text-xs">Qté</Label>
@@ -441,6 +473,18 @@ function CreatePurchaseOrderPage() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                            <div className="flex justify-end pt-1">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addItem(true)}
+                                    className="gap-2"
+                                >
+                                    <FaPlus className="h-3 w-3" />
+                                    Ajouter une ligne
+                                </Button>
                             </div>
                         </div>
 

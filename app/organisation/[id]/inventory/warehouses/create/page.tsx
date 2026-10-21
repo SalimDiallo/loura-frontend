@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Switch } from "@/components/ui/switch";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { usePaginatedMembers } from "@/lib/hooks/hr";
 import { useCreateWarehouse } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -95,7 +96,7 @@ function CreateWarehousePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name || !formData.code) {
-            toast("Champs manquants", {
+            toast.error("Champs manquants", {
                 description: "Le nom et le code sont obligatoires.",
             });
             return;
@@ -104,14 +105,9 @@ function CreateWarehousePage() {
             await createWarehouse.mutateAsync({ orgId, data: formData });
             toast.success("Entrepôt créé avec succès !");
             router.push(`/organisation/${orgId}/inventory/warehouses`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description:
-                    error?.data?.code?.[0] ||
-                    error?.data?.name?.[0] ||
-                    error?.data?.detail ||
-                    error?.message ||
-                    "Impossible de créer l'entrepôt",
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -189,6 +185,7 @@ function CreateWarehousePage() {
                                         }
                                         className="pl-10"
                                         required
+                                        autoFocus
                                     />
                                 </div>
                             </div>

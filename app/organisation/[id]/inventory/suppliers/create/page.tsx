@@ -167,6 +167,7 @@ function CreateSupplierPage() {
                                         }
                                         className="pl-10"
                                         required
+                                        autoFocus
                                     />
                                 </div>
                             </div>

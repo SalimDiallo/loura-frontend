@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Switch } from "@/components/ui/switch";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCategories, useCreateCategory } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { CreateCategoryData } from "@/lib/types";
@@ -63,20 +64,16 @@ function CreateCategoryPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name) {
-            toast("Nom requis", { description: "Le nom est obligatoire." });
+            toast.error("Nom requis", { description: "Le nom est obligatoire." });
             return;
         }
         try {
             await createCategory.mutateAsync({ orgId, data: formData });
             toast.success("Catégorie créée avec succès !");
             router.push(`/organisation/${orgId}/inventory/categories`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description:
-                    error?.data?.name?.[0] ||
-                    error?.data?.detail ||
-                    error?.message ||
-                    "Impossible de créer la catégorie",
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -150,6 +147,7 @@ function CreateCategoryPage() {
                                         }
                                         className="pl-10"
                                         required
+                                        autoFocus
                                     />
                                 </div>
                             </div>

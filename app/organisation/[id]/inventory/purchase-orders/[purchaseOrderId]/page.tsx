@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getApiErrorMessage } from "@/lib/api";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
     useCancelPurchaseOrder,
@@ -166,9 +167,9 @@ function PurchaseOrderDetailPage() {
         try {
             await sendMutation.mutateAsync({ orgId, id: poId });
             toast.success("Commande validée. Elle est désormais en cours.");
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description: error?.data?.error || error?.message,
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -178,9 +179,9 @@ function PurchaseOrderDetailPage() {
             await cancelMutation.mutateAsync({ orgId, id: poId });
             toast.success("Commande annulée.");
             setShowCancel(false);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description: error?.data?.error || error?.message,
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -190,11 +191,23 @@ function PurchaseOrderDetailPage() {
             await deleteMutation.mutateAsync({ orgId, id: poId });
             toast.success("Commande supprimée.");
             router.push(`/organisation/${orgId}/inventory/purchase-orders`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description: error?.data?.error || error?.message,
+                description: getApiErrorMessage(error),
             });
         }
+    };
+
+    const fillAllRemaining = () => {
+        if (!po) return;
+        const filled: Record<string, string> = {};
+        for (const item of po.items) {
+            const remaining = Number(item.remaining_to_receive);
+            if (remaining > 0) {
+                filled[item.id] = String(remaining);
+            }
+        }
+        setReceiveQuantities(filled);
     };
 
     const handleReceive = async () => {
@@ -222,24 +235,29 @@ function PurchaseOrderDetailPage() {
                     notes: receiveNotes,
                 },
             });
-            toast.success("Réception enregistrée.");
+            toast.success("Réception enregistrée avec succès.");
             setReceiveQuantities({});
             setReceiveReference("");
             setReceiveNotes("");
-        } catch (error: any) {
-            toast.error("Erreur", {
-                description:
-                    error?.data?.lines?.[0] ||
-                    error?.data?.detail ||
-                    error?.message,
+        } catch (error: unknown) {
+            toast.error("Erreur de réception", {
+                description: getApiErrorMessage(error),
             });
         }
     };
 
     const handleRecordPayment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!payAmount || parseFloat(payAmount) <= 0) {
+        const amount = parseFloat(payAmount);
+        if (!payAmount || !Number.isFinite(amount) || amount <= 0) {
             toast("Montant invalide", { description: "Saisissez un montant > 0." });
+            return;
+        }
+        const outstanding = Number(po.outstanding_amount);
+        if (amount > outstanding + 0.001) {
+            toast("Montant trop élevé", {
+                description: `Le restant dû est de ${formatCurrency(outstanding)}. Vous ne pouvez pas dépasser ce montant.`,
+            });
             return;
         }
         try {
@@ -258,9 +276,9 @@ function PurchaseOrderDetailPage() {
             setPayAmount("");
             setPayReference("");
             setPayNotes("");
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description: error?.data?.detail || error?.message,
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -269,9 +287,9 @@ function PurchaseOrderDetailPage() {
         try {
             await deletePaymentMutation.mutateAsync({ orgId, id: poId, paymentId });
             toast.success("Paiement supprimé.");
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error("Erreur", {
-                description: error?.data?.detail || error?.message,
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -340,7 +358,7 @@ function PurchaseOrderDetailPage() {
                                     variant="outline"
                                     onClick={() =>
                                         router.push(
-                                            `/organisation/${orgId}/inventory/purchase-orders/${po.id}/edit`
+                                            `/organisation/${orgId}/inventory/purchase-orders/${poId}/edit`
                                         )
                                     }
                                     className="gap-2"
@@ -372,7 +390,7 @@ function PurchaseOrderDetailPage() {
                                 Annuler
                             </Button>
                         )}
-                        {canManage && po.status === "draft" && (
+                        {canManage && (
                             <Button
                                 variant="outline"
                                 onClick={() => setShowDelete(true)}
@@ -412,7 +430,7 @@ function PurchaseOrderDetailPage() {
                             <p
                                 className={`text-2xl font-bold ${Number(po.outstanding_amount) > 0 ? "text-red-700" : "text-muted-foreground"}`}
                             >
-                                {formatCurrency(Number(po.outstanding_amount))}
+                                {formatCurrency(Math.max(0, Number(po.outstanding_amount)))}
                             </p>
                         </CardContent>
                     </Card>
@@ -564,43 +582,98 @@ function PurchaseOrderDetailPage() {
                     <TabsContent value="receive">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-base">
-                                    Enregistrer une réception
-                                </CardTitle>
-                                <CardDescription>
-                                    Saisissez la quantité reçue pour chaque ligne. Un mouvement
-                                    de stock sera créé automatiquement.
-                                </CardDescription>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <CardTitle className="text-base">
+                                            Enregistrer une réception
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Saisissez la quantité reçue pour chaque ligne. Un
+                                            mouvement de stock sera créé automatiquement.
+                                        </CardDescription>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={fillAllRemaining}
+                                        disabled={receiveMutation.isPending}
+                                        className="shrink-0 gap-2"
+                                    >
+                                        <FaTruckLoading className="h-3.5 w-3.5" />
+                                        Tout recevoir
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-3">
                                     {po.items.map((item) => {
                                         const remaining = Number(item.remaining_to_receive);
-                                        const disabled = remaining <= 0;
+                                        const received = Number(item.quantity_received);
+                                        const ordered = Number(item.quantity_ordered);
+                                        const fullyReceived = item.is_fully_received;
+                                        const partiallyReceived =
+                                            !fullyReceived && received > 0;
+                                        const disabled =
+                                            remaining <= 0 || receiveMutation.isPending;
                                         return (
                                             <div
                                                 key={item.id}
-                                                className="flex items-center gap-3 p-3 border rounded-md"
+                                                className={`flex items-center gap-3 p-3 border rounded-md transition-colors ${
+                                                    fullyReceived
+                                                        ? "bg-green-50 border-green-200"
+                                                        : partiallyReceived
+                                                          ? "bg-amber-50 border-amber-200"
+                                                          : "bg-background"
+                                                }`}
                                             >
-                                                <div className="flex-1">
-                                                    <div className="font-medium text-sm">
-                                                        {item.product.name}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-medium text-sm">
+                                                            {item.product.name}
+                                                        </span>
+                                                        {fullyReceived && (
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="text-[10px] bg-green-50 text-green-700 border-green-200"
+                                                            >
+                                                                Reçu
+                                                            </Badge>
+                                                        )}
+                                                        {partiallyReceived && (
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="text-[10px] bg-amber-50 text-amber-700 border-amber-200"
+                                                            >
+                                                                Partiel
+                                                            </Badge>
+                                                        )}
                                                     </div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        Restant à recevoir :{" "}
-                                                        <span
-                                                            className={
-                                                                remaining > 0
-                                                                    ? "text-amber-700 font-semibold"
-                                                                    : "text-green-700"
-                                                            }
-                                                        >
-                                                            {remaining.toLocaleString("fr-FR")}{" "}
+                                                    <div className="text-xs text-muted-foreground mt-0.5">
+                                                        Commandé :{" "}
+                                                        <span className="font-medium">
+                                                            {ordered.toLocaleString("fr-FR")}{" "}
                                                             {item.product.unit_display.toLowerCase()}
                                                         </span>
+                                                        {received > 0 && (
+                                                            <>
+                                                                {" · "}Déjà reçu :{" "}
+                                                                <span className="font-medium text-green-700">
+                                                                    {received.toLocaleString("fr-FR")}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                        {remaining > 0 && (
+                                                            <>
+                                                                {" · "}Restant :{" "}
+                                                                <span className="font-medium text-amber-700">
+                                                                    {remaining.toLocaleString("fr-FR")}
+                                                                </span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="w-32">
+                                                <div className="w-28 shrink-0">
                                                     <Input
                                                         type="number"
                                                         min="0"
@@ -615,6 +688,11 @@ function PurchaseOrderDetailPage() {
                                                             })
                                                         }
                                                         disabled={disabled}
+                                                        className={
+                                                            fullyReceived
+                                                                ? "bg-muted/50 text-muted-foreground"
+                                                                : ""
+                                                        }
                                                     />
                                                 </div>
                                                 <Button
@@ -629,6 +707,7 @@ function PurchaseOrderDetailPage() {
                                                         })
                                                     }
                                                     title="Remplir avec la quantité restante"
+                                                    className="shrink-0 text-xs"
                                                 >
                                                     Tout
                                                 </Button>
@@ -639,7 +718,7 @@ function PurchaseOrderDetailPage() {
 
                                 <div className="grid gap-3 md:grid-cols-2 pt-3 border-t">
                                     <div className="space-y-2">
-                                        <Label htmlFor="receive_ref">Référence</Label>
+                                        <Label htmlFor="receive_ref">Référence (BL…)</Label>
                                         <Input
                                             id="receive_ref"
                                             placeholder="Bon de livraison, BL-..."
@@ -648,6 +727,7 @@ function PurchaseOrderDetailPage() {
                                                 setReceiveReference(e.target.value)
                                             }
                                             maxLength={100}
+                                            disabled={receiveMutation.isPending}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -656,14 +736,15 @@ function PurchaseOrderDetailPage() {
                                             id="receive_notes"
                                             value={receiveNotes}
                                             onChange={(e) => setReceiveNotes(e.target.value)}
+                                            disabled={receiveMutation.isPending}
                                         />
                                     </div>
                                 </div>
 
                                 <div className="flex justify-between items-center pt-3 border-t">
                                     <p className="text-sm text-muted-foreground">
-                                        Total à réceptionner :{" "}
-                                        <span className="font-semibold">
+                                        Quantité totale à enregistrer :{" "}
+                                        <span className="font-semibold text-foreground">
                                             {totalToReceive.toLocaleString("fr-FR")}
                                         </span>
                                     </p>
@@ -705,20 +786,41 @@ function PurchaseOrderDetailPage() {
                                             className="space-y-3"
                                         >
                                             <div className="space-y-2">
-                                                <Label htmlFor="pay_amount">Montant *</Label>
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="pay_amount">Montant *</Label>
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs text-primary hover:underline"
+                                                        onClick={() =>
+                                                            setPayAmount(
+                                                                String(
+                                                                    Math.max(
+                                                                        0,
+                                                                        Number(po.outstanding_amount)
+                                                                    )
+                                                                )
+                                                            )
+                                                        }
+                                                    >
+                                                        Tout payer
+                                                    </button>
+                                                </div>
                                                 <Input
                                                     id="pay_amount"
                                                     type="number"
                                                     step="0.01"
                                                     min="0.01"
-                                                    max={Number(po.outstanding_amount)}
+                                                    max={Math.max(0, Number(po.outstanding_amount))}
                                                     value={payAmount}
                                                     onChange={(e) => setPayAmount(e.target.value)}
                                                     required
+                                                    autoFocus
                                                 />
                                                 <p className="text-xs text-muted-foreground">
                                                     Restant dû :{" "}
-                                                    {formatCurrency(Number(po.outstanding_amount))}
+                                                    {formatCurrency(
+                                                        Math.max(0, Number(po.outstanding_amount))
+                                                    )}
                                                 </p>
                                             </div>
                                             <div className="space-y-2">
@@ -961,13 +1063,24 @@ function PurchaseOrderDetailPage() {
             <Dialog open={showDelete} onOpenChange={setShowDelete}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Supprimer ce brouillon ?</DialogTitle>
+                        <DialogTitle>Supprimer cette commande ?</DialogTitle>
                         <DialogDescription>
-                            Cette action est irréversible. Le brouillon{" "}
-                            <span className="font-mono font-semibold">
-                                {po.order_number}
-                            </span>{" "}
-                            sera définitivement supprimé.
+                            {po.status !== "draft" ? (
+                                <>
+                                    Cette commande a reçu de la marchandise : la
+                                    suppression corrigera le stock en conséquence.
+                                    Action réversible via la corbeille.
+                                </>
+                            ) : (
+                                <>
+                                    La commande{" "}
+                                    <span className="font-mono font-semibold">
+                                        {po.order_number}
+                                    </span>{" "}
+                                    sera déplacée dans la corbeille. Vous pourrez
+                                    la restaurer à tout moment.
+                                </>
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

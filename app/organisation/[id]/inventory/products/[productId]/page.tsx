@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import { FormPageLayout } from "@/components/layout/FormPageLayout";
 import { PermissionGuard } from "@/components/permissions";
 import { AuditFootprint } from "@/components/services/AuditBadge";
@@ -12,19 +13,12 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Switch } from "@/components/ui/switch";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
     useCategories,
@@ -118,13 +112,9 @@ function ProductDetailPage() {
         try {
             await updateProduct.mutateAsync({ orgId, productId, data: formData });
             toast.success("Produit mis à jour.");
-        } catch (error: any) {
-            toast.error("Erreur", {
-                description:
-                    error?.data?.sku?.[0] ||
-                    error?.data?.detail ||
-                    error?.message ||
-                    "Impossible de mettre à jour",
+        } catch (error: unknown) {
+            toast.error("Impossible de mettre à jour", {
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -132,14 +122,11 @@ function ProductDetailPage() {
     const handleDelete = async () => {
         try {
             await deleteProduct.mutateAsync({ orgId, productId });
-            toast.success("Produit supprimé.");
+            toast.success("Produit déplacé dans la corbeille.");
             router.push(`/organisation/${orgId}/inventory/products`);
-        } catch (error: any) {
-            toast.error("Erreur", {
-                description:
-                    error?.data?.detail ||
-                    error?.message ||
-                    "Impossible de supprimer",
+        } catch (error: unknown) {
+            toast.error("Suppression impossible", {
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -150,9 +137,9 @@ function ProductDetailPage() {
         try {
             await uploadImage.mutateAsync({ orgId, productId, file });
             toast.success("Image mise à jour.");
-        } catch (error: any) {
-            toast.error("Erreur", {
-                description: error?.message || "Upload impossible",
+        } catch (error: unknown) {
+            toast.error("Upload impossible", {
+                description: getApiErrorMessage(error),
             });
         } finally {
             if (imageInputRef.current) imageInputRef.current.value = "";
@@ -163,9 +150,9 @@ function ProductDetailPage() {
         try {
             await deleteImage.mutateAsync({ orgId, productId });
             toast.success("Image supprimée.");
-        } catch (error: any) {
-            toast.error("Erreur", {
-                description: error?.message || "Suppression impossible",
+        } catch (error: unknown) {
+            toast.error("Suppression impossible", {
+                description: getApiErrorMessage(error),
             });
         }
     };
@@ -341,6 +328,7 @@ function ProductDetailPage() {
                                         }
                                         className="pl-10"
                                         required
+                                        autoFocus
                                     />
                                 </div>
                             </div>
@@ -581,34 +569,19 @@ function ProductDetailPage() {
                 </CardContent>
             </Card>
 
-            <Dialog open={showDelete} onOpenChange={setShowDelete}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Supprimer le produit</DialogTitle>
-                        <DialogDescription>
-                            Voulez-vous supprimer{" "}
-                            <span className="font-semibold">{product.name}</span> ? Cette
-                            action est irréversible.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowDelete(false)}>
-                            Annuler
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={deleteProduct.isPending}
-                            className="gap-2"
-                        >
-                            {deleteProduct.isPending && (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            )}
-                            Supprimer
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDeleteDialog
+                open={showDelete}
+                onOpenChange={setShowDelete}
+                title="Supprimer le produit ?"
+                description={
+                    <>
+                        « {product.name} » sera déplacé dans la corbeille.
+                        Vous pourrez le restaurer à tout moment.
+                    </>
+                }
+                pending={deleteProduct.isPending}
+                onConfirm={handleDelete}
+            />
         </FormPageLayout>
     );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmDeleteDialog } from "@/components/layout/ConfirmDeleteDialog";
 import {
     ListPageLayout,
     ListPagination,
@@ -8,6 +9,7 @@ import {
     ListTable,
     ListTableColumn,
 } from "@/components/layout/ListPageLayout";
+import { ListSelectionBar } from "@/components/layout/ListSelectionBar";
 import {
     Can,
     PermissionGuard,
@@ -15,17 +17,28 @@ import {
 } from "@/components/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ShortcutsHelpModal } from "@/components/ui/shortcuts-help";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/api/error-message";
+import { useBulkSelection } from "@/lib/hooks/use-bulk-selection";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import {
+    type KeyboardShortcut,
+    useKeyboardShortcuts,
+} from "@/lib/hooks/use-keyboard-shortcuts";
+import {
+    useDeleteExpense,
     usePaginatedExpenses,
     useRestoreExpense,
     useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
+import type { Expense } from "@/lib/types";
 import { formatCurrency } from "@/utils/formatters";
+import { Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
     FaCalendarAlt,
     FaCoins,
@@ -65,9 +78,16 @@ function ExpensesPage() {
   const canManage = can(PERMISSIONS.EXPENSES.MANAGE);
 
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [filterOpen, setFilterOpen] = useState(false);
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [showTrash, setShowTrash] = useState(false);
+  const [toDelete, setToDelete] = useState<Expense | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { data: warehouses = [] } = useWarehouses(orgId, {
     page_size: "all",
@@ -76,14 +96,31 @@ function ExpensesPage() {
 
   const stableFilters = useMemo(
     () => ({
-      search: search || undefined,
+      search: debouncedSearch || undefined,
       warehouse: warehouseFilter || undefined,
       deleted: showTrash ? "true" : undefined,
     }),
-    [search, warehouseFilter, showTrash]
+    [debouncedSearch, warehouseFilter, showTrash]
   );
 
   const restoreExpense = useRestoreExpense();
+  const deleteExpense = useDeleteExpense();
+
+  const {
+    data: expenses,
+    meta,
+    setPage,
+    nextPage,
+    prevPage,
+    isLoading,
+    error,
+  } = usePaginatedExpenses(orgId, stableFilters, { pageSize: 10 });
+
+  const selection = useBulkSelection(expenses.map((e) => e.id));
+  useEffect(() => {
+    selection.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, warehouseFilter, showTrash, meta.currentPage]);
 
   const handleRestore = (id: string) => {
     restoreExpense.mutate(
@@ -98,15 +135,78 @@ function ExpensesPage() {
     );
   };
 
-  const {
-    data: expenses,
-    meta,
-    setPage,
-    nextPage,
-    prevPage,
-    isLoading,
-    error,
-  } = usePaginatedExpenses(orgId, stableFilters, { pageSize: 10 });
+  const handleConfirmDelete = () => {
+    if (!toDelete) return;
+    deleteExpense.mutate(
+      { orgId, id: toDelete.id },
+      {
+        onSuccess: () => {
+          toast.success("Dépense déplacée dans la corbeille.");
+          setToDelete(null);
+        },
+        onError: (err) =>
+          toast.error("Suppression impossible", {
+            description: getApiErrorMessage(err),
+          }),
+      }
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = selection.ids;
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    const results: PromiseSettledResult<unknown>[] = [];
+    for (const id of ids) {
+        try {
+            await deleteExpense.mutateAsync({ orgId, id });
+            results.push({ status: "fulfilled", value: undefined });
+        } catch (e) {
+            results.push({ status: "rejected", reason: e });
+        }
+    }
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - ok;
+    setBulkDeleting(false);
+    setBulkOpen(false);
+    selection.clear();
+    if (failed === 0) {
+      toast.success(
+        `${ok} dépense${ok > 1 ? "s" : ""} déplacée${ok > 1 ? "s" : ""} dans la corbeille.`
+      );
+    } else {
+      toast.error(`${ok} supprimée${ok > 1 ? "s" : ""}, ${failed} en échec.`, {
+        description: "Réessayez pour les éléments restants.",
+      });
+    }
+  };
+
+  const shortcuts = useMemo<KeyboardShortcut[]>(() => {
+    const list: KeyboardShortcut[] = [
+      {
+        key: "/",
+        description: "Aller à la recherche",
+        handler: () => searchInputRef.current?.focus(),
+      },
+      {
+        key: "?",
+        shift: true,
+        description: "Afficher l'aide des raccourcis",
+        handler: () => setShowShortcuts((v) => !v),
+      },
+    ];
+    if (canManage && !showTrash) {
+      list.unshift({
+        key: "n",
+        description: "Nouvelle dépense",
+        handler: () =>
+          router.push(`/organisation/${orgId}/inventory/expenses/create`),
+      });
+    }
+    return list;
+  }, [canManage, showTrash, orgId, router]);
+
+  useKeyboardShortcuts(shortcuts);
 
   if (error) {
     return (
@@ -124,8 +224,10 @@ function ExpensesPage() {
     (sum, e) => sum + Number(e.amount || 0),
     0
   );
+  const showSelection = canManage && !showTrash;
 
   return (
+    <>
     <ListPageLayout
       title={showTrash ? "Dépenses — Corbeille" : "Dépenses"}
       icon={showTrash ? FaTrashRestore : FaCoins}
@@ -172,6 +274,7 @@ function ExpensesPage() {
         <ListSearchFilters
           searchValue={search}
           onSearchChange={setSearch}
+          searchInputRef={searchInputRef}
           searchPlaceholder="Rechercher dans description, motif, notes..."
           filtersOpen={filterOpen}
           onFiltersOpenChange={setFilterOpen}
@@ -238,8 +341,40 @@ function ExpensesPage() {
             )
           ) : (
             <>
+            {showSelection && (
+              <ListSelectionBar
+                count={selection.count}
+                label={`${selection.count} dépense${selection.count > 1 ? "s" : ""} sélectionnée${selection.count > 1 ? "s" : ""}`}
+                onClear={selection.clear}
+                onDelete={() => setBulkOpen(true)}
+              />
+            )}
             <ListTable
               columns={[
+                ...(showSelection
+                  ? [
+                      <ListTableColumn
+                        key="select"
+                        header={
+                          <Checkbox
+                            checked={selection.allSelected}
+                            onCheckedChange={selection.toggleAll}
+                            aria-label="Tout sélectionner"
+                          />
+                        }
+                      >
+                        {({ value: e }) => (
+                          <div onClick={(ev) => ev.stopPropagation()}>
+                            <Checkbox
+                              checked={selection.selected.has(e.id)}
+                              onCheckedChange={() => selection.toggleOne(e.id)}
+                              aria-label="Sélectionner la dépense"
+                            />
+                          </div>
+                        )}
+                      </ListTableColumn>,
+                    ]
+                  : []),
                 <ListTableColumn key="desc" header="Description">
                   {({ value: e }) => (
                     <div>
@@ -344,6 +479,28 @@ function ExpensesPage() {
                         }
                       </ListTableColumn>,
                     ]
+                  : canManage
+                  ? [
+                      <ListTableColumn key="actions" header="" align="right">
+                        {({ value: e }) => (
+                          <div
+                            className="flex items-center justify-end"
+                            onClick={(ev) => ev.stopPropagation()}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              title="Supprimer la dépense"
+                              aria-label="Supprimer la dépense"
+                              onClick={() => setToDelete(e)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </ListTableColumn>,
+                    ]
                   : []),
               ]}
               data={expenses}
@@ -367,5 +524,36 @@ function ExpensesPage() {
         </>
       }
     />
+
+      <ConfirmDeleteDialog
+        open={!!toDelete}
+        onOpenChange={() => setToDelete(null)}
+        title="Supprimer la dépense ?"
+        description={
+          <>
+            «&nbsp;{toDelete?.description}&nbsp;» sera déplacée dans la
+            corbeille. Vous pourrez la restaurer à tout moment.
+          </>
+        }
+        pending={deleteExpense.isPending}
+        onConfirm={handleConfirmDelete}
+      />
+
+      <ConfirmDeleteDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        title={`Supprimer ${selection.count} dépense${selection.count > 1 ? "s" : ""} ?`}
+        description="Les dépenses sélectionnées seront déplacées dans la corbeille. Vous pourrez les restaurer à tout moment."
+        pending={bulkDeleting}
+        onConfirm={handleBulkDelete}
+      />
+
+      <ShortcutsHelpModal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        shortcuts={shortcuts}
+        title="Raccourcis — Dépenses"
+      />
+    </>
   );
 }
