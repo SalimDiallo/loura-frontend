@@ -13,7 +13,9 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { CodeGeneratorButton } from "@/components/ui/code-generator-button";
 import { Input } from "@/components/ui/input";
+import { makeBarcodeEAN13, makeSku } from "@/lib/code-generator";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
@@ -334,29 +336,50 @@ function ProductDetailPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="sku">SKU *</Label>
-                                <Input
-                                    id="sku"
-                                    value={formData.sku || ""}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, sku: e.target.value })
-                                    }
-                                    required
-                                    maxLength={64}
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="sku"
+                                        value={formData.sku || ""}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, sku: e.target.value })
+                                        }
+                                        required
+                                        maxLength={64}
+                                        className="flex-1"
+                                    />
+                                    <CodeGeneratorButton
+                                        title="Générer un SKU"
+                                        onGenerate={() =>
+                                            setFormData((f) => ({ ...f, sku: makeSku(f.name) }))
+                                        }
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="barcode">
                                     <Barcode className="inline h-3.5 w-3.5 mr-1" />
                                     Code-barres
                                 </Label>
-                                <Input
-                                    id="barcode"
-                                    value={formData.barcode || ""}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, barcode: e.target.value })
-                                    }
-                                    maxLength={64}
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="barcode"
+                                        value={formData.barcode || ""}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, barcode: e.target.value })
+                                        }
+                                        maxLength={64}
+                                        className="flex-1"
+                                    />
+                                    <CodeGeneratorButton
+                                        title="Générer un code-barres (EAN-13)"
+                                        onGenerate={() =>
+                                            setFormData((f) => ({
+                                                ...f,
+                                                barcode: makeBarcodeEAN13(),
+                                            }))
+                                        }
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="description">Description</Label>

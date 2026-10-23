@@ -10,7 +10,9 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { CodeGeneratorButton } from "@/components/ui/code-generator-button";
 import { Input } from "@/components/ui/input";
+import { makeCode } from "@/lib/code-generator";
 import { Label } from "@/components/ui/label";
 import { SmartSelector, type SmartSelectorItem } from "@/components/ui/smart-selector";
 import { Switch } from "@/components/ui/switch";
@@ -191,19 +193,31 @@ function CreateWarehousePage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="code">Code *</Label>
-                                <Input
-                                    id="code"
-                                    placeholder="WH-001"
-                                    value={formData.code}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            code: e.target.value.toUpperCase(),
-                                        })
-                                    }
-                                    required
-                                    maxLength={20}
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="code"
+                                        placeholder="WH-001"
+                                        value={formData.code}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                code: e.target.value.toUpperCase(),
+                                            })
+                                        }
+                                        required
+                                        maxLength={20}
+                                        className="flex-1"
+                                    />
+                                    <CodeGeneratorButton
+                                        title="Générer un code entrepôt"
+                                        onGenerate={() =>
+                                            setFormData((f) => ({
+                                                ...f,
+                                                code: makeCode({ name: f.name, prefix: "WH" }),
+                                            }))
+                                        }
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="description">Description</Label>

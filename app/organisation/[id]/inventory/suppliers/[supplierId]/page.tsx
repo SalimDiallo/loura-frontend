@@ -19,7 +19,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { CodeGeneratorButton } from "@/components/ui/code-generator-button";
 import { Input } from "@/components/ui/input";
+import { makeCode } from "@/lib/code-generator";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -267,18 +269,31 @@ function SupplierDetailPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="code">Code interne</Label>
-                                    <Input
-                                        id="code"
-                                        value={formData.code || ""}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                code: e.target.value.toUpperCase(),
-                                            })
-                                        }
-                                        maxLength={30}
-                                        disabled={!canManage}
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="code"
+                                            value={formData.code || ""}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    code: e.target.value.toUpperCase(),
+                                                })
+                                            }
+                                            maxLength={30}
+                                            disabled={!canManage}
+                                            className="flex-1"
+                                        />
+                                        <CodeGeneratorButton
+                                            title="Générer un code fournisseur"
+                                            disabled={!canManage}
+                                            onGenerate={() =>
+                                                setFormData((f) => ({
+                                                    ...f,
+                                                    code: makeCode({ name: f.name, prefix: "FOUR" }),
+                                                }))
+                                            }
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="tax_id">NIF / TVA</Label>

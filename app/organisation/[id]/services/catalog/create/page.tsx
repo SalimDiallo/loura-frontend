@@ -11,7 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CodeGeneratorButton } from "@/components/ui/code-generator-button";
 import { Input } from "@/components/ui/input";
+import { makeCode } from "@/lib/code-generator";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import {
@@ -207,12 +209,21 @@ function CreateServicePage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="code">Code interne</Label>
-              <Input
-                id="code"
-                value={form.code ?? ""}
-                onChange={(e) => setField("code", e.target.value)}
-                placeholder="SRV-001"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="code"
+                  value={form.code ?? ""}
+                  onChange={(e) => setField("code", e.target.value)}
+                  placeholder="SRV-001"
+                  className="flex-1"
+                />
+                <CodeGeneratorButton
+                  title="Générer un code service"
+                  onGenerate={() =>
+                    setField("code", makeCode({ name: form.name, prefix: "SRV" }))
+                  }
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

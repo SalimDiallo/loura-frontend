@@ -10,9 +10,11 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { CodeGeneratorButton } from "@/components/ui/code-generator-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { makeCode } from "@/lib/code-generator";
 import { useCreateSupplier } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import type { CreateSupplierData } from "@/lib/types";
@@ -173,18 +175,30 @@ function CreateSupplierPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="code">Code interne</Label>
-                                <Input
-                                    id="code"
-                                    placeholder="FOUR-001 (optionnel)"
-                                    value={formData.code || ""}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            code: e.target.value.toUpperCase(),
-                                        })
-                                    }
-                                    maxLength={30}
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="code"
+                                        placeholder="FOUR-001 (optionnel)"
+                                        value={formData.code || ""}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                code: e.target.value.toUpperCase(),
+                                            })
+                                        }
+                                        maxLength={30}
+                                        className="flex-1"
+                                    />
+                                    <CodeGeneratorButton
+                                        title="Générer un code fournisseur"
+                                        onGenerate={() =>
+                                            setFormData((f) => ({
+                                                ...f,
+                                                code: makeCode({ name: f.name, prefix: "FOUR" }),
+                                            }))
+                                        }
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="tax_id">NIF / TVA</Label>
