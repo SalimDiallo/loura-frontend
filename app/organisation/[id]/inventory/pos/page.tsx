@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrencyFormatter } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
 import { useCustomers } from "@/lib/hooks/hr";
 import {
     useCategories,
@@ -280,6 +281,8 @@ function POSPage() {
     const [showInstallments, setShowInstallments] = useState(false);
     const [showNotes, setShowNotes] = useState(false);
     const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+    // Tiroir panier (mobile/tablette < lg) : en desktop le panier est latéral.
+    const [mobileCartOpen, setMobileCartOpen] = useState(false);
 
     // Dernière vente encaissée : déclenche la modale de succès (aperçu facture).
     const [lastSale, setLastSale] = useState<
@@ -369,6 +372,8 @@ function POSPage() {
             });
             return;
         }
+        // Referme le tiroir mobile pour laisser place à la modale de confirmation.
+        setMobileCartOpen(false);
         setShowCheckoutConfirm(true);
     };
 
@@ -437,6 +442,7 @@ function POSPage() {
             setDueDate("");
             setInstallments([]);
             setShowCheckoutConfirm(false);
+            setMobileCartOpen(false);
         } catch (error: any) {
             toast.error("Erreur lors de l'encaissement", {
                 description:
@@ -491,7 +497,7 @@ function POSPage() {
             shortcuts={shortcuts}
             title="Raccourcis — Ventes rapides"
         />
-        <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
+        <div className="h-[calc(100dvh-4rem)] flex flex-col lg:flex-row gap-3 lg:gap-4 p-3 lg:p-4 overflow-hidden">
             {/* ──── Grille produits ──── */}
             <div className="flex-1 flex flex-col gap-4 min-w-0">
                 {/* Header POS */}
@@ -501,7 +507,7 @@ function POSPage() {
                             <FaReceipt className="h-5 w-5" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold">Ventes rapide</h1>
+                            <h1 className="text-lg sm:text-xl font-bold">Ventes rapides</h1>
                             <p className="text-xs text-muted-foreground">
                                 Encaissement comptant ou crédit
                             </p>
@@ -513,7 +519,7 @@ function POSPage() {
                             <select
                                 value={warehouseId}
                                 onChange={(e) => setWarehouseId(e.target.value)}
-                                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                className="h-9 max-w-[45vw] sm:max-w-[200px] truncate rounded-md border border-input bg-background px-3 text-sm"
                             >
                                 {warehouses.map((w) => (
                                     <option key={w.id} value={w.id}>
@@ -654,10 +660,59 @@ function POSPage() {
                 </div>
             </div>
 
+            {/* ──── Barre panier (mobile/tablette) : ouvre le tiroir ──── */}
+            {cart.length > 0 && (
+                <button
+                    type="button"
+                    onClick={() => setMobileCartOpen(true)}
+                    className="lg:hidden shrink-0 flex items-center justify-between gap-3 rounded-xl bg-primary px-4 h-14 text-primary-foreground shadow-lg active:scale-[0.99] transition"
+                    aria-label="Ouvrir le panier"
+                >
+                    <span className="flex items-center gap-2 font-semibold">
+                        <ShoppingCart className="h-5 w-5" />
+                        Voir le panier · {cart.length} article
+                        {cart.length > 1 ? "s" : ""}
+                    </span>
+                    <span className="font-bold">{formatCurrency(totals.total)}</span>
+                </button>
+            )}
+
+            {/* Overlay mobile derrière le tiroir */}
+            {mobileCartOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+                    onClick={() => setMobileCartOpen(false)}
+                    aria-hidden
+                />
+            )}
+
             {/* ──── Panier ──── */}
-            <Card className="lg:w-[420px] flex flex-col h-full overflow-hidden" data-tour="pos-cart">
+            <Card
+                data-tour="pos-cart"
+                className={cn(
+                    "flex flex-col overflow-hidden gap-0 py-0",
+                    // Mobile/tablette : tiroir plein écran coulissant par le bas.
+                    "fixed inset-x-0 bottom-0 z-50 h-[88dvh] rounded-t-2xl border-t shadow-2xl transition-transform duration-300 ease-out",
+                    // Desktop (lg+) : panier latéral statique.
+                    "lg:static lg:z-auto lg:h-full lg:w-[420px] lg:rounded-xl lg:border lg:shadow-none lg:transition-none",
+                    mobileCartOpen
+                        ? "translate-y-0"
+                        : "translate-y-full lg:translate-y-0"
+                )}
+            >
+                {/* Poignée de glissement (mobile uniquement) */}
+                <div className="lg:hidden mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-muted" />
                 <div className="p-3 border-b flex items-center justify-between">
                     <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setMobileCartOpen(false)}
+                            className="lg:hidden h-7 w-7 p-0 -ml-1"
+                            aria-label="Fermer le panier"
+                        >
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
                         <ShoppingCart className="h-4 w-4" />
                         <span className="font-semibold text-sm">
                             Panier ({cart.length})
