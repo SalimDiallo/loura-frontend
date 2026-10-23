@@ -203,6 +203,8 @@ interface MenuItem {
   url: string;
   icon: React.ElementType;
   requiredPermission?: string | string[];
+  /** Entrée secondaire : masquée sous un repli « Plus… » dans le groupe. */
+  secondary?: boolean;
 }
 
 interface MenuGroup {
@@ -246,64 +248,77 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
       defaultOpen: false,
       requiredModule: "hr",
       items: [
-        { 
-          title: "Vue d'ensemble", 
-          url: `${b}/hr`, 
-          icon: FaClipboardList, 
-          active: "/hr"
-        },
-        { 
-          title: "Départements", 
-          url: `${b}/hr/departments`, 
-          icon: FaBriefcase, 
-          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
-          active: "/hr/departments"
-        },
-        { 
-          title: "Postes", 
-          url: `${b}/hr/positions`, 
-          icon: FaBriefcase, 
-          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
-          active: "/hr/positions"
-        },
-        { 
-          title: "Employés", 
-          url: `${b}/hr/employees`, 
-          icon: FaUserCheck, 
+        // ── Essentiel (toujours visible) ──────────────────────────────
+        {
+          title: "Employés",
+          url: `${b}/hr/employees`,
+          icon: FaUserCheck,
           requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
           active: "/hr/employees"
         },
-        { 
-          title: "Rôles & Permissions", 
-          url: `${b}/hr/roles`, 
-          icon: FaBriefcase, 
+        {
+          title: "Rôles & Permissions",
+          url: `${b}/hr/roles`,
+          icon: FaBriefcase,
           requiredPermission: PERMISSIONS.HR.MANAGE_ROLES,
           active: "/hr/roles"
         },
-        { 
-          title: "Paie", 
-          url: `${b}/hr/payroll`, 
-          icon: FaCreditCard,
-          active: "/hr/payroll"
-        },
-        { 
-          title: "Contrats", 
-          url: `${b}/hr/contracts`, 
+        // ── Secondaire (replié sous « Plus… ») ────────────────────────
+        {
+          title: "Vue d'ensemble",
+          url: `${b}/hr`,
           icon: FaClipboardList,
-          active: "/hr/contracts"
+          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
+          active: "/hr",
+          secondary: true
         },
-        { 
-          title: "Congés", 
-          url: `${b}/hr/leaves`, 
+        {
+          title: "Départements",
+          url: `${b}/hr/departments`,
+          icon: FaBriefcase,
+          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
+          active: "/hr/departments",
+          secondary: true
+        },
+        {
+          title: "Postes",
+          url: `${b}/hr/positions`,
+          icon: FaBriefcase,
+          requiredPermission: PERMISSIONS.HR.VIEW_EMPLOYEES,
+          active: "/hr/positions",
+          secondary: true
+        },
+        {
+          title: "Paie",
+          url: `${b}/hr/payroll`,
+          icon: FaCreditCard,
+          requiredPermission: PERMISSIONS.PAYMENTS.VIEW,
+          active: "/hr/payroll",
+          secondary: true
+        },
+        {
+          title: "Contrats",
+          url: `${b}/hr/contracts`,
+          icon: FaClipboardList,
+          requiredPermission: PERMISSIONS.CONTRACTS.VIEW,
+          active: "/hr/contracts",
+          secondary: true
+        },
+        {
+          title: "Congés",
+          url: `${b}/hr/leaves`,
           icon: FaUmbrellaBeach,
-          active: "/hr/leaves"
+          requiredPermission: PERMISSIONS.LEAVES.VIEW,
+          active: "/hr/leaves",
+          secondary: true
         },
         {
           title: "Clients",
           url: `${b}/hr/clients`,
           icon: FaUserCheck,
           requiredPermission: PERMISSIONS.CUSTOMERS.VIEW,
-          active: "/hr/clients"
+          active: "/hr/clients",
+          secondary: true
         },
         // { title: "Pointage", url: `${b}/hr/attendance`, icon: FaClock },
       ],
@@ -341,14 +356,16 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           url: `${b}/inventory/credit-sales`, 
           icon: FaCreditCard,
           requiredPermission: PERMISSIONS.SALES.VIEW,
-          active: "/inventory/credit-sales"
+          active: "/inventory/credit-sales",
+          secondary: true
         },
         { 
           title: "Approvisionnements", 
           url: `${b}/inventory/purchase-orders`, 
           icon: FaTruck,
           requiredPermission: PERMISSIONS.PURCHASE_ORDERS.VIEW,
-          active: "/inventory/purchase-orders"
+          active: "/inventory/purchase-orders",
+          secondary: true
         },
         // { 
         //   title: "Dépenses", 
@@ -368,56 +385,64 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           url: `${b}/inventory/categories`, 
           icon: FaTags,
           requiredPermission: PERMISSIONS.PRODUCT_CATEGORIES.VIEW,
-          active: "/inventory/categories"
+          active: "/inventory/categories",
+          secondary: true
         },
         { 
           title: "Fournisseurs", 
           url: `${b}/inventory/suppliers`, 
           icon: FaUserCheck,
           requiredPermission: PERMISSIONS.SUPPLIERS.VIEW,
-          active: "/inventory/suppliers"
+          active: "/inventory/suppliers",
+          secondary: true
         },
         { 
           title: "Devis & Pro Forma", 
           url: `${b}/inventory/quotes`, 
           icon: FaDochub,
           requiredPermission: PERMISSIONS.SALES.VIEW,
-          active: "/inventory/quotes"
+          active: "/inventory/quotes",
+          secondary: true
         },
         {
           title: "Entrepôts",
           url: `${b}/inventory/warehouses`, 
           icon: FaWarehouse,
           requiredPermission: PERMISSIONS.WAREHOUSES.VIEW,
-          active: "/inventory/warehouses"
+          active: "/inventory/warehouses",
+          secondary: true
         },
         { 
           title: "Inventaires (Stock)", 
           url: `${b}/inventory/inventories`, 
           icon: FaBoxOpen,
           requiredPermission: PERMISSIONS.STOCK.VIEW,
-          active: "/inventory/inventories"
+          active: "/inventory/inventories",
+          secondary: true
         },
         { 
           title: "Inventaires physiques", 
           url: `${b}/inventory/physical-inventories`, 
           icon: FaClipboardCheck, 
           requiredPermission: PERMISSIONS.STOCK.VIEW,
-          active: "/inventory/physical-inventories"
+          active: "/inventory/physical-inventories",
+          secondary: true
         },
         { 
           title: "Alertes", 
           url: `${b}/inventory/alerts`, 
           icon: FaExclamationTriangle,
           requiredPermission: PERMISSIONS.STOCK.VIEW,
-          active: "/inventory/alerts"
+          active: "/inventory/alerts",
+          secondary: true
         },
         {
           title: "Dépenses",
           url: `${b}/inventory/expenses`,
           icon: FaCoins,
           requiredPermission: PERMISSIONS.EXPENSES.VIEW,
-          active: "/inventory/expenses"
+          active: "/inventory/expenses",
+          secondary: true
         },
         {
           title: "Caisse",
@@ -431,7 +456,8 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           url: `${b}/inventory/reports`,
           icon: FaChartBar,
           requiredPermission: PERMISSIONS.INVENTORY_REPORTS.VIEW,
-          active: "/inventory/reports"
+          active: "/inventory/reports",
+          secondary: true
         },
       ],
 
@@ -462,7 +488,8 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           url: `${b}/services/categories`,
           icon: FaSitemap,
           requiredPermission: PERMISSIONS.SERVICE_CATEGORIES.VIEW,
-          active: "/services/categories"
+          active: "/services/categories",
+          secondary: true
         },
         {
           title: "Dossiers clients",
@@ -476,28 +503,32 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           url: `${b}/services/workflow`,
           icon: FaProjectDiagram,
           requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
-          active: "/services/workflow"
+          active: "/services/workflow",
+          secondary: true
         },
         {
           title: "Transactions",
           url: `${b}/services/transactions`,
           icon: FaMoneyBillWave,
           requiredPermission: PERMISSIONS.SERVICE_TRANSACTIONS.VIEW,
-          active: "/services/transactions"
+          active: "/services/transactions",
+          secondary: true
         },
         {
           title: "Journal d'activité",
           url: `${b}/services/activity`,
           icon: FaHistory,
           requiredPermission: PERMISSIONS.SERVICE_ENROLLMENTS.VIEW,
-          active: "/services/activity"
+          active: "/services/activity",
+          secondary: true
         },
         {
           title: "Rapports",
           url: `${b}/services/reports`,
           icon: FaChartBar,
           requiredPermission: PERMISSIONS.SERVICE_REPORTS.VIEW,
-          active: "/services/reports"
+          active: "/services/reports",
+          secondary: true
         },
       ],
     },
@@ -656,11 +687,38 @@ function NavGroup({
   smart: SmartSidebarState;
   onLinkClick: (url: string) => void;
 }) {
+  const [showMore, setShowMore] = useState(false);
+
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return group.items;
     return group.items.filter((i) => i.title.toLowerCase().includes(q));
   }, [group.items, query]);
+
+  const searching = query.trim().length > 0;
+  const primaryItems = useMemo(
+    () => filteredItems.filter((i) => !i.secondary),
+    [filteredItems]
+  );
+  const secondaryItems = useMemo(
+    () => filteredItems.filter((i) => i.secondary),
+    [filteredItems]
+  );
+  // On révèle le secondaire si : l'utilisateur a cliqué « Plus… », une
+  // recherche est active, il n'y a aucun item principal, OU la page active
+  // est elle-même une entrée secondaire (sinon elle serait invisible).
+  const activeInSecondary = useMemo(
+    () => secondaryItems.some((i) => isRouteActive(pathname, i.active)),
+    [secondaryItems, pathname]
+  );
+  const revealSecondary =
+    searching || showMore || primaryItems.length === 0 || activeInSecondary;
+  const shownSecondary = revealSecondary ? secondaryItems : [];
+  const showMoreToggle =
+    !searching &&
+    !activeInSecondary &&
+    primaryItems.length > 0 &&
+    secondaryItems.length > 0;
 
   const hasActiveItem = useMemo(
     () => group.items.some((item) => isRouteActive(pathname, item.active)),
@@ -699,7 +757,7 @@ function NavGroup({
         <CollapsibleContent className="transition-all duration-200 ease-out data-[state=closed]:animate-none">
           <SidebarGroupContent className="mt-0.5">
             <SidebarMenu>
-              {filteredItems.map((item) => (
+              {[...primaryItems, ...shownSecondary].map((item) => (
                 <SmartMenuItem
                   key={item.url}
                   item={item}
@@ -709,6 +767,28 @@ function NavGroup({
                   onLinkClick={onLinkClick}
                 />
               ))}
+              {showMoreToggle && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="sm"
+                    onClick={() => setShowMore((v) => !v)}
+                    className="ml-1 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground"
+                    tooltip={showMore ? "Voir moins" : "Plus…"}
+                  >
+                    <FaChevronDown
+                      className={cn(
+                        "size-3! opacity-50 transition-transform duration-200",
+                        !showMore && "-rotate-90"
+                      )}
+                    />
+                    <span>
+                      {showMore
+                        ? "Voir moins"
+                        : `Plus… (${secondaryItems.length})`}
+                    </span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </CollapsibleContent>
@@ -977,7 +1057,12 @@ function OrgSideBarInner({
           return canAny(perms);
         }),
       }))
-      .filter((group) => group.items.length > 0);
+      .filter((group) => group.items.length > 0)
+      // RH plus discret : on le repousse en bas du menu (tri stable, le
+      // reste conserve son ordre). Le groupe est déjà replié par défaut
+      // (defaultOpen: false) et masqué si l'utilisateur n'a aucune
+      // permission RH (tous ses items sont alors filtrés).
+      .sort((a, b) => (a.id === "hr" ? 1 : 0) - (b.id === "hr" ? 1 : 0));
   }, [orgId, canAny, isOwner, permsLoading, org, installedModules]);
 
   // URL → item lookup, only over visible items.

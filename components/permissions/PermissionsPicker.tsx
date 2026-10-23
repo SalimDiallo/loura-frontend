@@ -15,11 +15,20 @@ import {
     getRequiredIds,
     resolvePermissionSelection,
 } from "@/lib/permission-dependencies";
+import {
+    PERMISSION_PRESETS,
+    presetPermissionIds,
+    presetState,
+    type PermissionPreset,
+} from "@/lib/permission-presets";
 import type { Permission } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
     AlertTriangle,
     Ban,
+    Boxes,
+    Briefcase,
+    Calculator,
     Check,
     ChevronDown,
     Eye,
@@ -28,8 +37,12 @@ import {
     Search,
     Settings2,
     Shield,
+    ShoppingCart,
     Sparkles,
+    Users,
+    Wand2,
     X,
+    type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -45,6 +58,25 @@ const MODULE_ACCENTS: Record<string, string> = {
   hr: "bg-amber-500",
   inventory: "bg-emerald-500",
   services: "bg-sky-500",
+};
+
+// Icône + style de chaque profil métier (preset).
+const PRESET_ICONS: Record<string, LucideIcon> = {
+  pos: ShoppingCart,
+  stock: Boxes,
+  accounting: Calculator,
+  hr: Users,
+  services: Briefcase,
+  readonly: Eye,
+};
+
+const PRESET_ACTIVE_CLASS: Record<string, string> = {
+  pos: "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  stock: "border-teal-500 bg-teal-500/10 text-teal-700 dark:text-teal-300",
+  accounting: "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  hr: "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  services: "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  readonly: "border-slate-400 bg-slate-400/10 text-slate-700 dark:text-slate-300",
 };
 
 type FilterMode = "all" | "selected" | "available";
@@ -181,6 +213,33 @@ export function PermissionsPicker({
     onChange([]);
   };
 
+  // ─── Profils métier : un clic active (ou retire) tout un ensemble ─────────
+  const handleApplyPreset = (preset: PermissionPreset) => {
+    const ids = presetPermissionIds(preset, permissions).filter(
+      (id) => !implicitSet.has(id)
+    );
+    if (ids.length === 0) return;
+    const full = presetState(preset, selectedIds, permissions) === "full";
+    const idSet = new Set(ids);
+    const nextRaw = full
+      ? selectedIds.filter((id) => !idSet.has(id)) // profil complet → on retire
+      : Array.from(new Set([...selectedIds, ...ids])); // sinon → on ajoute (cumulable)
+    onChange(
+      resolvePermissionSelection(selectedIds, nextRaw, permissions, {
+        implicitIds,
+      })
+    );
+  };
+
+  // N'affiche que les profils dont au moins une permission existe dans l'org.
+  const availablePresets = useMemo(
+    () =>
+      PERMISSION_PRESETS.filter(
+        (p) => presetPermissionIds(p, permissions).length > 0
+      ),
+    [permissions]
+  );
+
   const handleExpandAll = () => {
     const next: Record<string, boolean> = {};
     grouped.forEach(([mod]) => {
@@ -208,6 +267,67 @@ export function PermissionsPicker({
       <div className="space-y-4">
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
+        )}
+
+        {/* ─── Profils rapides : un clic active plusieurs permissions ─── */}
+        {availablePresets.length > 0 && (
+          <div className="rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+              <Wand2 className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-sm font-semibold">Profils rapides</span>
+              <span className="text-xs text-muted-foreground">
+                Appliquez un métier en un clic — cumulables
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availablePresets.map((preset) => {
+                const Icon = PRESET_ICONS[preset.id] ?? Sparkles;
+                const state = presetState(preset, selectedIds, permissions);
+                const count = presetPermissionIds(
+                  preset,
+                  permissions
+                ).length;
+                return (
+                  <Tooltip key={preset.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset(preset)}
+                        className={cn(
+                          "inline-flex items-center gap-2 h-9 rounded-full border px-3 text-sm font-medium transition-all active:scale-95",
+                          state === "full"
+                            ? PRESET_ACTIVE_CLASS[preset.id] ??
+                                "border-primary bg-primary/10 text-primary"
+                            : state === "partial"
+                              ? "border-dashed border-primary/50 text-foreground hover:bg-muted"
+                              : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {preset.label}
+                        {state === "full" ? (
+                          <Check className="h-3.5 w-3.5" />
+                        ) : state === "partial" ? (
+                          <span className="text-[10px] font-mono opacity-70">
+                            partiel
+                          </span>
+                        ) : null}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <p className="font-semibold mb-1">{preset.label}</p>
+                      <p className="text-xs mb-1">{preset.description}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {state === "full"
+                          ? "Cliquer pour retirer ce profil"
+                          : `Active ${count} permission${count > 1 ? "s" : ""} (+ leurs dépendances)`}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {/* ─── Header : recherche + résumé ───────────────────────────── */}
