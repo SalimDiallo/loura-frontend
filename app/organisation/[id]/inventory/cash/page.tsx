@@ -153,8 +153,11 @@ function CashPage() {
   });
 
   // Bornes de date envoyées au backend selon le mode.
+  // Mode intervalle sans bornes = « toute la période » → on envoie ?all=1 pour
+  // que le backend ignore la fenêtre par défaut (sinon il se cale sur le jour).
   const dateParams = useMemo(() => {
     if (period.mode === "single") return { date: period.date || undefined };
+    if (!period.from && !period.to) return { all: "1" };
     return { from: period.from || undefined, to: period.to || undefined };
   }, [period]);
 

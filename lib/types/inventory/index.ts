@@ -1326,6 +1326,8 @@ export interface ListCashTransactionsParams {
   /** Filtrer sur un compte bancaire (côté banque). */
   bank_account?: string;
   source?: CashSourceType;
+  /** ``1`` = toute la période (ignore la fenêtre par défaut du jour). */
+  all?: string;
   page?: number;
   page_size?: number | string;
 }

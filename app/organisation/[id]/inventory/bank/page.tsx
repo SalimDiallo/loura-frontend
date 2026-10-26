@@ -68,10 +68,6 @@ function formatDate(iso: string): string {
   }
 }
 
-function startOfMonthISO(): string {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
-}
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -100,8 +96,9 @@ function BankPage() {
   const money = (value: string | number) => formatCurrency(Number(value) || 0);
   const canManage = can(PERMISSIONS.CASH.MANAGE);
 
-  const [from, setFrom] = useState<string>(startOfMonthISO());
-  const [to, setTo] = useState<string>(todayISO());
+  // Par défaut : toute la période (cohérent avec la caisse et la trésorerie).
+  const [from, setFrom] = useState<string>("");
+  const [to, setTo] = useState<string>("");
   const [accountFilter, setAccountFilter] = useState<string>("");
 
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -123,6 +120,8 @@ function BankPage() {
     () => ({
       from: from || undefined,
       to: to || undefined,
+      // Aucune borne = toute la période (le backend ignore la fenêtre du jour).
+      all: !from && !to ? "1" : undefined,
       bank_account: accountFilter || undefined,
     }),
     [from, to, accountFilter]
