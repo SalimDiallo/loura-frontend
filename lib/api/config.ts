@@ -455,6 +455,24 @@ export const API_ENDPOINTS = {
       ADJUSTMENT_DETAIL: (orgId: string, id: string) =>
         `/inventory/organizations/${orgId}/cash/adjustments/${id}/`,
     },
+    BANK: {
+      ACCOUNTS: (orgId: string) =>
+        `/inventory/organizations/${orgId}/bank/accounts/`,
+      ACCOUNT_DETAIL: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/bank/accounts/${id}/`,
+      TRANSACTIONS: (orgId: string) =>
+        `/inventory/organizations/${orgId}/bank/transactions/`,
+      SUMMARY: (orgId: string) =>
+        `/inventory/organizations/${orgId}/bank/summary/`,
+    },
+    TREASURY: {
+      TRANSFERS: (orgId: string) =>
+        `/inventory/organizations/${orgId}/treasury/transfers/`,
+      TRANSFER_DETAIL: (orgId: string, id: string) =>
+        `/inventory/organizations/${orgId}/treasury/transfers/${id}/`,
+      OVERVIEW: (orgId: string) =>
+        `/inventory/organizations/${orgId}/treasury/overview/`,
+    },
     // Commandes fournisseur (Purchase Orders)
     PURCHASE_ORDERS: {
       LIST: (orgId: string) =>

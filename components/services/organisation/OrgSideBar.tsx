@@ -72,7 +72,7 @@ import {
     FaUsers,
     FaWarehouse
 } from "react-icons/fa";
-import { FaWallet } from "react-icons/fa6";
+import { FaWallet, FaBuildingColumns, FaScaleBalanced } from "react-icons/fa6";
 
 // ============================================================================
 // RESIZE CONSTANTS
@@ -450,6 +450,20 @@ function buildMenuGroups(orgId: string): MenuGroup[] {
           icon: FaWallet,
           requiredPermission: PERMISSIONS.CASH.VIEW,
           active: "/inventory/cash"
+        },
+        {
+          title: "Banque",
+          url: `${b}/inventory/bank`,
+          icon: FaBuildingColumns,
+          requiredPermission: PERMISSIONS.CASH.VIEW,
+          active: "/inventory/bank"
+        },
+        {
+          title: "Trésorerie",
+          url: `${b}/inventory/treasury`,
+          icon: FaScaleBalanced,
+          requiredPermission: PERMISSIONS.CASH.VIEW,
+          active: "/inventory/treasury"
         },
         {
           title: "Rapports",

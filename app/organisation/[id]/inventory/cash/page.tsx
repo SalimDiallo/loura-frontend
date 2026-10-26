@@ -24,7 +24,6 @@ import {
 import { PERMISSIONS } from "@/lib/permissions";
 import type {
     CashDirection,
-    CashPaymentMethod,
     CashSummary,
     CashTransaction,
 } from "@/lib/types/inventory";
@@ -70,6 +69,7 @@ const SOURCE_LABELS: Record<string, string> = {
   po_payment: "Achat",
   expense: "Dépense",
   adjustment: "Caisse",
+  transfer: "Transfert",
 };
 
 function todayISO() {
@@ -143,7 +143,6 @@ function CashPage() {
   );
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [directionFilter, setDirectionFilter] = useState<CashDirection | "">("");
-  const [methodFilter, setMethodFilter] = useState<CashPaymentMethod | "">("");
   const [userFilter, setUserFilter] = useState<string>("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -164,10 +163,9 @@ function CashPage() {
       ...dateParams,
       warehouse: warehouseFilter || undefined,
       direction: directionFilter || undefined,
-      method: methodFilter || undefined,
       user: userFilter || undefined,
     }),
-    [dateParams, warehouseFilter, directionFilter, methodFilter, userFilter]
+    [dateParams, warehouseFilter, directionFilter, userFilter]
   );
 
   const {
@@ -198,7 +196,7 @@ function CashPage() {
   }, [summary, formatCurrency]);
 
   const filtersAreActive =
-    !!warehouseFilter || !!directionFilter || !!methodFilter || !!userFilter;
+    !!warehouseFilter || !!directionFilter || !!userFilter;
 
   const isToday = period.mode === "single" && period.date === todayISO();
 
@@ -214,7 +212,10 @@ function CashPage() {
     );
   }
 
-  const balance = Number(summary?.balance ?? 0);
+  // Solde réel de la caisse = solde de clôture (ouverture + flux) quand le
+  // backend le fournit ; à défaut, le flux net de la période.
+  const soldeValue = summary?.closing_balance ?? summary?.balance ?? 0;
+  const balance = Number(soldeValue);
 
   return (
     <>
@@ -250,14 +251,14 @@ function CashPage() {
           />,
           <ListStat
             key="balance"
-            label="Solde"
+            label="Solde de caisse"
             value={
               <span
                 className={
                   balance >= 0 ? "text-emerald-600" : "text-red-600"
                 }
               >
-                {money(summary?.balance ?? 0)}
+                {money(soldeValue)}
               </span>
             }
             icon={
@@ -324,25 +325,6 @@ function CashPage() {
                     <option value="out">Sorties</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Méthode
-                  </label>
-                  <select
-                    value={methodFilter}
-                    onChange={(e) =>
-                      setMethodFilter(e.target.value as CashPaymentMethod | "")
-                    }
-                    className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
-                  >
-                    <option value="">Toutes</option>
-                    {Object.entries(METHOD_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 {!isCashier && (
                   <div>
                     <label className="block text-sm font-medium mb-1">
@@ -383,8 +365,8 @@ function CashPage() {
                       : "Aucun mouvement ce jour-là"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Les ventes, achats, dépenses et apports/retraits
-                  apparaîtront ici.
+                  Seuls les mouvements en espèces apparaissent ici. Les
+                  règlements par banque/Mobile Money sont dans « Banque ».
                 </p>
               </div>
             ) : (

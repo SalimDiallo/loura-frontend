@@ -1286,13 +1286,18 @@ export type CashSourceType =
   | "sale_payment"
   | "po_payment"
   | "expense"
-  | "adjustment";
+  | "adjustment"
+  | "transfer";
 
-/** Transaction de caisse normalisée (vue consolidée, lecture seule). */
+/** Canal de trésorerie : caisse physique (espèces) vs banque/dématérialisé. */
+export type TreasuryChannel = "cash" | "bank";
+
+/** Transaction de trésorerie normalisée (vue consolidée, lecture seule). */
 export interface CashTransaction {
   id: string;
   source_type: CashSourceType;
   direction: CashDirection;
+  channel: TreasuryChannel;
   amount: string;
   method: string;
   label: string;
@@ -1300,6 +1305,8 @@ export interface CashTransaction {
   date: string;
   warehouse_id: string | null;
   warehouse_name: string;
+  bank_account_id: string | null;
+  bank_account_name: string;
   created_by_info: UserMiniInfo | null;
 }
 
@@ -1312,6 +1319,9 @@ export interface ListCashTransactionsParams {
   method?: CashPaymentMethod;
   /** Filtrer sur l'auteur (id utilisateur) du mouvement. */
   user?: string;
+  /** Filtrer sur un compte bancaire (côté banque). */
+  bank_account?: string;
+  source?: CashSourceType;
   page?: number;
   page_size?: number | string;
 }
@@ -1334,16 +1344,26 @@ export interface CashSummaryUserRow extends CashSummaryBreakdownRow {
   email: string;
 }
 
+export interface CashSummaryBankAccountRow extends CashSummaryBreakdownRow {
+  name: string;
+}
+
 export interface CashSummary {
   count: number;
   count_in: number;
   count_out: number;
   total_in: string;
   total_out: string;
+  net_flow: string;
   balance: string;
   currency: string;
+  /** Solde de caisse avant la fenêtre (présent sur la vue caisse). */
+  opening_balance?: string;
+  /** Solde de caisse en fin de fenêtre (= opening + net_flow). */
+  closing_balance?: string;
   by_method: Record<string, CashSummaryBreakdownRow>;
   by_warehouse: Record<string, CashSummaryWarehouseRow>;
+  by_bank_account: Record<string, CashSummaryBankAccountRow>;
   /** Ventilation par auteur ("unknown" = mouvements sans auteur connu). */
   by_user: Record<string, CashSummaryUserRow>;
 }
@@ -1354,6 +1374,8 @@ export interface CashAdjustment {
   organization: string;
   warehouse: string;
   warehouse_name: string;
+  bank_account_name: string | null;
+  channel: TreasuryChannel;
   direction: CashDirection;
   amount: string;
   method: CashPaymentMethod;
@@ -1372,6 +1394,7 @@ export interface CreateCashAdjustmentData {
   direction: CashDirection;
   amount: string;
   method?: CashPaymentMethod;
+  bank_account_id?: string | null;
   label: string;
   reason?: string;
   adjustment_date: string;
@@ -1387,6 +1410,126 @@ export interface ListCashAdjustmentsParams {
   to?: string;
   page?: number;
   page_size?: number | string;
+}
+
+// ─── Banque (comptes bancaires / dématérialisés) ────────────────────────────
+
+/** Compte bancaire d'une organisation (solde calculé côté serveur). */
+export interface BankAccount {
+  id: string;
+  organization: string;
+  warehouse: string | null;
+  warehouse_name: string | null;
+  name: string;
+  bank_name: string;
+  account_number: string;
+  currency: string;
+  opening_balance: string;
+  /** Solde courant = ouverture + flux affectés (null si non calculé). */
+  balance: string | null;
+  is_active: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  created_by_info: UserMiniInfo | null;
+  updated_by_info: UserMiniInfo | null;
+}
+
+export interface CreateBankAccountData {
+  name: string;
+  bank_name?: string;
+  account_number?: string;
+  currency?: string;
+  opening_balance?: string;
+  warehouse_id?: string | null;
+  is_active?: boolean;
+  notes?: string;
+}
+
+export type UpdateBankAccountData = Partial<CreateBankAccountData>;
+
+export interface ListBankAccountsParams {
+  active?: string | number;
+  warehouse?: string;
+  page?: number;
+  page_size?: number | string;
+}
+
+// ─── Trésorerie (transferts internes + synthèse) ────────────────────────────
+
+export type TransferDirection = "cash_to_bank" | "bank_to_cash";
+
+/** Transfert interne caisse ↔ banque. */
+export interface TreasuryTransfer {
+  id: string;
+  organization: string;
+  warehouse: string;
+  warehouse_name: string;
+  bank_account: string;
+  bank_account_name: string;
+  direction: TransferDirection;
+  amount: string;
+  transfer_date: string;
+  label: string;
+  reason: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  created_by_info: UserMiniInfo | null;
+  updated_by_info: UserMiniInfo | null;
+}
+
+export interface CreateTreasuryTransferData {
+  warehouse_id: string;
+  bank_account_id: string;
+  direction: TransferDirection;
+  amount: string;
+  transfer_date: string;
+  label?: string;
+  reason?: string;
+  notes?: string;
+}
+
+export type UpdateTreasuryTransferData = Partial<CreateTreasuryTransferData>;
+
+export interface ListTreasuryTransfersParams {
+  warehouse?: string;
+  bank_account?: string;
+  direction?: TransferDirection;
+  from?: string;
+  to?: string;
+  page?: number;
+  page_size?: number | string;
+}
+
+/** Ligne de solde (caisse) dans la synthèse de trésorerie. */
+export interface TreasuryCaisseRow {
+  warehouse_id: string | null;
+  warehouse_name: string;
+  balance: string;
+}
+
+/** Ligne de solde (compte bancaire) dans la synthèse de trésorerie. */
+export interface TreasuryBankRow {
+  bank_account_id: string | null;
+  name: string;
+  bank_name: string;
+  is_active: boolean;
+  balance: string;
+}
+
+/** Vue de synthèse consolidée : total = caisses + banques. */
+export interface TreasuryOverview {
+  currency: string;
+  caisses: TreasuryCaisseRow[];
+  bank_accounts: TreasuryBankRow[];
+  total_cash: string;
+  total_bank: string;
+  total: string;
+}
+
+export interface TreasuryOverviewParams {
+  as_of?: string;
 }
 
 // ─── Accès entrepôt par membre (HR + inventory) ────────────────────────────

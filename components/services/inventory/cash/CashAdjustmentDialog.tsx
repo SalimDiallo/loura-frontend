@@ -1,11 +1,17 @@
 "use client";
 
 /**
- * Dialog de création d'un mouvement de caisse (apport / retrait).
+ * Dialog de création d'un mouvement de trésorerie (apport / retrait).
  *
- * Réutilisé depuis la page Caisse — évite une page de formulaire séparée pour
- * une saisie rapide au comptoir. Le sens (entrée/sortie) est choisi via deux
- * boutons segmentés bien visibles pour limiter les erreurs.
+ * Deux canaux :
+ * - ``cash`` (défaut) : mouvement d'espèces dans une caisse (entrepôt). La
+ *   méthode est forcée à « espèces » — c'est la caisse physique.
+ * - ``bank`` : apport/retrait pur sur un compte bancaire (ex. injection de
+ *   capital en banque, frais, intérêts). Exige un compte et une méthode
+ *   dématérialisée.
+ *
+ * Le sens (entrée/sortie) est choisi via deux boutons segmentés bien visibles
+ * pour limiter les erreurs de saisie au comptoir.
  */
 
 import { Button } from "@/components/ui/button";
@@ -25,13 +31,13 @@ import { useCreateCashAdjustment } from "@/lib/hooks/inventory";
 import type {
   CashDirection,
   CashPaymentMethod,
+  TreasuryChannel,
 } from "@/lib/types/inventory";
 import { useState } from "react";
 import { FaArrowDown, FaArrowUp } from "react-icons/fa";
 import { toast } from "sonner";
 
-const METHOD_OPTIONS: { value: CashPaymentMethod; label: string }[] = [
-  { value: "cash", label: "Espèces" },
+const BANK_METHOD_OPTIONS: { value: CashPaymentMethod; label: string }[] = [
   { value: "bank_transfer", label: "Virement bancaire" },
   { value: "mobile_money", label: "Mobile Money" },
   { value: "check", label: "Chèque" },
@@ -39,7 +45,7 @@ const METHOD_OPTIONS: { value: CashPaymentMethod; label: string }[] = [
   { value: "other", label: "Autre" },
 ];
 
-interface WarehouseOption {
+interface IdName {
   id: string;
   name: string;
 }
@@ -50,21 +56,31 @@ export function CashAdjustmentDialog({
   orgId,
   warehouses,
   defaultWarehouseId,
+  channel = "cash",
+  bankAccounts = [],
+  defaultBankAccountId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orgId: string;
-  warehouses: WarehouseOption[];
+  warehouses: IdName[];
   defaultWarehouseId?: string;
+  /** Canal visé : caisse (espèces) ou banque (compte). */
+  channel?: TreasuryChannel;
+  /** Comptes bancaires disponibles (requis en canal banque). */
+  bankAccounts?: IdName[];
+  defaultBankAccountId?: string;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const createAdjustment = useCreateCashAdjustment();
+  const isBank = channel === "bank";
 
   const [direction, setDirection] = useState<CashDirection>("in");
   const [form, setForm] = useState({
     warehouse_id: defaultWarehouseId ?? "",
+    bank_account_id: defaultBankAccountId ?? "",
     amount: "",
-    method: "cash" as CashPaymentMethod,
+    method: (isBank ? "bank_transfer" : "cash") as CashPaymentMethod,
     label: "",
     reason: "",
     adjustment_date: today,
@@ -75,8 +91,9 @@ export function CashAdjustmentDialog({
     setDirection("in");
     setForm({
       warehouse_id: defaultWarehouseId ?? "",
+      bank_account_id: defaultBankAccountId ?? "",
       amount: "",
-      method: "cash",
+      method: isBank ? "bank_transfer" : "cash",
       label: "",
       reason: "",
       adjustment_date: today,
@@ -92,6 +109,12 @@ export function CashAdjustmentDialog({
       });
       return;
     }
+    if (isBank && !form.bank_account_id) {
+      toast("Compte manquant", {
+        description: "Sélectionnez le compte bancaire concerné.",
+      });
+      return;
+    }
     try {
       await createAdjustment.mutateAsync({
         orgId,
@@ -99,7 +122,8 @@ export function CashAdjustmentDialog({
           warehouse_id: form.warehouse_id,
           direction,
           amount: form.amount,
-          method: form.method,
+          method: isBank ? form.method : "cash",
+          bank_account_id: isBank ? form.bank_account_id : undefined,
           label: form.label,
           reason: form.reason || undefined,
           adjustment_date: form.adjustment_date,
@@ -120,9 +144,13 @@ export function CashAdjustmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nouveau mouvement de caisse</DialogTitle>
+          <DialogTitle>
+            {isBank ? "Nouveau mouvement bancaire" : "Nouveau mouvement de caisse"}
+          </DialogTitle>
           <DialogDescription>
-            Enregistrez un apport (entrée) ou un retrait (sortie) de fonds.
+            {isBank
+              ? "Enregistrez un apport (crédit) ou un retrait (débit) sur un compte."
+              : "Enregistrez un apport (entrée) ou un retrait (sortie) d'espèces."}
           </DialogDescription>
         </DialogHeader>
 
@@ -139,7 +167,7 @@ export function CashAdjustmentDialog({
               }`}
             >
               <FaArrowDown className="h-3.5 w-3.5" />
-              Apport (entrée)
+              {isBank ? "Crédit (entrée)" : "Apport (entrée)"}
             </button>
             <button
               type="button"
@@ -151,7 +179,7 @@ export function CashAdjustmentDialog({
               }`}
             >
               <FaArrowUp className="h-3.5 w-3.5" />
-              Retrait (sortie)
+              {isBank ? "Débit (sortie)" : "Retrait (sortie)"}
             </button>
           </div>
 
@@ -195,46 +223,70 @@ export function CashAdjustmentDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="adj-warehouse">Caisse (entrepôt) *</Label>
-              <select
-                id="adj-warehouse"
-                value={form.warehouse_id}
-                onChange={(e) =>
-                  setForm({ ...form, warehouse_id: e.target.value })
-                }
-                className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
-                required
-              >
-                <option value="">— Choisir une caisse —</option>
-                {warehouses.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
+          {isBank && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="adj-account">Compte bancaire *</Label>
+                <select
+                  id="adj-account"
+                  value={form.bank_account_id}
+                  onChange={(e) =>
+                    setForm({ ...form, bank_account_id: e.target.value })
+                  }
+                  className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
+                  required
+                >
+                  <option value="">— Choisir un compte —</option>
+                  {bankAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="adj-method">Méthode</Label>
+                <select
+                  id="adj-method"
+                  value={form.method}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      method: e.target.value as CashPaymentMethod,
+                    })
+                  }
+                  className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
+                >
+                  {BANK_METHOD_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="adj-method">Méthode</Label>
-              <select
-                id="adj-method"
-                value={form.method}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    method: e.target.value as CashPaymentMethod,
-                  })
-                }
-                className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
-              >
-                {METHOD_OPTIONS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          )}
+
+          <div>
+            <Label htmlFor="adj-warehouse">
+              {isBank ? "Caisse de rattachement *" : "Caisse (entrepôt) *"}
+            </Label>
+            <select
+              id="adj-warehouse"
+              value={form.warehouse_id}
+              onChange={(e) =>
+                setForm({ ...form, warehouse_id: e.target.value })
+              }
+              className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
+              required
+            >
+              <option value="">— Choisir une caisse —</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

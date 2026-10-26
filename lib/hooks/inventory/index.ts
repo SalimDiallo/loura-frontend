@@ -1671,15 +1671,24 @@ export function useSetMemberWarehouseAccess() {
 
 // ─── Caisse / Trésorerie ──────────────────────────────────────────────────────
 
-import { cashService } from "@/lib/services/inventory";
+import { bankService, cashService, treasuryService } from "@/lib/services/inventory";
 import type {
+  BankAccount,
   CashAdjustment,
   CashSummary,
   CashTransaction,
+  CreateBankAccountData,
   CreateCashAdjustmentData,
+  CreateTreasuryTransferData,
+  ListBankAccountsParams,
   ListCashAdjustmentsParams,
   ListCashTransactionsParams,
+  ListTreasuryTransfersParams,
+  TreasuryOverview,
+  TreasuryOverviewParams,
+  UpdateBankAccountData,
   UpdateCashAdjustmentData,
+  UpdateTreasuryTransferData,
 } from "@/lib/types/inventory";
 
 const CASH_KEY = (orgId: string) => ["inventory", "cash", orgId];
@@ -1745,10 +1754,24 @@ export function useCashAdjustment(
   });
 }
 
-/** Invalide toutes les vues caisse (transactions + résumé + apports). */
+const BANK_KEY = (orgId: string) => ["inventory", "bank", orgId];
+const BANK_ACCOUNT_KEY = (orgId: string, id: string) => [
+  "inventory",
+  "bank-account",
+  orgId,
+  id,
+];
+const TREASURY_KEY = (orgId: string) => ["inventory", "treasury", orgId];
+
+/**
+ * Invalide toutes les vues de trésorerie (caisse + banque + synthèse +
+ * transferts). Un mouvement sur un canal peut changer la synthèse globale.
+ */
 function invalidateCash(qc: ReturnType<typeof useQueryClient>, orgId: string) {
   qc.invalidateQueries({ queryKey: CASH_KEY(orgId) });
   qc.invalidateQueries({ queryKey: CASH_ADJUSTMENTS_KEY(orgId) });
+  qc.invalidateQueries({ queryKey: BANK_KEY(orgId) });
+  qc.invalidateQueries({ queryKey: TREASURY_KEY(orgId) });
 }
 
 export function useCreateCashAdjustment() {
@@ -1789,6 +1812,160 @@ export function useDeleteCashAdjustment() {
   return useMutation({
     mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
       cashService.deleteAdjustment(orgId, id),
+    onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
+  });
+}
+
+// ─── Banque (comptes + flux dématérialisés) ─────────────────────────────────
+
+/** Liste des comptes bancaires (avec leur solde courant). */
+export function useBankAccounts(
+  orgId: string,
+  params?: ListBankAccountsParams
+) {
+  return useQuery({
+    queryKey: [...BANK_KEY(orgId), "accounts", params ?? {}],
+    queryFn: () => bankService.listAccounts(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function useBankAccount(
+  orgId: string,
+  id: string
+): UseQueryResult<BankAccount, Error> {
+  return useQuery({
+    queryKey: BANK_ACCOUNT_KEY(orgId, id),
+    queryFn: () => bankService.getAccount(orgId, id),
+    enabled: !!orgId && !!id,
+  });
+}
+
+/** Liste consolidée paginée des mouvements bancaires. */
+export function usePaginatedBankTransactions(
+  orgId: string,
+  filters?: Omit<ListCashTransactionsParams, "page" | "page_size">,
+  options?: { pageSize?: number; initialPage?: number; enabled?: boolean }
+): UsePaginatedQueryReturn<CashTransaction> {
+  return usePaginatedQuery<CashTransaction, any>({
+    queryKey: [...BANK_KEY(orgId), "transactions"],
+    fetchFn: (params) => bankService.transactions(orgId, params) as any,
+    filters,
+    pageSize: options?.pageSize ?? 15,
+    initialPage: options?.initialPage ?? 1,
+    enabled: options?.enabled !== false && !!orgId,
+  });
+}
+
+/** Résumé bancaire (total crédits / débits) pour le filtre courant. */
+export function useBankSummary(
+  orgId: string,
+  params?: ListCashTransactionsParams
+): UseQueryResult<CashSummary, Error> {
+  return useQuery({
+    queryKey: [...BANK_KEY(orgId), "summary", params ?? {}],
+    queryFn: () => bankService.summary(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function useCreateBankAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, data }: { orgId: string; data: CreateBankAccountData }) =>
+      bankService.createAccount(orgId, data),
+    onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
+  });
+}
+
+export function useUpdateBankAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orgId,
+      id,
+      data,
+    }: {
+      orgId: string;
+      id: string;
+      data: UpdateBankAccountData;
+    }) => bankService.updateAccount(orgId, id, data),
+    onSuccess: (_, { orgId, id }) => {
+      qc.invalidateQueries({ queryKey: BANK_ACCOUNT_KEY(orgId, id) });
+      invalidateCash(qc, orgId);
+    },
+  });
+}
+
+export function useDeleteBankAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      bankService.deleteAccount(orgId, id),
+    onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
+  });
+}
+
+// ─── Trésorerie (synthèse + transferts internes) ────────────────────────────
+
+/** Vue de synthèse consolidée : soldes caisses + comptes + total. */
+export function useTreasuryOverview(
+  orgId: string,
+  params?: TreasuryOverviewParams
+): UseQueryResult<TreasuryOverview, Error> {
+  return useQuery({
+    queryKey: [...TREASURY_KEY(orgId), "overview", params ?? {}],
+    queryFn: () => treasuryService.overview(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function useTreasuryTransfers(
+  orgId: string,
+  params?: ListTreasuryTransfersParams
+) {
+  return useQuery({
+    queryKey: [...TREASURY_KEY(orgId), "transfers", params ?? {}],
+    queryFn: () => treasuryService.listTransfers(orgId, params),
+    enabled: !!orgId,
+  });
+}
+
+export function useCreateTreasuryTransfer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orgId,
+      data,
+    }: {
+      orgId: string;
+      data: CreateTreasuryTransferData;
+    }) => treasuryService.createTransfer(orgId, data),
+    onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
+  });
+}
+
+export function useUpdateTreasuryTransfer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orgId,
+      id,
+      data,
+    }: {
+      orgId: string;
+      id: string;
+      data: UpdateTreasuryTransferData;
+    }) => treasuryService.updateTransfer(orgId, id, data),
+    onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
+  });
+}
+
+export function useDeleteTreasuryTransfer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      treasuryService.deleteTransfer(orgId, id),
     onSuccess: (_, { orgId }) => invalidateCash(qc, orgId),
   });
 }
