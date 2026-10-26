@@ -28,6 +28,7 @@ import { useCurrencyFormatter } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import { useCustomers } from "@/lib/hooks/hr";
 import {
+    useBankAccounts,
     useCategories,
     useCompleteSale,
     useCreateSale,
@@ -36,6 +37,7 @@ import {
     useStocks,
     useWarehouses,
 } from "@/lib/hooks/inventory";
+import type { BankAccount } from "@/lib/types/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import {
     SALE_PAYMENT_METHODS,
@@ -267,6 +269,7 @@ function POSPage() {
     const [saleType, setSaleType] = useState<SaleType>("cash");
     const [customerId, setCustomerId] = useState<string>("");
     const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>("cash");
+    const [paymentBankAccountId, setPaymentBankAccountId] = useState("");
     const [paymentReference, setPaymentReference] = useState("");
     const [globalDiscountType, setGlobalDiscountType] =
         useState<SaleDiscountType>("none");
@@ -340,6 +343,10 @@ function POSPage() {
     const createSale = useCreateSale();
     const completeSale = useCompleteSale();
     const createPayment = useCreateSalePayment();
+    const { data: bankAccountsRaw } = useBankAccounts(orgId, { active: 1 });
+    const bankAccounts: BankAccount[] = Array.isArray(bankAccountsRaw)
+        ? bankAccountsRaw
+        : (bankAccountsRaw?.results ?? []);
 
     const isCheckingOut =
         createSale.isPending || completeSale.isPending || createPayment.isPending;
@@ -416,6 +423,10 @@ function POSPage() {
                         amount: totals.total.toFixed(2),
                         payment_date: today,
                         method: paymentMethod,
+                        bank_account_id:
+                            paymentMethod !== "cash" && paymentBankAccountId
+                                ? paymentBankAccountId
+                                : null,
                         reference: paymentReference,
                         notes: "",
                     },
@@ -1067,6 +1078,26 @@ function POSPage() {
                                                 </option>
                                             ))}
                                         </select>
+                                        {paymentMethod !== "cash" && (
+                                            <select
+                                                value={paymentBankAccountId}
+                                                onChange={(e) =>
+                                                    setPaymentBankAccountId(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                            >
+                                                <option value="">
+                                                    Compte : Non affecté
+                                                </option>
+                                                {bankAccounts.map((a) => (
+                                                    <option key={a.id} value={a.id}>
+                                                        {a.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
                                         <Input
                                             placeholder="Référence (optionnelle)"
                                             value={paymentReference}

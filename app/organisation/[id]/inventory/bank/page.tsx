@@ -18,6 +18,7 @@ import {
   useBankSummary,
   useDeleteBankAccount,
   usePaginatedBankTransactions,
+  useTreasuryOverview,
   useWarehouses,
 } from "@/lib/hooks/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -138,12 +139,28 @@ function BankPage() {
   } = usePaginatedBankTransactions(orgId, filters, { pageSize: 15 });
 
   const { data: summary } = useBankSummary(orgId, filters);
+  // Source autoritative du total banque (inclut le bucket « Non affecté ») :
+  // garantit la cohérence avec la page Trésorerie.
+  const { data: overview } = useTreasuryOverview(orgId);
 
-  const totalBalance = useMemo(
+  // Flux bancaires non rattachés à un compte (historique / non renseigné).
+  const unassigned = useMemo(
     () =>
-      accounts.reduce((acc, a) => acc + Number(a.balance ?? a.opening_balance ?? 0), 0),
-    [accounts]
+      (overview?.bank_accounts ?? []).find(
+        (b) => b.bank_account_id === null && Number(b.balance) !== 0
+      ),
+    [overview]
   );
+
+  // Total = somme des comptes + non affecté (= overview.total_bank). On
+  // privilégie le total de l'overview s'il est chargé, sinon on l'estime.
+  const totalBalance = useMemo(() => {
+    if (overview?.total_bank != null) return Number(overview.total_bank);
+    return accounts.reduce(
+      (acc, a) => acc + Number(a.balance ?? a.opening_balance ?? 0),
+      0
+    );
+  }, [overview, accounts]);
 
   const handleDeleteAccount = async (account: BankAccount) => {
     if (
@@ -314,6 +331,23 @@ function BankPage() {
                       </div>
                     );
                   })}
+                  {unassigned && (
+                    <div className="rounded-lg border border-dashed border-border p-4 bg-muted/20">
+                      <div className="font-medium text-sm">Non affecté</div>
+                      <div className="text-xs text-muted-foreground">
+                        Flux bancaires sans compte précisé
+                      </div>
+                      <div
+                        className={`mt-3 font-mono tabular-nums text-lg font-semibold ${
+                          Number(unassigned.balance) >= 0
+                            ? "text-emerald-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {money(unassigned.balance)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </section>

@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiErrorMessage } from "@/lib/api";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
+    useBankAccounts,
     useCancelPurchaseOrder,
     useCreatePurchaseOrderPayment,
     useDeletePurchaseOrder,
@@ -35,6 +36,7 @@ import {
     useReceivePurchaseOrder,
     useSendPurchaseOrder,
 } from "@/lib/hooks/inventory";
+import type { BankAccount } from "@/lib/types/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import {
     PURCHASE_ORDER_PAYMENT_METHODS,
@@ -120,6 +122,10 @@ function PurchaseOrderDetailPage() {
     const receiveMutation = useReceivePurchaseOrder();
     const deleteMutation = useDeletePurchaseOrder();
     const paymentMutation = useCreatePurchaseOrderPayment();
+    const { data: bankAccountsRaw } = useBankAccounts(orgId, { active: 1 });
+    const bankAccounts: BankAccount[] = Array.isArray(bankAccountsRaw)
+        ? bankAccountsRaw
+        : (bankAccountsRaw?.results ?? []);
     const deletePaymentMutation = useDeletePurchaseOrderPayment();
 
     const [showDelete, setShowDelete] = useState(false);
@@ -139,6 +145,7 @@ function PurchaseOrderDetailPage() {
     );
     const [payMethod, setPayMethod] =
         useState<PurchaseOrderPaymentMethod>("cash");
+    const [payBankAccountId, setPayBankAccountId] = useState("");
     const [payReference, setPayReference] = useState("");
     const [payNotes, setPayNotes] = useState("");
 
@@ -268,6 +275,10 @@ function PurchaseOrderDetailPage() {
                     amount: payAmount,
                     payment_date: payDate,
                     method: payMethod,
+                    bank_account_id:
+                        payMethod !== "cash" && payBankAccountId
+                            ? payBankAccountId
+                            : null,
                     reference: payReference,
                     notes: payNotes,
                 },
@@ -276,6 +287,7 @@ function PurchaseOrderDetailPage() {
             setPayAmount("");
             setPayReference("");
             setPayNotes("");
+            setPayBankAccountId("");
         } catch (error: unknown) {
             toast.error("Erreur", {
                 description: getApiErrorMessage(error),
@@ -852,6 +864,28 @@ function PurchaseOrderDetailPage() {
                                                     ))}
                                                 </select>
                                             </div>
+                                            {payMethod !== "cash" && (
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="pay_bank_account">
+                                                        Compte bancaire
+                                                    </Label>
+                                                    <select
+                                                        id="pay_bank_account"
+                                                        value={payBankAccountId}
+                                                        onChange={(e) =>
+                                                            setPayBankAccountId(e.target.value)
+                                                        }
+                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                                    >
+                                                        <option value="">Non affecté</option>
+                                                        {bankAccounts.map((a) => (
+                                                            <option key={a.id} value={a.id}>
+                                                                {a.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
                                             <div className="space-y-2">
                                                 <Label htmlFor="pay_ref">Référence</Label>
                                                 <Input

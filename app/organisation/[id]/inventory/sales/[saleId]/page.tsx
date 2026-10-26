@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCurrencyFormatter } from "@/lib/hooks";
 import {
+    useBankAccounts,
     useCancelSale,
     useCompleteSale,
     useCreateSalePayment,
@@ -32,6 +33,7 @@ import {
     useDeleteSalePayment,
     useSale,
 } from "@/lib/hooks/inventory";
+import type { BankAccount } from "@/lib/types/inventory";
 import { PERMISSIONS } from "@/lib/permissions";
 import {
     SALE_PAYMENT_METHODS,
@@ -112,6 +114,12 @@ function SaleDetailPage() {
     const deleteMutation = useDeleteSale();
     const paymentMutation = useCreateSalePayment();
     const deletePaymentMutation = useDeleteSalePayment();
+    // Comptes bancaires actifs : pour rattacher un règlement non-espèces au bon
+    // compte (sinon il tombe dans « Non affecté » en trésorerie).
+    const { data: bankAccountsRaw } = useBankAccounts(orgId, { active: 1 });
+    const bankAccounts: BankAccount[] = Array.isArray(bankAccountsRaw)
+        ? bankAccountsRaw
+        : (bankAccountsRaw?.results ?? []);
 
     const [showDelete, setShowDelete] = useState(false);
     const [showCancel, setShowCancel] = useState(false);
@@ -122,6 +130,7 @@ function SaleDetailPage() {
     const [payAmount, setPayAmount] = useState("");
     const [payDate, setPayDate] = useState(new Date().toISOString().split("T")[0]);
     const [payMethod, setPayMethod] = useState<SalePaymentMethod>("cash");
+    const [payBankAccountId, setPayBankAccountId] = useState<string>("");
     const [payInstallmentId, setPayInstallmentId] = useState<string>("");
     const [payReference, setPayReference] = useState("");
     const [payNotes, setPayNotes] = useState("");
@@ -202,6 +211,10 @@ function SaleDetailPage() {
                     amount: payAmount,
                     payment_date: payDate,
                     method: payMethod,
+                    bank_account_id:
+                        payMethod !== "cash" && payBankAccountId
+                            ? payBankAccountId
+                            : null,
                     installment_id: payInstallmentId || null,
                     reference: payReference,
                     notes: payNotes,
@@ -212,6 +225,7 @@ function SaleDetailPage() {
             setPayReference("");
             setPayNotes("");
             setPayInstallmentId("");
+            setPayBankAccountId("");
             setShowPayConfirm(false);
         } catch (err) {
             toast.error("Impossible d'enregistrer le paiement", {
@@ -706,6 +720,35 @@ function SaleDetailPage() {
                                                     )}
                                                 </select>
                                             </div>
+                                            {payMethod !== "cash" && (
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="pay_bank_account">
+                                                        Compte bancaire
+                                                    </Label>
+                                                    <select
+                                                        id="pay_bank_account"
+                                                        value={payBankAccountId}
+                                                        onChange={(e) =>
+                                                            setPayBankAccountId(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                                    >
+                                                        <option value="">
+                                                            Non affecté
+                                                        </option>
+                                                        {bankAccounts.map((a) => (
+                                                            <option
+                                                                key={a.id}
+                                                                value={a.id}
+                                                            >
+                                                                {a.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
                                             {sale.installments.length > 0 && (
                                                 <div className="space-y-2">
                                                     <Label htmlFor="pay_installment">

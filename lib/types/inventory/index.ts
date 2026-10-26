@@ -637,6 +637,8 @@ export interface CreatePurchaseOrderPaymentData {
   amount: string | number;
   payment_date: string;
   method?: PurchaseOrderPaymentMethod;
+  /** Compte bancaire débité (règlement non-espèces uniquement). */
+  bank_account_id?: string | null;
   reference?: string;
   notes?: string;
 }
@@ -834,6 +836,8 @@ export interface CreateSalePaymentData {
   amount: string | number;
   payment_date: string;
   method?: SalePaymentMethod;
+  /** Compte bancaire crédité (règlement non-espèces uniquement). */
+  bank_account_id?: string | null;
   installment_id?: string | null;
   reference?: string;
   notes?: string;
