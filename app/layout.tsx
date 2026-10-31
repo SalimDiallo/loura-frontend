@@ -1,5 +1,5 @@
-"use client"
 import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
+import { GlobalKeyboardShortcuts } from "@/components/global-keyboard-shortcuts";
 import { QueryProvider } from "@/components/providers";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
@@ -12,8 +12,6 @@ import {
   Playfair_Display,
   Space_Grotesk,
 } from "next/font/google";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect } from "react";
 import "./globals.css";
 
 // Police principale : Space Grotesk depuis next/google-fonts
@@ -44,39 +42,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const router = useRouter()
-
-  // Raccourci global B pour retour en arrière
-  const handleGlobalKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      // Ignorer si on est dans un champ de saisie
-      const target = e.target as HTMLElement
-      const isInputField =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-
-      if (isInputField) return
-
-      // B = Retour en arrière (navigation)
-      if (
-        e.key.toLowerCase() === "b" &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.altKey
-      ) {
-        e.preventDefault()
-        router.back()
-      }
-    },
-    [router]
-  )
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleGlobalKeyDown)
-    return () => document.removeEventListener("keydown", handleGlobalKeyDown)
-  }, [handleGlobalKeyDown])
-
   return (
     <html
       lang="fr"
@@ -131,6 +96,7 @@ export default function RootLayout({
       <body>
         <QueryProvider>
           <ThemeProvider>
+            <GlobalKeyboardShortcuts />
             <FrontendErrorReporter />
             {children}
             <Toaster richColors position="top-center" />
